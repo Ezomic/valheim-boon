@@ -32,6 +32,7 @@ namespace Boon
             _harmony.PatchAll(typeof(SkillWatch));
             _harmony.PatchAll(typeof(DeathPenalty));
             _harmony.PatchAll(typeof(UiInput));
+            _harmony.PatchAll(typeof(MenuGuard));
 
             Log.LogInfo(PluginName + " " + PluginVersion + " by " + PluginAuthor + " - ready.");
         }
@@ -58,12 +59,42 @@ namespace Boon
             }
 
             var player = Player.m_localPlayer;
-            if (player != null && ClientState.Known) Effects.Apply(player, ClientState.Ranks);
+            if (player == null) return;
+
+            BindHome();
+
+            if (ClientState.Known) Effects.Apply(player, ClientState.Ranks);
         }
 
         private void OnGUI()
         {
             DraftUI.Draw();
+        }
+
+        /// <summary>
+        /// Remember which world this character belongs to, the first time it is seen in one.
+        /// After this the menu will refuse to start it anywhere else, which is the only point
+        /// at which that can still be prevented.
+        /// </summary>
+        private bool _bound;
+
+        private void BindHome()
+        {
+            if (!BoonConfig.ProtectCharacter.Value) return;
+
+            // Cleared when leaving a world, so joining another one binds again rather than
+            // being skipped for the rest of the process.
+            if (ZNet.instance == null || Game.instance == null) { _bound = false; return; }
+            if (_bound) return;
+
+            var uid = ZNet.instance.GetWorldUID();
+            if (uid == 0L) return;
+
+            var profile = Game.instance.GetPlayerProfile();
+            if (profile == null) return;
+
+            _bound = true;
+            Home.Bind(profile.m_filename, uid);
         }
 
         /// <summary>

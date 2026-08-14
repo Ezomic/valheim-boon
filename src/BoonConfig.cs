@@ -24,6 +24,7 @@ namespace Boon
 
         internal static ConfigEntry<bool> RemoveDeathSkillLoss;
 
+        internal static ConfigEntry<bool> ProtectCharacter;
         internal static ConfigEntry<bool> RequireFreshCharacter;
         internal static ConfigEntry<bool> GateEnforce;
         internal static ConfigEntry<float> MaxSkillUpsPerMinute;
@@ -69,6 +70,15 @@ namespace Boon
             InventoryBaseHeight = cfg.Bind("Cards", "InventoryBaseHeight", 4,
                 "Vanilla player inventory rows, used as the base the *inventoryrow card adds " +
                 "to. Read from the game at runtime when possible; this is the fallback.");
+
+            ProtectCharacter = cfg.Bind("Gate", "ProtectCharacter", true,
+                "Refuse to start a local world with a character that belongs to a different " +
+                "one.\n" +
+                "This is protection rather than enforcement, and it is the only defence that " +
+                "actually works: loading a world writes it into the character's own " +
+                "m_worldData, nothing ever removes that entry, and the gate then refuses the " +
+                "character on its own server forever. The bindings are in boon-home.txt beside " +
+                "this file and can be edited or deleted by hand.");
 
             RemoveDeathSkillLoss = cfg.Bind("Death", "RemoveDeathSkillLoss", true,
                 "Skip Skills.OnDeath entirely. The vanilla world modifier is not enough on " +
