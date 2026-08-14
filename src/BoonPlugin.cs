@@ -54,7 +54,7 @@ namespace Boon
             {
                 Ledger.Tick(Time.time);
                 GreetPeers();
-                MirrorLocalHost();
+                SeedLocalHost();
             }
 
             var player = Player.m_localPlayer;
@@ -104,13 +104,28 @@ namespace Boon
         }
 
         /// <summary>
-        /// On a listen server or in singleplayer the host has no peer entry for itself, so
-        /// its state is read straight from the ledger rather than sent over the wire.
+        /// Singleplayer and listen servers work without any special casing, because
+        /// ZRoutedRpc handles a message addressed to yourself locally:
+        ///
+        ///     if (targetPeerID == m_id || targetPeerID == 0L) HandleRoutedRPC(data);
+        ///
+        /// and GetServerPeerID returns m_id when you are the server. So skill reports, picks
+        /// and state pushes all loop straight back and resolve against the local ledger.
+        ///
+        /// The one thing that does not happen is the greeting: the host has no peer entry for
+        /// itself, so GreetPeers never sees it and nothing seeds the opening state. That is
+        /// all this does, once. Everything after arrives through the same path as a client's.
         /// </summary>
-        private void MirrorLocalHost()
+        private void SeedLocalHost()
         {
             if (ZNet.instance == null || ZNet.instance.IsDedicated()) return;
             if (Player.m_localPlayer == null) return;
+
+            // Known is cleared when the RPC layer re-registers, so this re-seeds once per
+            // session and is otherwise a single comparison per frame. An earlier version
+            // rebuilt the whole state from strings every frame, which allocated two strings
+            // and a dictionary per frame for no gain.
+            if (ClientState.Known) return;
 
             var rec = Ledger.For("localhost");
             if (rec == null) return;

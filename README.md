@@ -76,6 +76,26 @@ The client's half of the protocol is deliberately thin. It reports **that a skil
 and **which card it wants**. It never sends a level, an XP total or a rank, because the server
 does not store anything the client says — only re-derives from the events it claims.
 
+### Singleplayer
+
+Works, with no special casing. Valheim runs a local server in singleplayer, and `ZRoutedRpc`
+handles a message addressed to yourself locally rather than putting it on a socket:
+
+```csharp
+if (targetPeerID == m_id || targetPeerID == 0L) HandleRoutedRPC(data);
+```
+
+Since `GetServerPeerID()` returns your own id when you are the server, skill reports, picks and
+state pushes all loop straight back and resolve against the local ledger. Progress is stored
+under the owner `localhost`.
+
+The only gap is that the host has no peer entry for itself, so nothing greets it on spawn —
+hence a one-shot seed of the opening state. Everything after arrives by the same path a
+client's would.
+
+The gate is pointless here and effectively inert: on your own machine you are the one it would
+be protecting you from.
+
 ## The fresh-character gate
 
 The real defence is not rate limiting, it is refusing characters that could have been levelled
