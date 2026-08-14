@@ -24,6 +24,12 @@ namespace Boon
             // ours to report.
             if (__instance != Player.m_localPlayer) return;
 
+            // Logged on the sending side as well as the receiving side. The two together are
+            // what tell you whether a missing grant means the hook never fired or the report
+            // never arrived - with only the server's log, both look identical.
+            if (BoonConfig.Verbose.Value)
+                BoonPlugin.Log.LogInfo("Skill up: " + skill + " reached " + level + ", reporting.");
+
             Net.ReportSkillUp(skill, level);
         }
     }

@@ -18,28 +18,45 @@ namespace Boon
     {
         private const string EffectName = "Boon";
 
+        // StatusEffect.NameHash() hashes the UnityEngine.Object name, so this can be computed
+        // once without instantiating anything to ask.
+        private static readonly int EffectHash = EffectName.GetStableHashCode();
+
         private static SE_Stats _applied;
         private static string _appliedSignature;
+        private static Player _appliedTo;
 
         private static int _baseInventoryHeight = -1;
         private static FieldInfo _inventoryHeight;
 
         internal static void Reset()
         {
+            if (_applied != null) Object.Destroy(_applied);
+
             _applied = null;
             _appliedSignature = null;
+            _appliedTo = null;
+            _baseInventoryHeight = -1;
         }
 
         /// <summary>
         /// Bring the local player in line with <paramref name="ranks"/>. Cheap to call every
-        /// frame: it does nothing unless the set of cards actually changed.
+        /// frame: it returns immediately unless the cards or the player actually changed.
         /// </summary>
         internal static void Apply(Player player, Dictionary<string, int> ranks)
         {
             if (player == null) return;
 
             var signature = Signature(ranks);
-            if (signature == _appliedSignature && _applied != null) return;
+
+            // Both halves matter. Comparing only the signature would miss a respawn, which
+            // builds a fresh Player with a fresh SEMan holding none of this. An earlier
+            // version also tested "_applied != null", which is null exactly when you hold no
+            // cards - so with an empty hand it re-applied every frame, leaking a
+            // ScriptableObject per frame and filling the log.
+            if (ReferenceEquals(player, _appliedTo) && signature == _appliedSignature) return;
+
+            _appliedTo = player;
             _appliedSignature = signature;
 
             ApplyStats(player, ranks);
@@ -54,38 +71,43 @@ namespace Boon
             var seman = player.GetSEMan();
             if (seman == null) return;
 
-            // Replace wholesale rather than editing in place. A status effect already held by
-            // SEMan is keyed on its name hash, so adding a second with the same name is a
-            // no-op - the old values would simply persist.
+            // Work out what is owed before building anything, so an empty hand costs no
+            // allocation at all.
+            var totals = new Dictionary<FieldInfo, float>();
+            foreach (var kv in ranks)
+            {
+                if (kv.Value <= 0) continue;
+
+                var card = Cards.Get(kv.Key);
+                if (card == null || card.IsSpecial || card.Field == null) continue;
+
+                // Several cards may target the same field, so accumulate rather than assign.
+                totals.TryGetValue(card.Field, out var running);
+                totals[card.Field] = running + card.PerRank * kv.Value;
+            }
+
+            // Replace wholesale rather than editing in place: SEMan keys on the name hash, so
+            // adding a second effect with the same name is a no-op and the old values would
+            // simply persist.
+            seman.RemoveStatusEffect(EffectHash, quiet: true);
+
+            if (_applied != null)
+            {
+                Object.Destroy(_applied);
+                _applied = null;
+            }
+
+            if (totals.Count == 0) return;
+
             var stats = ScriptableObject.CreateInstance<SE_Stats>();
             stats.name = EffectName;
             stats.m_name = EffectName;
             stats.m_ttl = 0f;   // 0 is permanent; anything else expires mid-session.
 
-            var any = false;
-            foreach (var kv in ranks)
-            {
-                var card = Cards.Get(kv.Key);
-                if (card == null || card.IsSpecial || card.Field == null) continue;
-                if (kv.Value <= 0) continue;
+            foreach (var kv in totals) kv.Key.SetValue(stats, kv.Value);
 
-                // Cards accumulate by rank, and several cards may target the same field, so
-                // read-add-write rather than assign.
-                var current = (float)card.Field.GetValue(stats);
-                card.Field.SetValue(stats, current + card.PerRank * kv.Value);
-                any = true;
-            }
-
-            seman.RemoveStatusEffect(stats.NameHash(), quiet: true);
-            if (any)
-            {
-                seman.AddStatusEffect(stats);
-                _applied = stats;
-            }
-            else
-            {
-                _applied = null;
-            }
+            seman.AddStatusEffect(stats);
+            _applied = stats;
         }
 
         /// <summary>
@@ -119,8 +141,10 @@ namespace Boon
             var extra = 0;
             foreach (var kv in ranks)
             {
+                if (kv.Value <= 0) continue;
+
                 var card = Cards.Get(kv.Key);
-                if (card == null || card.Effect != "*inventoryrow" || kv.Value <= 0) continue;
+                if (card == null || card.Effect != "*inventoryrow") continue;
                 extra += Mathf.RoundToInt(card.PerRank * kv.Value);
             }
 
