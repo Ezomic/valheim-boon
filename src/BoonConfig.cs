@@ -82,10 +82,14 @@ namespace Boon
                 "and has never used cheats. Checked every login rather than only the first, so " +
                 "a character taken elsewhere and brought back is caught too.");
 
-            GateEnforce = cfg.Bind("Gate", "GateEnforce", false,
-                "Off logs what the gate would have blocked without disconnecting anyone. " +
-                "Start here and read the log before turning enforcement on - the check " +
-                "applies to your own character as well.");
+            GateEnforce = cfg.Bind("Gate", "GateEnforce", true,
+                "On refuses the connection and tells the player why. Off logs what would " +
+                "have been blocked without disconnecting anyone.\n" +
+                "This applies to your own character too, and the rule is strict: a character " +
+                "is refused by every world but its first, and m_worldData entries are never " +
+                "removed, so one visit elsewhere locks that character out permanently. Back " +
+                "up a character file before taking it anywhere else - restoring the backup " +
+                "clears the travel record and is the only way back in.");
 
             MaxSkillUpsPerMinute = cfg.Bind("Gate", "MaxSkillUpsPerMinute", 30f,
                 "Server-side ceiling on accepted skill-up reports per player. A backstop " +

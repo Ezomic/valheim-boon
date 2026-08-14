@@ -107,11 +107,11 @@ there is then nothing to verify.
 Checked on **every login**, not only the first, so a character taken away to a creative world
 and brought back is caught on return rather than waved through because it was clean once.
 
-**It ships with enforcement off.** `GateEnforce = false` logs what it would have refused
-without disconnecting anyone. The rule applies to the server owner's character too, so it is
-worth reading the log for a while before it starts turning people away.
+**Enforcement is on.** A refused player is sent `ConnectionStatus.ErrorKicked` and dropped.
+Set `GateEnforce = false` to fall back to logging what would have been refused without
+turning anyone away.
 
-### Read this before turning enforcement on
+### What this costs
 
 The rule is stricter than it sounds, in three ways:
 
@@ -130,6 +130,23 @@ The rule is stricter than it sounds, in three ways:
 A refused player is sent `ConnectionStatus.ErrorKicked` before being dropped, the same way
 ZNet turns away a wrong-version client, so they see a message rather than an unexplained
 disconnect.
+
+### A character backup is the way back in — and is not a hole
+
+Character files live client-side in
+`%USERPROFILE%\AppData\LocalLow\IronGate\Valheim\characters`, and `m_worldData` is serialised
+into them. **Restoring a backup taken before the trip clears the travel record and the gate
+passes again.** That is the escape hatch for the permanent lockout above: back a character up
+before taking it anywhere else.
+
+It is not a way to smuggle progress in, because a restore rolls back *everything* — the
+skills gained on the other world go with the travel record, which is exactly the thing anyone
+would have gone there to get. Backing up, levelling elsewhere and restoring nets nothing.
+
+What it does not defend against is a **hand-edited** character file, stripping the world
+entries while keeping the skills. The file is an unencrypted ZPackage, so that is possible for
+someone willing to write a parser. Combined with the fact that these facts are self-reported
+in the first place, the gate stops the ordinary case and not a determined one.
 
 ### What this does not do
 
@@ -172,7 +189,7 @@ prefab name that does not resolve. A typo costs one card, not the catalogue.
 | `OfferCount` | `3` | Cards per draft |
 | `RemoveDeathSkillLoss` | `true` | Skip `Skills.OnDeath` |
 | `RequireFreshCharacter` | `true` | Run the gate check |
-| `GateEnforce` | `false` | Actually disconnect, rather than only logging |
+| `GateEnforce` | `true` | Disconnect a refused player; off logs only |
 | `MaxSkillUpsPerMinute` | `30` | Server-side ceiling on accepted reports |
 | `Verbose` | `false` | Log every grant, rejection and card applied |
 
