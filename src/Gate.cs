@@ -149,7 +149,16 @@ namespace Boon
             BoonPlugin.Log.LogWarning("Gate: refusing " + who + " - " + why + ".");
 
             var peer = ZNet.instance != null ? ZNet.instance.GetPeer(sender) : null;
-            if (peer != null) ZNet.instance.Disconnect(peer);
+            if (peer == null) return;
+
+            // Send the reason before dropping, the same way ZNet turns away a wrong-version
+            // or banned client - it invokes "Error" with a ConnectionStatus and then
+            // disconnects. Without this the player is dropped with no explanation at all and
+            // has no way to tell a refusal from a crash.
+            if (peer.m_rpc != null)
+                peer.m_rpc.Invoke("Error", (int)ZNet.ConnectionStatus.ErrorKicked);
+
+            ZNet.instance.Disconnect(peer);
         }
 
         private static Dictionary<string, float> ParseFacts(string facts)

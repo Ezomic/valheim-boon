@@ -111,6 +111,26 @@ and brought back is caught on return rather than waved through because it was cl
 without disconnecting anyone. The rule applies to the server owner's character too, so it is
 worth reading the log for a while before it starts turning people away.
 
+### Read this before turning enforcement on
+
+The rule is stricter than it sounds, in three ways:
+
+- **It is symmetric.** "Has this character been on any world other than this one" refuses a
+  character on *every* world but its first. A character bound to this server is refused by any
+  other modded world, and vice versa. In practice that means **one character per modded world**.
+- **It is permanent.** `m_worldData` entries are created as soon as a character explores or
+  logs out, and nothing ever removes them. Visiting a friend's world once locks that character
+  out of this server for good, with no way to clear the record.
+- **It does not protect Boon levels** — the ledger already does that completely. Levels come
+  only from skill-ups reported while connected here, and nothing is backfilled, so a character
+  that grinds skills elsewhere returns with **zero** extra Boon levels. What the gate actually
+  stops is a maxed-out *vanilla* character walking in: skills at 100, map explored. That is a
+  real concern about server balance, but it is a different one.
+
+A refused player is sent `ConnectionStatus.ErrorKicked` before being dropped, the same way
+ZNet turns away a wrong-version client, so they see a message rather than an unexplained
+disconnect.
+
 ### What this does not do
 
 The gate reads a client-side file, so the facts are self-reported and a purpose-built modified
