@@ -1,0 +1,38 @@
+# Boon card catalogue.
+#
+# One card per line:
+#
+#   id | Name | flavour text | effect | value-per-rank
+#
+# "effect" is either the literal name of a public float field on the game's SE_Stats
+# class, or one of the specials below. Using the field name directly means any of the
+# ~45 modifiers the game already has can be turned into a card by adding a line here -
+# no code change, no rebuild.
+#
+# Specials:
+#   *inventoryrow   adds rows to the player inventory grid
+#
+# Value is per rank and accumulates: rank 3 of a 15-per-rank card gives 45.
+# Cards stop being offered once they reach MaxRank in the config.
+#
+# Sign conventions differ between fields and are the game's, not ours. The stamina-use
+# modifiers are fractions where negative means cheaper, so -0.05 is a 5% discount per
+# rank. Read a value out loud before adding it.
+
+oxback      | Ox-backed      | The load sits easy on you.        | m_addMaxCarryWeight      | 15
+deeppack    | Deep pack      | Room for one thing more.          | *inventoryrow            | 1
+
+lightfoot   | Light of foot  | The ground gives less.            | m_runStaminaUseModifier  | -0.05
+surefooted  | Sure-footed    | You have fallen further than this.| m_fallDamageModifier     | -0.10
+longwind    | Long wind      | Breath comes back quicker.        | m_staminaRegenMultiplier | 0.08
+swiftmend   | Swift-mending  | Flesh knits without asking.       | m_healthRegenMultiplier  | 0.08
+
+thickhide   | Thick-hided    | Blows land shallower.             | m_addArmor               | 2
+bracedarm   | Braced arm     | The shield holds where it stood.  | m_blockStaminaUseModifier| -0.06
+heavyhand   | Heavy-handed   | The swing costs you less.         | m_attackStaminaUseModifier | -0.05
+steadyfoot  | Steady footing | Harder to knock out of stance.    | m_staggerModifier        | -0.06
+
+softstep    | Soft step      | The woods do not notice you.      | m_stealthModifier        | 0.08
+quietwake   | Quiet wake     | You leave less behind you.        | m_noiseModifier          | -0.08
+strongswim  | Strong swimmer | The water carries rather than drags.| m_swimStaminaUseModifier | -0.08
+quickstudy  | Quick study    | Lessons stick the first time.     | m_raiseSkillModifier     | 0.05
