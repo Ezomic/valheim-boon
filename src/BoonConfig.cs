@@ -27,6 +27,7 @@ namespace Boon
         internal static ConfigEntry<bool> RequireFreshCharacter;
         internal static ConfigEntry<bool> GateEnforce;
         internal static ConfigEntry<float> MaxSkillUpsPerMinute;
+        internal static ConfigEntry<float> SkillDriftAllowance;
 
         internal static ConfigEntry<int> InventoryBaseHeight;
 
@@ -90,6 +91,14 @@ namespace Boon
                 "removed, so one visit elsewhere locks that character out permanently. Back " +
                 "up a character file before taking it anywhere else - restoring the backup " +
                 "clears the travel record and is the only way back in.");
+
+            SkillDriftAllowance = cfg.Bind("Gate", "SkillDriftAllowance", 1f,
+                "How far a returning character's skill may sit above the highest level this " +
+                "server watched it reach before it counts as gained elsewhere.\n" +
+                "Not zero, because the ledger is flushed on a timer: a server that stops " +
+                "unexpectedly can lose the last few seconds of snapshot updates, and a level " +
+                "genuinely earned here would then look imported. One level of slack absorbs " +
+                "that and is worth nothing to a cheat.");
 
             MaxSkillUpsPerMinute = cfg.Bind("Gate", "MaxSkillUpsPerMinute", 30f,
                 "Server-side ceiling on accepted skill-up reports per player. A backstop " +

@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Text;
 using HarmonyLib;
+using UnityEngine;
 
 namespace Boon
 {
@@ -103,34 +104,52 @@ namespace Boon
             return total;
         }
 
+        /// <summary>
+        /// Every skill and the level it currently sits at, as "type:level" pairs.
+        /// </summary>
+        internal static string LocalSkills()
+        {
+            var player = Player.m_localPlayer;
+            if (player == null) return "";
+
+            var skills = player.GetSkills();
+            if (skills == null) return "";
+
+            var sb = new StringBuilder();
+            foreach (var skill in skills.GetSkillList())
+            {
+                if (skill == null || skill.m_info == null) continue;
+                if (sb.Length > 0) sb.Append(',');
+                sb.Append((int)skill.m_info.m_skill).Append(':')
+                  .Append(skill.m_level.ToString("R", CultureInfo.InvariantCulture));
+            }
+
+            return sb.ToString();
+        }
+
         // ---- server side ---------------------------------------------------------------
 
         /// <summary>
-        /// Judge a client's reported facts. With GateEnforce off this only writes to the log,
-        /// which is the intended way to start: the rule applies to the server owner's own
-        /// character too, and it is worth reading what it would have blocked before it starts
-        /// disconnecting people.
+        /// Judge a joining character on both counts: where it has been, and whether it came
+        /// back stronger than this server watched it become.
+        ///
+        /// The two catch different things and neither subsumes the other. The travel check
+        /// reads the character's own file, so it sees a trip even if nothing was gained - and
+        /// can be defeated by editing that file. The snapshot compares against this server's
+        /// own record, which no client can reach, so it survives an edited file - but it only
+        /// notices a trip that actually produced levels. Together they cover both.
+        ///
+        /// With GateEnforce off this only writes to the log.
         /// </summary>
-        internal static void Evaluate(long sender, string owner, string facts)
+        internal static void Judge(long sender, string owner, string facts, string skills)
         {
             if (!BoonConfig.RequireFreshCharacter.Value) return;
 
-            var parsed = ParseFacts(facts);
             var who = owner ?? ("peer " + sender);
-
-            if (parsed == null)
-            {
-                BoonPlugin.Log.LogWarning("Gate: " + who + " sent unreadable profile facts ('" + facts + "').");
-                return;
-            }
-
             var reasons = new List<string>();
 
-            if (Value(parsed, "otherWorlds") > 0)
-                reasons.Add("has played on " + Value(parsed, "otherWorlds") + " other world(s)");
-
-            if (Value(parsed, "cheats") > 0)
-                reasons.Add("character is flagged as having used cheats");
+            TravelReasons(facts, who, reasons);
+            SnapshotReasons(skills, owner, who, reasons);
 
             if (reasons.Count == 0)
             {
@@ -159,6 +178,94 @@ namespace Boon
                 peer.m_rpc.Invoke("Error", (int)ZNet.ConnectionStatus.ErrorKicked);
 
             ZNet.instance.Disconnect(peer);
+        }
+
+        private static void TravelReasons(string facts, string who, List<string> reasons)
+        {
+            var parsed = ParseFacts(facts);
+            if (parsed == null)
+            {
+                BoonPlugin.Log.LogWarning("Gate: " + who + " sent unreadable profile facts ('" + facts + "').");
+                return;
+            }
+
+            if (Value(parsed, "otherWorlds") > 0)
+                reasons.Add("has played on " + Value(parsed, "otherWorlds") + " other world(s)");
+
+            if (Value(parsed, "cheats") > 0)
+                reasons.Add("character is flagged as having used cheats");
+        }
+
+        /// <summary>
+        /// Compare the reported skills against the highest levels this server itself watched
+        /// them reach.
+        ///
+        /// A character with no snapshot yet has its current skills **adopted** as the baseline
+        /// rather than being refused. Refusing would turn away everyone the first time this
+        /// shipped, and a genuinely imported character is what the travel check is for - the
+        /// two are deliberately layered.
+        /// </summary>
+        private static void SnapshotReasons(string skills, string owner, string who, List<string> reasons)
+        {
+            if (string.IsNullOrEmpty(owner)) return;
+
+            var reported = ParseSkills(skills);
+            if (reported == null) return;
+
+            var rec = Ledger.For(owner);
+            if (rec == null) return;
+
+            if (!rec.HasSnapshot)
+            {
+                foreach (var kv in reported) rec.Snapshot[kv.Key] = kv.Value;
+                Ledger.Touch();
+
+                BoonPlugin.Log.LogInfo("Gate: adopted a first skill baseline for " + who +
+                                       " (" + reported.Count + " skills). Future joins are compared against it.");
+                return;
+            }
+
+            var slack = Mathf.Max(0f, BoonConfig.SkillDriftAllowance.Value);
+
+            foreach (var kv in reported)
+            {
+                var seen = rec.Snapshot.TryGetValue(kv.Key, out var s) ? s : 0f;
+                if (kv.Value <= seen + slack) continue;
+
+                reasons.Add((Skills.SkillType)kv.Key + " is " + kv.Value.ToString("0.#") +
+                            " but this server only saw it reach " + seen.ToString("0.#"));
+            }
+
+            // Passing means the report matched, so take it as the new baseline - it is the
+            // freshest confirmation of a state this server agrees with.
+            if (reasons.Count != 0) return;
+
+            foreach (var kv in reported)
+            {
+                if (!rec.Snapshot.TryGetValue(kv.Key, out var s) || kv.Value > s)
+                {
+                    rec.Snapshot[kv.Key] = kv.Value;
+                    Ledger.Touch();
+                }
+            }
+        }
+
+        private static Dictionary<int, float> ParseSkills(string wire)
+        {
+            if (wire == null) return null;
+
+            var map = new Dictionary<int, float>();
+            foreach (var pair in wire.Split(','))
+            {
+                if (pair.Length == 0) continue;
+                var bits = pair.Split(':');
+                if (bits.Length != 2) continue;
+                if (!int.TryParse(bits[0], out var type)) continue;
+                if (!float.TryParse(bits[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var level)) continue;
+                map[type] = level;
+            }
+
+            return map;
         }
 
         private static Dictionary<string, float> ParseFacts(string facts)

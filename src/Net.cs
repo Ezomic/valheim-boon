@@ -106,7 +106,7 @@ namespace Boon
             rpc.Register<string>(RpcPick, OnPick);
             rpc.Register<string>(RpcState, OnState);
             rpc.Register(RpcAskProfile, OnAskProfile);
-            rpc.Register<string>(RpcProfile, OnProfile);
+            rpc.Register<string, string>(RpcProfile, OnProfile);
 
             ClientState.Clear();
             Effects.Reset();
@@ -158,6 +158,13 @@ namespace Boon
 
             var before = rec.Level;
             rec.Xp += Levels.XpForSkillUp(skillLevel);
+
+            // Keep the baseline current. Without this every level earned here would look
+            // imported at the next join, and the gate would refuse the very players it just
+            // watched earn it.
+            if (!rec.Snapshot.TryGetValue(skillType, out var seen) || skillLevel > seen)
+                rec.Snapshot[skillType] = skillLevel;
+
             Ledger.Touch();
 
             if (BoonConfig.Verbose.Value)
@@ -209,10 +216,10 @@ namespace Boon
             PushState(sender, rec);
         }
 
-        private static void OnProfile(long sender, string facts)
+        private static void OnProfile(long sender, string facts, string skills)
         {
             if (!IsServer) return;
-            Gate.Evaluate(sender, OwnerOf(sender), facts);
+            Gate.Judge(sender, OwnerOf(sender), facts, skills);
         }
 
         /// <summary>Roll a fresh offer if one is owed and none is standing.</summary>
@@ -298,7 +305,7 @@ namespace Boon
         private static void OnAskProfile(long sender)
         {
             if (ZRoutedRpc.instance == null) return;
-            ZRoutedRpc.instance.InvokeRoutedRPC(sender, RpcProfile, Gate.LocalFacts());
+            ZRoutedRpc.instance.InvokeRoutedRPC(sender, RpcProfile, Gate.LocalFacts(), Gate.LocalSkills());
         }
     }
 }

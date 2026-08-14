@@ -32,6 +32,20 @@ namespace Boon
         /// <summary>The ids currently on the table. Empty when nothing is owed.</summary>
         internal readonly List<string> Offer = new List<string>();
 
+        /// <summary>
+        /// The highest level this server has itself watched each skill reach, keyed by
+        /// (int)Skills.SkillType.
+        ///
+        /// This is the answer to the one hole the travel check cannot close. A character file
+        /// is client-side and can be hand-edited to strip its world history, but it cannot
+        /// reach this - the baseline lives here. A character coming back with a skill above
+        /// what this server saw it reach gained that level somewhere else, whatever its file
+        /// claims about where it has been.
+        /// </summary>
+        internal readonly Dictionary<int, float> Snapshot = new Dictionary<int, float>();
+
+        internal bool HasSnapshot => Snapshot.Count > 0;
+
         internal int Level => Levels.LevelForXp(Xp);
 
         /// <summary>How many picks the player still owes, and so how many drafts to run.</summary>
@@ -79,17 +93,30 @@ namespace Boon
         // has to survive being opened in a text editor on a server, and a dependency for
         // four fields is not worth it.
         //
-        //   v1|owner|xp|draftsTaken|id:rank,id:rank|offerId,offerId
+        //   v2|owner|xp|draftsTaken|id:rank,id:rank|offerId,offerId|skillType:level,...
+        //
+        // v1 lines are the same without the trailing snapshot and are still read, so a ledger
+        // written before the snapshot existed keeps working - those players simply have their
+        // baseline adopted on next join.
 
         internal string Serialise()
         {
             var sb = new StringBuilder();
-            sb.Append("v1|").Append(Owner).Append('|')
+            sb.Append("v2|").Append(Owner).Append('|')
               .Append(Xp.ToString("R", CultureInfo.InvariantCulture)).Append('|')
               .Append(DraftsTaken).Append('|');
 
             AppendRanks(sb);
-            sb.Append('|').Append(string.Join(",", Offer.ToArray()));
+            sb.Append('|').Append(string.Join(",", Offer.ToArray())).Append('|');
+
+            var first = true;
+            foreach (var kv in Snapshot)
+            {
+                if (!first) sb.Append(',');
+                sb.Append(kv.Key).Append(':').Append(kv.Value.ToString("R", CultureInfo.InvariantCulture));
+                first = false;
+            }
+
             return sb.ToString();
         }
 
@@ -98,7 +125,8 @@ namespace Boon
             if (string.IsNullOrEmpty(line)) return null;
 
             var parts = line.Split('|');
-            if (parts.Length < 6 || parts[0] != "v1") return null;
+            if (parts.Length < 6) return null;
+            if (parts[0] != "v1" && parts[0] != "v2") return null;
             if (parts[1].Length == 0) return null;
             if (!float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var xp)) return null;
             if (!int.TryParse(parts[3], out var drafts)) return null;
@@ -117,6 +145,19 @@ namespace Boon
             foreach (var offerId in parts[5].Split(','))
             {
                 if (offerId.Length > 0) rec.Offer.Add(offerId);
+            }
+
+            if (parts[0] == "v2" && parts.Length >= 7)
+            {
+                foreach (var pair in parts[6].Split(','))
+                {
+                    if (pair.Length == 0) continue;
+                    var bits = pair.Split(':');
+                    if (bits.Length != 2) continue;
+                    if (!int.TryParse(bits[0], out var type)) continue;
+                    if (!float.TryParse(bits[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var level)) continue;
+                    rec.Snapshot[type] = level;
+                }
             }
 
             return rec;
