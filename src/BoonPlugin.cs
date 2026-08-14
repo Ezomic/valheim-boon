@@ -62,6 +62,7 @@ namespace Boon
             if (player == null) return;
 
             BindHome();
+            ReadKey();
 
             if (ClientState.Known) Effects.Apply(player, ClientState.Ranks);
         }
@@ -77,6 +78,25 @@ namespace Boon
         /// at which that can still be prevented.
         /// </summary>
         private bool _bound;
+        private bool _keyHeld;
+
+        /// <summary>
+        /// Edge-triggered by hand, the same way Tether does it: a held key would otherwise
+        /// open and close the window several times a second.
+        /// </summary>
+        private void ReadKey()
+        {
+            var down = BoonConfig.KeyBoon.Value.IsDown();
+            if (!down) { _keyHeld = false; return; }
+            if (_keyHeld) return;
+            _keyHeld = true;
+
+            // The chest window and the game menu both own the cursor already; opening over
+            // them would fight for it.
+            if (InventoryGui.IsVisible() || Menu.IsVisible()) return;
+
+            DraftUI.Toggle();
+        }
 
         private void BindHome()
         {

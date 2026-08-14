@@ -1,4 +1,5 @@
 using BepInEx.Configuration;
+using UnityEngine;
 
 namespace Boon
 {
@@ -33,6 +34,7 @@ namespace Boon
         internal static ConfigEntry<int> InventoryBaseHeight;
 
         internal static ConfigEntry<bool> Verbose;
+        internal static ConfigEntry<KeyboardShortcut> KeyBoon;
 
         internal static void Bind(ConfigFile cfg)
         {
@@ -41,6 +43,13 @@ namespace Boon
 
             Verbose = cfg.Bind("General", "Verbose", false,
                 "Log every XP grant, every rejected report and every card applied.");
+
+            // A window needs a way back to it. Deferring an offer with Escape used to hide it
+            // until the game restarted, which made "decide later" a lie.
+            KeyBoon = cfg.Bind("General", "KeyBoon", new KeyboardShortcut(KeyCode.F7),
+                "Opens your boons: the cards you hold and how far you are through the current " +
+                "level. If a draft is waiting, this brings it back instead. F6 is devkit's, " +
+                "and Numpad 0-7 are taken by Thralls and Tether.");
 
             // The character level is its own number with its own curve. It is fed by skill
             // level-ups but is deliberately not a restatement of total skill level - the
