@@ -62,6 +62,13 @@ namespace Boon
         private static readonly Color NameDim = new Color(0.75f, 0.71f, 0.63f, 1f);
         private static readonly Color EdgeLit = new Color(0.45f, 0.37f, 0.23f, 1f);
         private static readonly Color EdgeDim = new Color(0.20f, 0.17f, 0.13f, 1f);
+
+        // Tints for a borrowed tile sprite: a pick-able card sits at full strength, a held
+        // one slightly under, an untaken one well back, so the board reads as a set with
+        // gaps in it without three separate textures.
+        private static readonly Color TileLit = new Color(1f, 0.94f, 0.80f, 1f);
+        private static readonly Color TileHeld = new Color(0.88f, 0.86f, 0.82f, 1f);
+        private static readonly Color TileIdle = new Color(0.62f, 0.60f, 0.58f, 0.85f);
         private static readonly Color Green = new Color(0.498f, 0.62f, 0.541f, 1f);
 
         // A cold silver-blue for the capstone. Deliberately outside the gold/green pair the
@@ -211,6 +218,12 @@ namespace Boon
             // The button goes down first so it takes the click; the labels drawn over it do
             // not consume events, so the whole tile stays clickable. When there is nothing to
             // spend it is a box instead, so it does not offer a hover it cannot honour.
+            // A borrowed tile carries its own carved edge, so the three states are told apart
+            // by tinting it rather than by drawing a border over the top of one.
+            var tinted = Skin.HasTile;
+            var previousColour = GUI.color;
+            if (tinted) GUI.color = canTake ? TileLit : rank > 0 ? TileHeld : TileIdle;
+
             if (canTake)
             {
                 if (GUI.Button(rect, GUIContent.none, _card)) Take(card.Id);
@@ -220,10 +233,12 @@ namespace Boon
                 GUI.Box(rect, GUIContent.none, rank > 0 ? _card : _cardEmpty);
             }
 
-            // Drawn by hand because replacing GUI.skin.box's background with a flat colour
-            // throws away the border image that came with it. Without this an untaken tile is
-            // 0.106 grey on the panel's 0.09 and reads as floating text rather than a card.
-            Frame(rect, canTake ? EdgeLit : rank > 0 ? Edge : EdgeDim);
+            if (tinted) GUI.color = previousColour;
+
+            // Only without borrowed art. Replacing GUI.skin.box's background with a flat colour
+            // throws away the border image that came with it, and without this an untaken tile
+            // is 0.106 grey on the panel's 0.09 and reads as floating text rather than a card.
+            else Frame(rect, canTake ? EdgeLit : rank > 0 ? Edge : EdgeDim);
 
             var x = rect.x + 12f;
             var w = rect.width - 24f;
@@ -325,20 +340,36 @@ namespace Boon
             if (_built) return;
             _built = true;
 
-            _panel = new GUIStyle(GUI.skin.box)
-            {
-                normal = { background = Solid(Ink) },
-                border = new RectOffset(1, 1, 1, 1),
-            };
+            // Borrowed first, so the styles below can be built on the game's own art where it
+            // was found and on flat colour where it was not.
+            Skin.Ensure();
 
-            _card = new GUIStyle(GUI.skin.box)
-            {
-                normal = { background = Solid(CardBg) },
-                hover = { background = Solid(Blend(CardBg, Gold, 0.12f)) },
-                active = { background = Solid(Blend(CardBg, Gold, 0.2f)) },
-            };
+            _panel = Skin.HasPanel
+                ? new GUIStyle(GUI.skin.box)
+                {
+                    normal = { background = Skin.Panel },
+                    border = Skin.PanelBorder,
+                }
+                : new GUIStyle(GUI.skin.box)
+                {
+                    normal = { background = Solid(Ink) },
+                    border = new RectOffset(1, 1, 1, 1),
+                };
 
-            _cardEmpty = new GUIStyle(GUI.skin.box) { normal = { background = Solid(EmptyBg) } };
+            // Tinted through GUI.color at draw time rather than by baking three copies of the
+            // borrowed texture, so hover and press still read on a nine-sliced sprite.
+            _card = Skin.HasTile
+                ? new GUIStyle(GUI.skin.box) { normal = { background = Skin.Tile }, border = Skin.TileBorder }
+                : new GUIStyle(GUI.skin.box)
+                {
+                    normal = { background = Solid(CardBg) },
+                    hover = { background = Solid(Blend(CardBg, Gold, 0.12f)) },
+                    active = { background = Solid(Blend(CardBg, Gold, 0.2f)) },
+                };
+
+            _cardEmpty = Skin.HasTile
+                ? new GUIStyle(GUI.skin.box) { normal = { background = Skin.Tile }, border = Skin.TileBorder }
+                : new GUIStyle(GUI.skin.box) { normal = { background = Solid(EmptyBg) } };
 
             _title = Text(20, Gold);
             _sub = Text(13, Muted);
@@ -384,13 +415,19 @@ namespace Boon
 
         private static GUIStyle Text(int size, Color colour)
         {
-            return new GUIStyle(GUI.skin.label)
+            var style = new GUIStyle(GUI.skin.label)
             {
                 fontSize = size,
                 normal = { textColor = colour },
                 wordWrap = false,
                 richText = false,
             };
+
+            // Only if one was found. IMGUI needs a Font and the game may ship only the
+            // TextMeshPro versions, in which case this stays Unity's default.
+            if (Skin.Face != null) style.font = Skin.Face;
+
+            return style;
         }
 
         private static Color Blend(Color a, Color b, float t)
