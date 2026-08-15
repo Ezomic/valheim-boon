@@ -19,7 +19,7 @@
 # modifiers are fractions where negative means cheaper, so -0.05 is a 5% discount per
 # rank. Read a value out loud before adding it.
 
-oxback      | Ox-backed      | The load sits easy on you.        | m_addMaxCarryWeight      | 15
+oxback      | Ox-backed      | The load sits easy on you.        | m_addMaxCarryWeight      | 50
 deeppack    | Deep pack      | Room for one thing more.          | *inventoryrow            | 1
 
 lightfoot   | Light of foot  | The ground gives less.            | m_runStaminaUseModifier  | -0.05
