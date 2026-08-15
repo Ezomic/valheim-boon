@@ -220,6 +220,10 @@ namespace Boon
             var rec = Ledger.For(Key(platform, characterId));
             if (rec == null) return;
 
+            // Before anything is reported back, in case the catalogue has changed under a
+            // record since it was last loaded.
+            if (rec.Reconcile()) Ledger.Touch();
+
             BoonPlugin.Log.LogInfo("Hello from " + platform + " playing character " + characterId +
                                    " - level " + rec.Level + ", " + rec.Taken.Count + " cards, " +
                                    rec.Owed + " to spend.");

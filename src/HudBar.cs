@@ -38,6 +38,7 @@ namespace Boon
         private static bool _failed;
         private static float _nextFlash;
         private static int _shownLevel = -1;
+        private static int _shownPercent = -1;
 
         private static float _sizedAt;
         private static string _tintedAt;
@@ -99,24 +100,37 @@ namespace Boon
             _fast.SetValue(progress);
             _slow.SetValue(progress);
 
-            if (_text != null && _shownLevel != ClientState.Level)
+            // Level and percentage together. The level alone said nothing about how close the
+            // next one was, and the bar alone is hard to read at a glance when it is a thin
+            // upright sliver - a number is the only thing that answers "how far" exactly.
+            var percent = Mathf.Clamp(Mathf.RoundToInt(progress * 100f), 0, 100);
+
+            if (_text != null && (_shownLevel != ClientState.Level || _shownPercent != percent))
             {
                 _shownLevel = ClientState.Level;
-                _text.text = _shownLevel.ToString();
+                _shownPercent = percent;
+                _text.text = _shownLevel + " · " + percent + "%";
             }
 
             Announce();
         }
 
         /// <summary>
-        /// The same rules the IMGUI bar followed: the game's own idea of whether the
-        /// interface is up, plus our own of whether there is anything to show yet.
+        /// Always up, unlike the bars it was cloned from.
+        ///
+        /// Vanilla hides stamina and eitr a second after they fill, because they are things
+        /// you glance at while they are moving. Experience is the opposite - it is a slow
+        /// number you want to be able to check at any moment - so the only things that hide
+        /// it are the two that hide everything: the player pressing the hide-HUD key, and
+        /// being dead.
+        ///
+        /// It no longer hides behind the inventory either. That window does not cover this
+        /// corner, and having it vanish while you were reading it was the reason to change.
         /// </summary>
         private static bool Visible()
         {
             if (!ClientState.Known) return false;
             if (Player.m_localPlayer.IsDead()) return false;
-            if (InventoryGui.IsVisible() || Menu.IsVisible()) return false;
             return !Hud.instance.m_userHidden;
         }
 
@@ -295,12 +309,27 @@ namespace Boon
             var raised = (Hud.instance.m_buildHud != null && Hud.instance.m_buildHud.activeSelf) ||
                          (Hud.instance.m_shipHudRoot != null && Hud.instance.m_shipHudRoot.activeSelf);
 
-            var point = new Vector2(BoonConfig.BarPosX.Value,
-                                    BoonConfig.BarPosY.Value + (raised ? BoonConfig.BarBuildRaise.Value : 0f));
-
             var cam = _canvas != null && _canvas.renderMode != RenderMode.ScreenSpaceOverlay
                 ? _canvas.worldCamera
                 : null;
+
+            var point = new Vector2(BoonConfig.BarPosX.Value,
+                                    BoonConfig.BarPosY.Value + (raised ? BoonConfig.BarBuildRaise.Value : 0f));
+
+            // Following the stamina bar is worth more than two pixel numbers: "below the
+            // stamina bar" is then true at every resolution and HUD scale rather than on the
+            // machine the numbers were measured on, and it inherits vanilla's own shove upward
+            // when the build panel opens instead of having to repeat it.
+            if (BoonConfig.BarFollowStamina.Value)
+            {
+                var anchor = Hud.instance.m_staminaBar2Root;
+                if (anchor != null)
+                {
+                    var onScreen = RectTransformUtility.WorldToScreenPoint(cam, anchor.position);
+                    point = new Vector2(onScreen.x + BoonConfig.BarOffsetX.Value,
+                                        onScreen.y - BoonConfig.BarOffsetY.Value);
+                }
+            }
 
             if (RectTransformUtility.ScreenPointToWorldPointInRectangle(parent, point, cam, out var world))
                 _rect.position = world;
@@ -324,6 +353,7 @@ namespace Boon
             _animator = null;
             _canvas = null;
             _shownLevel = -1;
+            _shownPercent = -1;
             _sizedAt = 0f;
             _tintedAt = null;
 

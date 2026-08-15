@@ -78,6 +78,47 @@ namespace Boon
             DraftsTaken++;
         }
 
+        /// <summary>
+        /// Hand back the picks spent on cards that no longer exist.
+        ///
+        /// Removing a card from cards.txt used to strand every rank already bought in it: the
+        /// ranks stayed in the ledger, counted toward the totals in the header, and had no
+        /// stone to appear on - so a player with twelve picks spent could only find seven of
+        /// them. Deleting Deep pack did exactly that to five.
+        ///
+        /// Returning them is the only honest answer. The catalogue is a text file and is meant
+        /// to be edited; an edit that quietly eats progress makes it something you have to be
+        /// careful with instead.
+        /// </summary>
+        internal bool Reconcile()
+        {
+            List<string> gone = null;
+
+            foreach (var kv in Taken)
+            {
+                if (Cards.Get(kv.Key) != null) continue;
+
+                if (gone == null) gone = new List<string>();
+                gone.Add(kv.Key);
+            }
+
+            if (gone == null) return false;
+
+            foreach (var id in gone)
+            {
+                var returned = Taken[id].Count;
+                Taken.Remove(id);
+
+                // The picks go back rather than being written off, so they can be spent again.
+                DraftsTaken = Math.Max(0, DraftsTaken - returned);
+
+                BoonPlugin.Log.LogInfo("Card '" + id + "' is no longer in the catalogue - " +
+                                       returned + " pick(s) returned to " + Owner + ".");
+            }
+
+            return true;
+        }
+
         // ---- serialisation -------------------------------------------------------------
         //
         // A flat line rather than JSON: the ledger is read and written by this mod alone, it

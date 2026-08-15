@@ -41,6 +41,9 @@ namespace Boon
         internal static ConfigEntry<bool> ShowInfoTab;
         internal static ConfigEntry<bool> ShowXpBar;
         internal static ConfigEntry<bool> VanillaBar;
+        internal static ConfigEntry<bool> BarFollowStamina;
+        internal static ConfigEntry<float> BarOffsetX;
+        internal static ConfigEntry<float> BarOffsetY;
         internal static ConfigEntry<float> BarPosX;
         internal static ConfigEntry<float> BarPosY;
         internal static ConfigEntry<float> BarSize;
@@ -106,6 +109,22 @@ namespace Boon
                 "the clone fails, since the HUD hierarchy is scene data rather than API and " +
                 "can change under a game update.");
 
+            // Anchored to the stamina bar rather than to the screen, so "below the stamina
+            // bar" stays true at any resolution and HUD scale instead of being two numbers
+            // that happen to be right on one machine. It also follows vanilla's own shove
+            // upward when the build panel opens, which BarBuildRaise otherwise has to
+            // duplicate by hand.
+            BarFollowStamina = cfg.Bind("Bar", "BarFollowStamina", true,
+                "Place the bar relative to the stamina bar instead of at fixed screen pixels. " +
+                "Off falls back to BarPosX and BarPosY, which is also what happens if the " +
+                "stamina bar cannot be found.");
+
+            BarOffsetX = cfg.Bind("Bar", "BarOffsetX", 0f,
+                "Pixels right of the stamina bar's centre, when following it.");
+
+            BarOffsetY = cfg.Bind("Bar", "BarOffsetY", 70f,
+                "Pixels below the stamina bar's centre, when following it.");
+
             // Screen pixels, not the donor's anchoredPosition: Hud rewrites that every frame
             // (0,130 normally, 0,285 with the build HUD up), so it is never a stable thing to
             // copy. The defaults put the bar where the hand-drawn one was tuned to sit.
@@ -128,9 +147,11 @@ namespace Boon
                 "moves its own bars up by the same amount to clear that panel; ours is pinned " +
                 "in screen space, so it has to make the move by hand.");
 
-            BarColour = cfg.Bind("Bar", "BarColour", "D4A94A",
+            BarColour = cfg.Bind("Bar", "BarColour", "9E86D9",
                 "Bar colour as RRGGBB hex. The trailing fill is the same hue held back, the " +
-                "way vanilla tells its bar pairs apart. Unparseable values fall back to gold.");
+                "way vanilla tells its bar pairs apart. Unparseable values fall back to gold.\n" +
+                "Violet by default because the four vanilla bars have red, yellow, blue and " +
+                "orange between them, and a fifth in any of those reads as one of them.");
 
             BarFlashSeconds = cfg.Bind("Bar", "BarFlashSeconds", 4f,
                 "How often the bar flashes while a pick is waiting to be spent, in seconds. " +
