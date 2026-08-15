@@ -262,13 +262,21 @@ namespace Boon
 
         private static void Take(string id)
         {
-            Net.SendPick(id);
-
-            // Applied locally at once so the tile answers the click, rather than sitting
-            // unchanged for a round trip. The server's reply is authoritative either way and
-            // corrects this if it refuses - it pushes state on every rejection for exactly
-            // that reason.
+            // Predicted *before* the send, and the order is the whole bug this once was.
+            //
+            // ZRoutedRpc handles a message addressed to yourself inline - the same property
+            // that lets singleplayer take the identical path as a remote client. So on a host,
+            // SendPick does not return until the server has already run OnPick, pushed the new
+            // state back and FromWire has applied it. Predicting afterwards stacked a second
+            // rank on top of the answer: the server read rank 2 and the client applied rank 3,
+            // every time, and the inflated DraftsTaken then hid a pick that was still owed.
+            //
+            // Predicting first is right on both paths. Locally the truth arrives immediately
+            // and overwrites the guess; remotely the guess stands for one round trip and is
+            // overwritten when the reply lands. Either way the server has the last word, which
+            // is what makes this display-only.
             ClientState.PredictTake(id);
+            Net.SendPick(id);
         }
 
         private static void Build()
