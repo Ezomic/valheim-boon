@@ -30,13 +30,16 @@ namespace Boon
             if (_built) return;
             _built = true;
 
-            Carved = Disc(new Color(0.486f, 0.467f, 0.435f),
-                          new Color(0.376f, 0.361f, 0.333f),
-                          new Color(0.196f, 0.184f, 0.165f));
+            // Pulled further apart after seeing them side by side: at the first values a
+            // carved stone and a raw one read as the same grey, which lost the whole point
+            // of a field you can scan for what you already hold.
+            Carved = Disc(new Color(0.596f, 0.573f, 0.533f),
+                          new Color(0.451f, 0.431f, 0.400f),
+                          new Color(0.204f, 0.192f, 0.173f));
 
-            Raw = Disc(new Color(0.271f, 0.259f, 0.239f),
-                       new Color(0.227f, 0.216f, 0.200f),
-                       new Color(0.141f, 0.133f, 0.122f));
+            Raw = Disc(new Color(0.220f, 0.212f, 0.200f),
+                       new Color(0.176f, 0.169f, 0.157f),
+                       new Color(0.106f, 0.102f, 0.094f));
 
             Rim = Ring(new Color(0.83f, 0.663f, 0.29f, 1f));
             Halo = Ring(new Color(0.83f, 0.663f, 0.29f, 0.45f), 3f);

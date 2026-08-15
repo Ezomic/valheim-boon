@@ -27,12 +27,12 @@ namespace Boon
         private const float PadX = 30f;
         private const float PadY = 26f;
 
-        private const float Stone = 108f;
+        private const float Stone = 100f;
         private const float CellGapX = 14f;
         private const float CellGapY = 18f;
         private const float StoneGap = 7f;
-        private const float NameLine = 18f;
-        private const float NowLine = 16f;
+        private const float NameLine = 20f;
+        private const float NowLine = 18f;
 
         private const float DetailWidth = 268f;
         private const float DetailPad = 22f;
@@ -40,9 +40,12 @@ namespace Boon
         // Marks around the rim, spread evenly and starting at the top. The same set on every
         // stone: what differs between boons is the sigil in the middle, not the ranks cut
         // around it.
-        private const float MarkRadius = 38f;
+        private const float MarkRadius = 35f;
         private const float MarkSize = 22f;
-        private static readonly string[] Marks = { "ᚠ", "ᚱ", "ᚲ", "ᚷ", "ᚹ", "ᚦ", "ᛁ", "ᛏ" };
+        // Latin letters, not runic code points. The game's "rune" face is a Latin-mapped
+        // decorative font - type F, get the rune - and U+16A0-range characters render as
+        // empty boxes in it. Learned from a screen of twenty-five tofu squares.
+        private static readonly string[] Marks = { "F", "R", "K", "G", "W", "TH", "I", "T" };
 
         private static bool _built;
         private static bool _open;
@@ -52,11 +55,11 @@ namespace Boon
                                 _sigil, _sigilDim, _mark, _dname, _dflav, _label, _dnow, _dnext,
                                 _dcap, _slotOn, _slotOff, _take, _foot, _bar, _barTrack, _rule;
 
-        private static readonly Color Void = new Color(0.031f, 0.027f, 0.024f, 0.86f);
+        private static readonly Color Void = new Color(0.035f, 0.031f, 0.027f, 0.97f);
         private static readonly Color Gold = new Color(0.83f, 0.663f, 0.29f, 1f);
         private static readonly Color Cream = new Color(0.91f, 0.863f, 0.753f, 1f);
         private static readonly Color Muted = new Color(0.659f, 0.612f, 0.518f, 1f);
-        private static readonly Color Faint = new Color(0.431f, 0.404f, 0.349f, 1f);
+        private static readonly Color Faint = new Color(0.588f, 0.553f, 0.482f, 1f);
         private static readonly Color Green = new Color(0.498f, 0.62f, 0.541f, 1f);
         private static readonly Color Silver = new Color(0.682f, 0.717f, 0.788f, 1f);
         private static readonly Color Carve = new Color(0.106f, 0.090f, 0.063f, 1f);
@@ -232,7 +235,10 @@ namespace Boon
             var maxRank = Mathf.Max(1, BoonConfig.MaxRank.Value);
             var maxed = rank >= maxRank;
 
+            var previousRule = GUI.color;
+            GUI.color = Edge;
             GUI.Label(new Rect(rect.x - DetailPad * 0.5f, rect.y, 1f, rect.height), GUIContent.none, _rule);
+            GUI.color = previousRule;
 
             var y = rect.y;
             var w = rect.width;
@@ -265,6 +271,7 @@ namespace Boon
             for (var i = 0; i < maxRank; i++)
             {
                 var slot = new Rect(rect.x + i * 35f, y, 30f, 22f);
+                Frame(slot, i < rank ? Gold : Edge);
 
                 if (i < rank)
                 {
@@ -303,6 +310,20 @@ namespace Boon
             return card.Id.Length > 0 ? card.Id.Substring(0, 1).ToUpperInvariant() : "·";
         }
 
+        /// <summary>A one-pixel outline as four thin rects, tinted through GUI.color.</summary>
+        private static void Frame(Rect r, Color colour)
+        {
+            var previous = GUI.color;
+            GUI.color = colour;
+
+            GUI.Label(new Rect(r.x, r.y, r.width, 1f), GUIContent.none, _rule);
+            GUI.Label(new Rect(r.x, r.yMax - 1f, r.width, 1f), GUIContent.none, _rule);
+            GUI.Label(new Rect(r.x, r.y, 1f, r.height), GUIContent.none, _rule);
+            GUI.Label(new Rect(r.xMax - 1f, r.y, 1f, r.height), GUIContent.none, _rule);
+
+            GUI.color = previous;
+        }
+
         private static Rect Grow(Rect r, float by)
         {
             return new Rect(r.x - by, r.y - by, r.width + by * 2f, r.height + by * 2f);
@@ -333,7 +354,7 @@ namespace Boon
             _void = new GUIStyle { normal = { background = Solid(Void) } };
             _barTrack = new GUIStyle { normal = { background = Solid(Track) } };
             _bar = new GUIStyle { normal = { background = Solid(Gold) } };
-            _rule = new GUIStyle { normal = { background = Solid(Edge) } };
+            _rule = new GUIStyle { normal = { background = Solid(Color.white) } };
 
             _title = Head(26, Gold);
 
@@ -349,7 +370,7 @@ namespace Boon
 
             _now = Body(12, Green);
             _now.alignment = TextAnchor.UpperCenter;
-            _nowDim = Body(12, new Color(0.333f, 0.376f, 0.353f, 1f));
+            _nowDim = Body(12, new Color(0.451f, 0.502f, 0.471f, 1f));
             _nowDim.alignment = TextAnchor.UpperCenter;
 
             // The inscription is cut into the stone rather than written on it, so it is dark
