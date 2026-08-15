@@ -26,7 +26,11 @@ namespace Boon
     {
         private const float Pad = 18f;
         private const float Gap = 8f;
-        private const float TileHeight = 112f;
+        // Four text lines at 10 + 21 + 19 + 19 + 18, then the track bottom-anchored at
+        // yMax - 10 - SlotHeight. At 112 the capstone line ran to y+87 and the track began at
+        // y+83, so the two drew on top of each other - measured off a screenshot rather than
+        // guessed, and the reason this is written down.
+        private const float TileHeight = 120f;
 
         // Config rather than constants: the catalogue is a text file, so the number of tiles
         // is not something this file can know. Twenty-four cards stopped fitting three across.
@@ -42,7 +46,7 @@ namespace Boon
         private static Vector2 _scroll;
 
         private static GUIStyle _panel, _card, _cardEmpty, _title, _sub, _spend, _name,
-                                _effect, _upgrade, _muted, _bonus, _bonusPending,
+                                _effect, _upgrade, _muted, _nameDim, _bonus, _bonusPending, _edge,
                                 _slotOn, _slotOff, _rule, _bar, _footer;
 
         private static readonly Color Ink = new Color(0.09f, 0.07f, 0.055f, 0.98f);
@@ -52,14 +56,19 @@ namespace Boon
         private static readonly Color Gold = new Color(0.83f, 0.663f, 0.29f, 1f);
         private static readonly Color Cream = new Color(0.91f, 0.863f, 0.753f, 1f);
         private static readonly Color Muted = new Color(0.659f, 0.612f, 0.518f, 1f);
-        private static readonly Color Faded = new Color(0.42f, 0.39f, 0.34f, 1f);
+        // Lifted from 0.42 after a screenshot: at that value the untaken names, the
+        // 'Not yet taken' line and the empty slot numbers were unreadable on this setup.
+        private static readonly Color Faded = new Color(0.58f, 0.54f, 0.47f, 1f);
+        private static readonly Color NameDim = new Color(0.75f, 0.71f, 0.63f, 1f);
+        private static readonly Color EdgeLit = new Color(0.45f, 0.37f, 0.23f, 1f);
+        private static readonly Color EdgeDim = new Color(0.20f, 0.17f, 0.13f, 1f);
         private static readonly Color Green = new Color(0.498f, 0.62f, 0.541f, 1f);
 
         // A cold silver-blue for the capstone. Deliberately outside the gold/green pair the
         // running effect and the next rank already use, because it is a different kind of
         // thing rather than more of the same one.
         private static readonly Color Silver = new Color(0.678f, 0.722f, 0.847f, 1f);
-        private static readonly Color SilverDim = new Color(0.42f, 0.45f, 0.53f, 1f);
+        private static readonly Color SilverDim = new Color(0.55f, 0.58f, 0.66f, 1f);
 
         /// <summary>True while the panel is up, which is what the input patches key on.</summary>
         internal static bool IsOpen => _open && Usable;
@@ -211,11 +220,16 @@ namespace Boon
                 GUI.Box(rect, GUIContent.none, rank > 0 ? _card : _cardEmpty);
             }
 
+            // Drawn by hand because replacing GUI.skin.box's background with a flat colour
+            // throws away the border image that came with it. Without this an untaken tile is
+            // 0.106 grey on the panel's 0.09 and reads as floating text rather than a card.
+            Frame(rect, canTake ? EdgeLit : rank > 0 ? Edge : EdgeDim);
+
             var x = rect.x + 12f;
             var w = rect.width - 24f;
             var y = rect.y + 10f;
 
-            GUI.Label(new Rect(x, y, w, 20f), card.Name, rank > 0 ? _name : _muted);
+            GUI.Label(new Rect(x, y, w, 20f), card.Name, rank > 0 ? _name : _nameDim);
             y += 21f;
 
             // What it does now, then what the pick would make it. The second line is the
@@ -333,6 +347,7 @@ namespace Boon
             _effect = Text(13, Green);
             _upgrade = Text(13, Gold);
             _muted = Text(13, Faded);
+            _nameDim = Text(16, NameDim);
             _bonus = Text(13, Silver);
             _bonusPending = Text(13, SilverDim);
             _footer = Text(12, Muted);
@@ -345,8 +360,26 @@ namespace Boon
             _slotOff.alignment = TextAnchor.MiddleCenter;
             _slotOff.normal.background = Solid(Blend(Ink, Edge, 0.35f));
 
+            _edge = new GUIStyle { normal = { background = Solid(Color.white) } };
             _rule = new GUIStyle { normal = { background = Solid(Edge) } };
             _bar = new GUIStyle { normal = { background = Solid(Gold) } };
+        }
+
+        /// <summary>
+        /// A one-pixel outline as four thin rects. Tinted through GUI.color rather than by
+        /// keeping three textures, since the only difference between the three states is hue.
+        /// </summary>
+        private static void Frame(Rect r, Color colour)
+        {
+            var previous = GUI.color;
+            GUI.color = colour;
+
+            GUI.Label(new Rect(r.x, r.y, r.width, 1f), GUIContent.none, _edge);
+            GUI.Label(new Rect(r.x, r.yMax - 1f, r.width, 1f), GUIContent.none, _edge);
+            GUI.Label(new Rect(r.x, r.y, 1f, r.height), GUIContent.none, _edge);
+            GUI.Label(new Rect(r.xMax - 1f, r.y, 1f, r.height), GUIContent.none, _edge);
+
+            GUI.color = previous;
         }
 
         private static GUIStyle Text(int size, Color colour)
