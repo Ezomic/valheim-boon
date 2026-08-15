@@ -21,10 +21,32 @@ namespace Boon
         internal string Effect;
         internal float PerRank;
 
-        /// <summary>Resolved SE_Stats field. Null for specials, which Effects handles by hand.</summary>
-        internal FieldInfo Field;
+        /// <summary>
+        /// The capstone: a second, different effect granted once per BonusEvery ranks. Empty
+        /// on a card that has none, which is allowed - the last two fields of a line are
+        /// optional so the fourteen cards written before this existed still parse.
+        /// </summary>
+        internal string BonusEffect = "";
+        internal float BonusPerRank;
 
-        internal bool IsSpecial => Effect.Length > 0 && Effect[0] == '*';
+        /// <summary>Resolved SE_Stats fields. Null for specials, which Effects handles by hand.</summary>
+        internal FieldInfo Field;
+        internal FieldInfo BonusField;
+
+        internal bool IsSpecial => IsSpecialEffect(Effect);
+        internal bool HasBonus => BonusEffect.Length > 0;
+
+        internal static bool IsSpecialEffect(string effect)
+        {
+            return effect != null && effect.Length > 0 && effect[0] == '*';
+        }
+
+        /// <summary>How many times the capstone has been earned at this rank.</summary>
+        internal static int BonusTimes(int rank)
+        {
+            var every = Mathf.Max(1, BoonConfig.BonusEvery.Value);
+            return rank / every;
+        }
 
         /// <summary>
         /// The green line under the card name. Generated rather than written in the
@@ -33,10 +55,20 @@ namespace Boon
         /// </summary>
         internal string Describe(int rank)
         {
-            var total = PerRank * Mathf.Max(1, rank);
-            if (!Labels.TryGetValue(Effect, out var label)) label = Effect;
+            return Format(Effect, PerRank * Mathf.Max(1, rank));
+        }
 
-            if (Percent.Contains(Effect))
+        /// <summary>The capstone as it reads at <paramref name="times"/> grants of it.</summary>
+        internal string DescribeBonus(int times)
+        {
+            return Format(BonusEffect, BonusPerRank * Mathf.Max(1, times));
+        }
+
+        private static string Format(string effect, float total)
+        {
+            if (!Labels.TryGetValue(effect, out var label)) label = effect;
+
+            if (Percent.Contains(effect))
             {
                 var pct = total * 100f;
                 return (pct >= 0f ? "+" : "−") + Mathf.Abs(pct).ToString("0.#", CultureInfo.InvariantCulture) + "% " + label;
@@ -94,6 +126,9 @@ namespace Boon
             { "m_dodgeStaminaUseModifier", "dodge stamina" },
             { "m_swimSpeedModifier", "swim speed" },
             { "m_timedBlockBonus", "parry bonus" },
+            { AttackSpeed.Melee, "melee speed" },
+            { AttackSpeed.Tools, "tool speed" },
+            { AttackSpeed.Ranged, "draw speed" },
         };
 
         private static readonly HashSet<string> Percent = new HashSet<string>
@@ -104,6 +139,17 @@ namespace Boon
             "m_fallDamageModifier", "m_stealthModifier", "m_noiseModifier", "m_staggerModifier",
             "m_raiseSkillModifier", "m_speedModifier", "m_damageModifier",
             "m_dodgeStaminaUseModifier", "m_swimSpeedModifier", "m_timedBlockBonus",
+            AttackSpeed.Melee, AttackSpeed.Tools, AttackSpeed.Ranged,
+        };
+
+        /// <summary>
+        /// The specials: effects with no SE_Stats field behind them, handled by code here.
+        /// Kept as a set so an unrecognised one is skipped with a warning rather than
+        /// silently doing nothing, the same way an unknown field name is.
+        /// </summary>
+        internal static readonly HashSet<string> Specials = new HashSet<string>
+        {
+            "*inventoryrow", AttackSpeed.Melee, AttackSpeed.Tools, AttackSpeed.Ranged,
         };
     }
 
@@ -181,27 +227,31 @@ namespace Boon
                     continue;
                 }
 
-                // An unknown field name is logged and skipped rather than thrown, matching how
-                // the game treats a prefab name that does not resolve. A typo costs one card,
-                // not the whole catalogue.
-                if (!card.IsSpecial)
-                {
-                    card.Field = typeof(SE_Stats).GetField(card.Effect,
-                        BindingFlags.Public | BindingFlags.Instance);
+                if (!Resolve(card.Effect, lineNo, card.Id, out card.Field)) continue;
 
-                    if (card.Field == null || card.Field.FieldType != typeof(float))
-                    {
-                        BoonPlugin.Log.LogWarning("cards.txt line " + lineNo + ": SE_Stats has no public " +
-                                                  "float field '" + card.Effect + "' - card '" + card.Id +
-                                                  "' skipped.");
-                        continue;
-                    }
-                }
-                else if (card.Effect != "*inventoryrow")
+                // The capstone is optional, so a five-field line is still a valid card and
+                // every card written before this existed keeps working untouched.
+                if (parts.Length >= 7)
                 {
-                    BoonPlugin.Log.LogWarning("cards.txt line " + lineNo + ": unknown special '" +
-                                              card.Effect + "' - card '" + card.Id + "' skipped.");
-                    continue;
+                    card.BonusEffect = parts[5].Trim();
+                    var bonusText = parts[6].Trim();
+
+                    if (card.BonusEffect.Length > 0)
+                    {
+                        if (!float.TryParse(bonusText, NumberStyles.Float, CultureInfo.InvariantCulture,
+                                            out card.BonusPerRank))
+                        {
+                            BoonPlugin.Log.LogWarning("cards.txt line " + lineNo + ": bonus value '" +
+                                                      bonusText + "' is not a number - bonus dropped.");
+                            card.BonusEffect = "";
+                        }
+                        else if (!Resolve(card.BonusEffect, lineNo, card.Id, out card.BonusField))
+                        {
+                            // The card itself is fine; only its capstone is unusable. Losing
+                            // the whole card over a typo in an optional field would be worse.
+                            card.BonusEffect = "";
+                        }
+                    }
                 }
 
                 _all.Add(card);
@@ -209,6 +259,35 @@ namespace Boon
             }
 
             BoonPlugin.Log.LogInfo("Loaded " + _all.Count + " cards from cards.txt.");
+        }
+
+        /// <summary>
+        /// Turn an effect name into the field it writes, or confirm it is a known special.
+        ///
+        /// An unknown name is logged and skipped rather than thrown, matching how the game
+        /// treats a prefab name that does not resolve. A typo costs one card, not the whole
+        /// catalogue.
+        /// </summary>
+        private static bool Resolve(string effect, int lineNo, string id, out FieldInfo field)
+        {
+            field = null;
+
+            if (Card.IsSpecialEffect(effect))
+            {
+                if (Card.Specials.Contains(effect)) return true;
+
+                BoonPlugin.Log.LogWarning("cards.txt line " + lineNo + ": unknown special '" + effect +
+                                          "' - card '" + id + "' skipped.");
+                return false;
+            }
+
+            field = typeof(SE_Stats).GetField(effect, BindingFlags.Public | BindingFlags.Instance);
+            if (field != null && field.FieldType == typeof(float)) return true;
+
+            BoonPlugin.Log.LogWarning("cards.txt line " + lineNo + ": SE_Stats has no public float field '" +
+                                      effect + "' - card '" + id + "' skipped.");
+            field = null;
+            return false;
         }
     }
 }

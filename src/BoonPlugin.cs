@@ -44,6 +44,7 @@ namespace Boon
             _harmony.PatchAll(typeof(DeathPenalty));
             _harmony.PatchAll(typeof(UiInput));
             _harmony.PatchAll(typeof(MenuGuard));
+            _harmony.PatchAll(typeof(AttackSpeed));
 
             Log.LogInfo(PluginName + " " + PluginVersion + " by " + PluginAuthor + " - ready.");
         }

@@ -21,6 +21,10 @@ namespace Boon
         internal static ConfigEntry<float> LevelExponent;
 
         internal static ConfigEntry<int> MaxRank;
+        internal static ConfigEntry<int> BonusEvery;
+        internal static ConfigEntry<float> AttackSpeedMax;
+        internal static ConfigEntry<float> PanelWidth;
+        internal static ConfigEntry<int> PanelColumns;
 
         internal static ConfigEntry<bool> RemoveDeathSkillLoss;
 
@@ -144,6 +148,30 @@ namespace Boon
             // the cfg carry over as a very wide, very short vertical bar.
             BarThickness = cfg.Bind("Bar", "BarThickness", 10f, "Bar thickness in pixels.");
             BarLength = cfg.Bind("Bar", "BarLength", 60f, "Bar height in pixels.");
+
+            // A capstone every fifth rank rather than only at the last one, so raising MaxRank
+            // to 10 gives two of them rather than moving the single one further away.
+            BonusEvery = cfg.Bind("Cards", "BonusEvery", 5,
+                "Ranks between capstones. A card that names a bonus effect in its last two " +
+                "cards.txt fields grants it once per this many ranks. At the default MaxRank " +
+                "of 5 that means once, on the final upgrade.");
+
+            AttackSpeedMax = cfg.Bind("Cards", "AttackSpeedMax", 1f,
+                "Ceiling on the attack-speed cards, as a fraction. 1 means the animation can " +
+                "at most run at double speed.\n" +
+                "This multiplies an animation rather than a number in a table, and animation " +
+                "events are what land the hit, so a mis-typed catalogue line could otherwise " +
+                "run the whole character at twenty times speed.");
+
+            // Twenty-four cards no longer fit three across without scrolling, and both of
+            // these are the kind of number that wants nudging rather than rebuilding.
+            PanelWidth = cfg.Bind("Cards", "PanelWidth", 1100f,
+                "Width of the F7 panel in pixels. It never scrolls sideways, so this and " +
+                "PanelColumns together set how wide a tile is.");
+
+            PanelColumns = cfg.Bind("Cards", "PanelColumns", 4,
+                "Tiles across the F7 panel. Fewer means wider tiles and a taller panel; the " +
+                "panel scrolls vertically once it would pass 88% of the screen height.");
 
             MaxRank = cfg.Bind("Cards", "MaxRank", 5,
                 "How deep a single card can be taken. A card at this rank stops being " +

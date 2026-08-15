@@ -24,11 +24,14 @@ namespace Boon
     /// </summary>
     internal static class BoonPanel
     {
-        private const float Width = 908f;
         private const float Pad = 18f;
         private const float Gap = 8f;
-        private const float TileHeight = 96f;
-        private const int Columns = 3;
+        private const float TileHeight = 112f;
+
+        // Config rather than constants: the catalogue is a text file, so the number of tiles
+        // is not something this file can know. Twenty-four cards stopped fitting three across.
+        private static float Width => Mathf.Max(480f, BoonConfig.PanelWidth.Value);
+        private static int Columns => Mathf.Max(1, BoonConfig.PanelColumns.Value);
 
         private const float SlotWidth = 30f;
         private const float SlotHeight = 19f;
@@ -39,7 +42,8 @@ namespace Boon
         private static Vector2 _scroll;
 
         private static GUIStyle _panel, _card, _cardEmpty, _title, _sub, _spend, _name,
-                                _effect, _upgrade, _muted, _slotOn, _slotOff, _rule, _bar, _footer;
+                                _effect, _upgrade, _muted, _bonus, _bonusPending,
+                                _slotOn, _slotOff, _rule, _bar, _footer;
 
         private static readonly Color Ink = new Color(0.09f, 0.07f, 0.055f, 0.98f);
         private static readonly Color CardBg = new Color(0.133f, 0.106f, 0.082f, 1f);
@@ -50,6 +54,12 @@ namespace Boon
         private static readonly Color Muted = new Color(0.659f, 0.612f, 0.518f, 1f);
         private static readonly Color Faded = new Color(0.42f, 0.39f, 0.34f, 1f);
         private static readonly Color Green = new Color(0.498f, 0.62f, 0.541f, 1f);
+
+        // A cold silver-blue for the capstone. Deliberately outside the gold/green pair the
+        // running effect and the next rank already use, because it is a different kind of
+        // thing rather than more of the same one.
+        private static readonly Color Silver = new Color(0.678f, 0.722f, 0.847f, 1f);
+        private static readonly Color SilverDim = new Color(0.42f, 0.45f, 0.53f, 1f);
 
         /// <summary>True while the panel is up, which is what the input patches key on.</summary>
         internal static bool IsOpen => _open && Usable;
@@ -220,6 +230,23 @@ namespace Boon
                       maxed ? "Rank " + rank + " · nothing further"
                             : "→ " + card.Describe(rank + 1) + " at rank " + (rank + 1),
                       maxed ? _muted : _upgrade);
+            y += 19f;
+
+            // The capstone, on its own line and in its own colour so it never reads as part of
+            // the running total. Shown whether or not it is earned yet - what a card is worth
+            // at the bottom of its track is most of why you would spend four picks getting
+            // there, and hiding it until it lands would hide the reason.
+            if (card.HasBonus)
+            {
+                var times = Card.BonusTimes(rank);
+                var at = Mathf.Max(1, BoonConfig.BonusEvery.Value) * (times + 1);
+
+                GUI.Label(new Rect(x, y, w, 18f),
+                          times > 0
+                              ? "★ " + card.DescribeBonus(times)
+                              : "★ " + card.DescribeBonus(1) + " at rank " + at,
+                          times > 0 ? _bonus : _bonusPending);
+            }
 
             DrawTrack(card, new Rect(x, rect.yMax - 10f - SlotHeight, w, SlotHeight), rank);
         }
@@ -306,6 +333,8 @@ namespace Boon
             _effect = Text(13, Green);
             _upgrade = Text(13, Gold);
             _muted = Text(13, Faded);
+            _bonus = Text(13, Silver);
+            _bonusPending = Text(13, SilverDim);
             _footer = Text(12, Muted);
 
             _slotOn = Text(12, Gold);

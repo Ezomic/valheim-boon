@@ -66,6 +66,58 @@ namespace Boon
                 BoonPlugin.Log.LogInfo("Applied cards: " + (signature.Length == 0 ? "(none)" : signature));
         }
 
+        /// <summary>
+        /// Everything the current hand adds up to, keyed by effect name.
+        ///
+        /// One pass over the cards covers base effects and capstones together, which is what
+        /// lets a capstone name anything a card can name - another stat field, an inventory
+        /// row, an attack-speed category - without each consumer knowing capstones exist.
+        /// </summary>
+        private static Dictionary<string, float> Totals(Dictionary<string, int> ranks)
+        {
+            var totals = new Dictionary<string, float>();
+            if (ranks == null) return totals;
+
+            foreach (var kv in ranks)
+            {
+                if (kv.Value <= 0) continue;
+
+                var card = Cards.Get(kv.Key);
+                if (card == null) continue;
+
+                Add(totals, card.Effect, card.PerRank * kv.Value);
+
+                if (!card.HasBonus) continue;
+
+                // Once per BonusEvery ranks, so it lands once at the default MaxRank of 5 and
+                // twice if the ceiling is ever raised to 10 - "every fifth upgrade" read
+                // literally rather than "the last one".
+                var times = Card.BonusTimes(kv.Value);
+                if (times > 0) Add(totals, card.BonusEffect, card.BonusPerRank * times);
+            }
+
+            return totals;
+        }
+
+        private static void Add(Dictionary<string, float> totals, string effect, float amount)
+        {
+            if (string.IsNullOrEmpty(effect)) return;
+
+            // Several cards may target the same effect, so accumulate rather than assign.
+            totals.TryGetValue(effect, out var running);
+            totals[effect] = running + amount;
+        }
+
+        /// <summary>
+        /// What the local hand adds up to for one effect. Read by AttackSpeed, which cannot
+        /// go through SE_Stats because the game has no field for what it does.
+        /// </summary>
+        internal static float TotalFor(string effect)
+        {
+            if (!ClientState.Known || string.IsNullOrEmpty(effect)) return 0f;
+            return Totals(ClientState.Ranks).TryGetValue(effect, out var total) ? total : 0f;
+        }
+
         private static void ApplyStats(Player player, Dictionary<string, int> ranks)
         {
             var seman = player.GetSEMan();
@@ -74,16 +126,14 @@ namespace Boon
             // Work out what is owed before building anything, so an empty hand costs no
             // allocation at all.
             var totals = new Dictionary<FieldInfo, float>();
-            foreach (var kv in ranks)
+            foreach (var kv in Totals(ranks))
             {
-                if (kv.Value <= 0) continue;
+                if (Card.IsSpecialEffect(kv.Key)) continue;
 
-                var card = Cards.Get(kv.Key);
-                if (card == null || card.IsSpecial || card.Field == null) continue;
+                var field = typeof(SE_Stats).GetField(kv.Key, BindingFlags.Public | BindingFlags.Instance);
+                if (field == null || field.FieldType != typeof(float)) continue;
 
-                // Several cards may target the same field, so accumulate rather than assign.
-                totals.TryGetValue(card.Field, out var running);
-                totals[card.Field] = running + card.PerRank * kv.Value;
+                totals[field] = kv.Value;
             }
 
             // Replace wholesale rather than editing in place: SEMan keys on the name hash, so
@@ -158,15 +208,10 @@ namespace Boon
                 if (_baseInventoryHeight <= 0) _baseInventoryHeight = BoonConfig.InventoryBaseHeight.Value;
             }
 
-            var extra = 0;
-            foreach (var kv in ranks)
-            {
-                if (kv.Value <= 0) continue;
-
-                var card = Cards.Get(kv.Key);
-                if (card == null || card.Effect != "*inventoryrow") continue;
-                extra += Mathf.RoundToInt(card.PerRank * kv.Value);
-            }
+            // Through Totals rather than over the cards directly, so a capstone that grants a
+            // row counts too.
+            Totals(ranks).TryGetValue("*inventoryrow", out var rows);
+            var extra = Mathf.RoundToInt(rows);
 
             var want = _baseInventoryHeight + Mathf.Max(0, extra);
             if (inventory.GetHeight() != want) _inventoryHeight.SetValue(inventory, want);

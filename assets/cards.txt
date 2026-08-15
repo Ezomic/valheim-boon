@@ -2,7 +2,7 @@
 #
 # One card per line:
 #
-#   id | Name | flavour text | effect | value-per-rank
+#   id | Name | flavour text | effect | value-per-rank | bonus effect | bonus value
 #
 # "effect" is either the literal name of a public float field on the game's SE_Stats
 # class, or one of the specials below. Using the field name directly means any of the
@@ -10,43 +10,61 @@
 # no code change, no rebuild.
 #
 # Specials:
-#   *inventoryrow   adds rows to the player inventory grid
+#   *inventoryrow           adds rows to the player inventory grid
+#   *attackspeed:melee      swings faster with a weapon
+#   *attackspeed:tools      swings faster with a pickaxe, hammer, hoe or cultivator
+#   *attackspeed:ranged     draws faster with a bow or crossbow
 #
 # Value is per rank and accumulates: rank 3 of a 15-per-rank card gives 45.
 # Cards stop being offered once they reach MaxRank in the config.
 #
+# The last two fields are the CAPSTONE and are optional. A card that names one grants it
+# once per BonusEvery ranks - at the default MaxRank 5 and BonusEvery 5, that is once, on
+# the final upgrade. A capstone can name anything an effect can, including a special.
+#
 # Sign conventions differ between fields and are the game's, not ours. The stamina-use
 # modifiers are fractions where negative means cheaper, so -0.05 is a 5% discount per
 # rank. Read a value out loud before adding it.
+#
+# Four fields count from 1 rather than 0 and the code adds that 1 for you - the three
+# regen multipliers and m_damageModifier. Write the plain fraction here.
 
-oxback      | Ox-backed      | The load sits easy on you.        | m_addMaxCarryWeight      | 50
-deeppack    | Deep pack      | Room for one thing more.          | *inventoryrow            | 1
+oxback      | Ox-backed      | The load sits easy on you.        | m_addMaxCarryWeight      | 50    | m_speedModifier           | 0.05
+deeppack    | Deep pack      | Room for one thing more.          | *inventoryrow            | 1     | m_addMaxCarryWeight       | 25
 
-lightfoot   | Light of foot  | The ground gives less.            | m_runStaminaUseModifier  | -0.05
-surefooted  | Sure-footed    | You have fallen further than this.| m_fallDamageModifier     | -0.10
-longwind    | Long wind      | Breath comes back quicker.        | m_staminaRegenMultiplier | 0.08
-swiftmend   | Swift-mending  | Flesh knits without asking.       | m_healthRegenMultiplier  | 0.08
+lightfoot   | Light of foot  | The ground gives less.            | m_runStaminaUseModifier  | -0.05 | m_speedModifier           | 0.04
+surefooted  | Sure-footed    | You have fallen further than this.| m_fallDamageModifier     | -0.10 | m_staggerModifier         | -0.08
+longwind    | Long wind      | Breath comes back quicker.        | m_staminaRegenMultiplier | 0.08  | m_runStaminaUseModifier   | -0.05
+swiftmend   | Swift-mending  | Flesh knits without asking.       | m_healthRegenMultiplier  | 0.08  | m_addArmor                | 2
 
-thickhide   | Thick-hided    | Blows land shallower.             | m_addArmor               | 2
-bracedarm   | Braced arm     | The shield holds where it stood.  | m_blockStaminaUseModifier| -0.06
-heavyhand   | Heavy-handed   | The swing costs you less.         | m_attackStaminaUseModifier | -0.05
-steadyfoot  | Steady footing | Harder to knock out of stance.    | m_staggerModifier        | -0.06
+thickhide   | Thick-hided    | Blows land shallower.             | m_addArmor               | 2     | m_staggerModifier         | -0.08
+bracedarm   | Braced arm     | The shield holds where it stood.  | m_blockStaminaUseModifier| -0.06 | m_timedBlockBonus         | 0.15
+heavyhand   | Heavy-handed   | The swing costs you less.         | m_attackStaminaUseModifier | -0.05 | m_damageModifier        | 0.05
+steadyfoot  | Steady footing | Harder to knock out of stance.    | m_staggerModifier        | -0.06 | m_addArmor                | 2
 
-softstep    | Soft step      | The woods do not notice you.      | m_stealthModifier        | 0.08
-quietwake   | Quiet wake     | You leave less behind you.        | m_noiseModifier          | -0.08
-strongswim  | Strong swimmer | The water carries rather than drags.| m_swimStaminaUseModifier | -0.08
-quickstudy  | Quick study    | Lessons stick the first time.     | m_raiseSkillModifier     | 0.05
+softstep    | Soft step      | The woods do not notice you.      | m_stealthModifier        | 0.08  | m_noiseModifier           | -0.10
+quietwake   | Quiet wake     | You leave less behind you.        | m_noiseModifier          | -0.08 | m_stealthModifier         | 0.10
+strongswim  | Strong swimmer | The water carries rather than drags.| m_swimStaminaUseModifier | -0.08 | m_swimSpeedModifier     | 0.10
+quickstudy  | Quick study    | Lessons stick the first time.     | m_raiseSkillModifier     | 0.05  | m_raiseSkillModifier      | 0.10
 
 # Valheim has no attack-speed stat: SE_Stats carries no such field and SEMan has no
-# ModifyAttackSpeed among its twenty-two hooks, because swing speed comes off the animator.
-# Damage per hit is the offensive stat that does exist, so that is what Keen edge is.
-keenedge    | Keen edge      | The blow goes deeper.             | m_damageModifier         | 0.03
-longstride  | Long stride    | Ground passes under you.          | m_speedModifier          | 0.03
+# ModifyAttackSpeed among its hooks, because swing speed comes off the animator. These
+# three ride a patch on Attack.Start instead - see AttackSpeed.cs - and are split by what
+# is in your hands, so a card that helps you fight does not also help you mine.
+#
+# An axe is one item with one animation, so felling trees rides the melee card. A staff is
+# ElementalMagic or BloodMagic and no card covers it; casting stays at vanilla speed.
+keenhand    | Keen hand      | The swing comes back sooner.      | *attackspeed:melee       | 0.03  | m_damageModifier          | 0.05
+surehand    | Sure hand      | The tool bites without waiting.   | *attackspeed:tools       | 0.03  | m_addMaxCarryWeight       | 25
+quickdraw   | Quick draw     | The string is back before you are.| *attackspeed:ranged      | 0.03  | m_damageModifier          | 0.05
 
-slipaside   | Slip aside     | The roll costs almost nothing.    | m_dodgeStaminaUseModifier| -0.06
-springheel  | Spring-heeled  | Up comes easy.                    | m_jumpStaminaUseModifier | -0.06
-patientcrouch | Patient crouch | Waiting costs you nothing.      | m_sneakStaminaUseModifier| -0.06
+keenedge    | Keen edge      | The blow goes deeper.             | m_damageModifier         | 0.03  | m_attackStaminaUseModifier| -0.08
+longstride  | Long stride    | Ground passes under you.          | m_speedModifier          | 0.03  | m_runStaminaUseModifier   | -0.06
 
-tideborne   | Tide-borne     | The water gives way.              | m_swimSpeedModifier      | 0.06
-turnedblade | Turned blade   | The parry answers back.           | m_timedBlockBonus        | 0.08
-brimming    | Brimming       | It returns before you need it.    | m_eitrRegenMultiplier    | 0.08
+slipaside   | Slip aside     | The roll costs almost nothing.    | m_dodgeStaminaUseModifier| -0.06 | m_staggerModifier         | -0.06
+springheel  | Spring-heeled  | Up comes easy.                    | m_jumpStaminaUseModifier | -0.06 | m_fallDamageModifier      | -0.15
+patientcrouch | Patient crouch | Waiting costs you nothing.      | m_sneakStaminaUseModifier| -0.06 | m_stealthModifier         | 0.10
+
+tideborne   | Tide-borne     | The water gives way.              | m_swimSpeedModifier      | 0.06  | m_swimStaminaUseModifier  | -0.10
+turnedblade | Turned blade   | The parry answers back.           | m_timedBlockBonus        | 0.08  | m_blockStaminaUseModifier | -0.08
+brimming    | Brimming       | It returns before you need it.    | m_eitrRegenMultiplier    | 0.08  | m_eitrRegenMultiplier     | 0.10
