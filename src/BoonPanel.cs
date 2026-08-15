@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Boon
@@ -292,7 +293,15 @@ namespace Boon
             GUI.Label(new Rect(rect.x, y, w, 18f), "CARVED AT", _label);
             y += 21f;
 
+            // Sorted for display only. The stored order is the order the ranks were bought,
+            // which stops being ascending the moment a pick is returned and respent - a card
+            // deleted from the catalogue hands back its picks with their original levels, so
+            // a track came out reading "11 12 8 9 10". Every number is true; ascending is
+            // simply how a set of levels reads.
             var levels = ClientState.LevelsOf(card.Id);
+            var shown = levels == null ? null : new List<int>(levels);
+            if (shown != null) shown.Sort();
+
             for (var i = 0; i < maxRank; i++)
             {
                 var slot = new Rect(rect.x + i * 35f, y, 30f, 22f);
@@ -301,7 +310,7 @@ namespace Boon
                 if (i < rank)
                 {
                     // A 0 is a rank taken before levels were recorded, and cannot be dated.
-                    var level = levels != null && i < levels.Count ? levels[i] : 0;
+                    var level = shown != null && i < shown.Count ? shown[i] : 0;
                     GUI.Label(slot, level > 0 ? level.ToString() : "—", _slotOn);
                 }
                 else
