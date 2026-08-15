@@ -39,8 +39,8 @@ namespace Boon
         internal static ConfigEntry<bool> ShowXpBar;
         internal static ConfigEntry<float> BarX;
         internal static ConfigEntry<float> BarBottom;
-        internal static ConfigEntry<float> BarWidth;
-        internal static ConfigEntry<float> BarHeight;
+        internal static ConfigEntry<float> BarThickness;
+        internal static ConfigEntry<float> BarLength;
 
         internal static void Bind(ConfigFile cfg)
         {
@@ -76,24 +76,28 @@ namespace Boon
                 "front-loaded, so this counteracts a flood of early cards.");
 
             ShowXpBar = cfg.Bind("Bar", "ShowXpBar", true,
-                "Show the experience bar under the health and stamina bars. It hides itself " +
-                "with the rest of the interface, including when the HUD is hidden by hand.");
+                "Show the experience bar beside the health bar. It hides itself with the rest " +
+                "of the interface, including when the HUD is hidden by hand.");
 
             // Pixels rather than an anchor to the real health bar: converting a scaled Canvas
             // RectTransform into IMGUI screen space breaks differently at every HUD scale, and
             // two numbers anyone can nudge are easier to correct than a formula that is subtly
             // wrong. These defaults are a starting guess for 1080p at default HUD scale.
-            BarX = cfg.Bind("Bar", "BarX", 68f, "Pixels from the left edge of the screen.");
+            BarX = cfg.Bind("Bar", "BarX", 168f,
+                "Pixels from the left edge of the screen to the left edge of the bar. The " +
+                "default aims to sit just right of the health bar.");
 
-            // Measured from the bottom, because that is the corner it belongs in - health and
-            // stamina live bottom-left, and this sits under them. Anchoring to the top would
-            // move it every time the resolution changed.
-            BarBottom = cfg.Bind("Bar", "BarBottom", 40f,
-                "Pixels from the bottom of the screen to the top of the bar. Lower this to " +
-                "push it further down, raise it to lift it toward the stamina bar. Depends on " +
+            // Measured from the bottom, because that is the corner it belongs in. Anchoring to
+            // the top would move it every time the resolution changed.
+            BarBottom = cfg.Bind("Bar", "BarBottom", 75f,
+                "Pixels from the bottom of the screen to the bottom of the bar. Depends on " +
                 "your resolution and HUD scale, so it will probably need nudging once.");
-            BarWidth = cfg.Bind("Bar", "BarWidth", 180f, "Bar width in pixels.");
-            BarHeight = cfg.Bind("Bar", "BarHeight", 6f, "Bar height in pixels.");
+
+            // Thickness and length rather than width and height, because the bar is upright:
+            // reusing the old names would have let the horizontal values already written to
+            // the cfg carry over as a very wide, very short vertical bar.
+            BarThickness = cfg.Bind("Bar", "BarThickness", 10f, "Bar thickness in pixels.");
+            BarLength = cfg.Bind("Bar", "BarLength", 60f, "Bar height in pixels.");
 
             MaxRank = cfg.Bind("Cards", "MaxRank", 5,
                 "How deep a single card can be taken. Offers stop including cards at this rank.");
