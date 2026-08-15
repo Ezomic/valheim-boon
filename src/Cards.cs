@@ -29,6 +29,13 @@ namespace Boon
         internal string BonusEffect = "";
         internal float BonusPerRank;
 
+        /// <summary>
+        /// The rune cut into the middle of this boon's stone. Optional eighth field: a card
+        /// written before stones existed falls back to the first letter of its id, which is
+        /// wrong-looking but never blank.
+        /// </summary>
+        internal string Sigil = "";
+
         /// <summary>Resolved SE_Stats fields. Null for specials, which Effects handles by hand.</summary>
         internal FieldInfo Field;
         internal FieldInfo BonusField;
@@ -231,6 +238,8 @@ namespace Boon
 
                 // The capstone is optional, so a five-field line is still a valid card and
                 // every card written before this existed keeps working untouched.
+                if (parts.Length >= 8) card.Sigil = parts[7].Trim();
+
                 if (parts.Length >= 7)
                 {
                     card.BonusEffect = parts[5].Trim();

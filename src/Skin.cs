@@ -43,6 +43,7 @@ namespace Boon
 
         internal static Font Face;
         internal static Font HeadFace;
+        internal static Font RuneFace;
 
         /// <summary>
         /// Left at white, deliberately, after measuring.
@@ -97,6 +98,11 @@ namespace Boon
         private static readonly string[] FaceNames = { "AveriaSerifLibre-Regular", "AveriaSerifLibre-Light" };
         private static readonly string[] HeadFaceNames = { "AveriaSerifLibre-Bold", "Norsebold", "Norse" };
 
+        // The game ships a face called exactly "rune", which is what makes an inscription
+        // free: a mark is text, not art. Norse and Norsebold behind it in case that one
+        // turns out to be something else.
+        private static readonly string[] RuneFaceNames = { "rune", "Norsebold", "Norse" };
+
         internal static void Ensure()
         {
             if (_tried) return;
@@ -114,12 +120,14 @@ namespace Boon
 
             Face = FindFace(FaceNames);
             HeadFace = FindFace(HeadFaceNames) ?? Face;
+            RuneFace = FindFace(RuneFaceNames) ?? HeadFace;
 
             BoonPlugin.Log.LogInfo("Skin: panel=" + Name(Panel) + ", interior=" + Name(Interior) +
                                    ", tile=" + Name(Tile) + ", select=" + Name(Select) +
                                    ", separator=" + Name(Separator) + ", bar=" + Name(BarTrack) +
                                    ", font=" + (Face != null ? Face.name : "default") +
-                                   ", heading=" + (HeadFace != null ? HeadFace.name : "default"));
+                                   ", heading=" + (HeadFace != null ? HeadFace.name : "default") +
+                                   ", rune=" + (RuneFace != null ? RuneFace.name : "default"));
         }
 
         private static string Name(Texture2D tex)
@@ -143,7 +151,8 @@ namespace Boon
 
             // Sprites run to thousands - every item icon is one - so this is filtered to the
             // words a window is likely to be built from, and capped.
-            var wanted = new[] { "panel", "wood", "slot", "frame", "border", "button", "darken", "bkg", "background" };
+            var wanted = new[] { "panel", "wood", "slot", "frame", "border", "button", "darken", "bkg", "background",
+                                 "stone", "rune", "circle", "round", "vegvisir", "seal", "sigil" };
             var hits = new List<string>();
 
             foreach (var sprite in Resources.FindObjectsOfTypeAll<Sprite>())
