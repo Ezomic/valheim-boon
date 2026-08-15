@@ -1,0 +1,336 @@
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace Boon
+{
+    /// <summary>
+    /// The experience bar, built by cloning one of the game's own upright bars.
+    ///
+    /// The first version drew two flat IMGUI rectangles. It sat in the right place and still
+    /// read as a mod: a vanilla bar carries a frame sprite, a bevelled inner track, softened
+    /// ends, and a second bar behind the first that lags a change - none of which survives
+    /// being approximated with a 1x1 texture. Cloning the real thing inherits all of it at
+    /// once, the same argument as borrowing a material rather than authoring a texture.
+    ///
+    /// The donor is the eitr bar, with the stamina bar behind it. Both are an ordinary
+    /// GuiBar pair turned on their side: GuiBar only ever resizes its fill on
+    /// RectTransform.Axis.Horizontal, so an upright vanilla bar is a *rotated* horizontal
+    /// one, and cloning is the only way to get that geometry without rebuilding it.
+    ///
+    /// XpBar stays behind this as the fallback. A HUD hierarchy is scene data rather than
+    /// API, so this can be wrong in ways ilspy cannot warn about; falling back to a bar that
+    /// certainly draws beats falling back to an empty corner.
+    /// </summary>
+    internal static class HudBar
+    {
+        private const float BorderBuffer = 16f;   // Hud.m_staminaBarBorderBuffer, which every
+                                                  // upright bar adds to its root's length.
+
+        private static GameObject _root;
+        private static RectTransform _rect;
+        private static GuiBar _fast, _slow;
+        private static TMP_Text _text;
+        private static Animator _animator;
+        private static Canvas _canvas;
+
+        private static bool _hasVisible, _hasFlash;
+        private static bool _failed;
+        private static float _nextFlash;
+        private static int _shownLevel = -1;
+
+        private static float _sizedAt;
+        private static string _tintedAt;
+
+        /// <summary>True while the cloned bar exists, which is what XpBar stands down for.</summary>
+        internal static bool Live => _root != null;
+
+        /// <summary>Whether the clone brought a text along to put the level in.</summary>
+        internal static bool HasText => _text != null;
+
+        /// <summary>
+        /// Half the bar's on-screen length in pixels, so IMGUI can hang a note off a bar that
+        /// lives in canvas units. The canvas scale is the whole conversion: the bar's length
+        /// is set in canvas units and the scaler multiplies it to pixels.
+        /// </summary>
+        internal static float HalfLength
+        {
+            get
+            {
+                var scale = _canvas != null ? _canvas.scaleFactor : 1f;
+                return Mathf.Max(16f, BoonConfig.BarSize.Value) * 0.5f * scale;
+            }
+        }
+
+        internal static void Update()
+        {
+            if (!BoonConfig.Enabled.Value || !BoonConfig.ShowXpBar.Value || !BoonConfig.VanillaBar.Value)
+            {
+                Drop();
+                return;
+            }
+
+            // The Hud is rebuilt with every world, taking our child with it. Both halves of
+            // that are handled by treating a missing root as "build one".
+            if (Hud.instance == null || Player.m_localPlayer == null)
+            {
+                Drop();
+                return;
+            }
+
+            if (_root == null && !Build()) return;
+
+            var wanted = Visible();
+            if (_root.activeSelf != wanted) _root.SetActive(wanted);
+            if (!wanted) return;
+
+            Place();
+
+            // Length and colour are re-read rather than set once at build. Both are numbers
+            // that get nudged, and a bar you have to restart the game to re-measure is a bar
+            // that stays slightly wrong.
+            if (!Mathf.Approximately(_sizedAt, BoonConfig.BarSize.Value)) Size();
+            if (_tintedAt != BoonConfig.BarColour.Value) Colour();
+
+            // Both bars get the same number, exactly as Hud.UpdateEitr does. The slow one
+            // lags it by its own smoothing, so a level-up reads as the fill draining away
+            // rather than snapping to empty.
+            var progress = Mathf.Clamp01(Levels.Progress(ClientState.Xp));
+            _fast.SetValue(progress);
+            _slow.SetValue(progress);
+
+            if (_text != null && _shownLevel != ClientState.Level)
+            {
+                _shownLevel = ClientState.Level;
+                _text.text = _shownLevel.ToString();
+            }
+
+            Announce();
+        }
+
+        /// <summary>
+        /// The same rules the IMGUI bar followed: the game's own idea of whether the
+        /// interface is up, plus our own of whether there is anything to show yet.
+        /// </summary>
+        private static bool Visible()
+        {
+            if (!ClientState.Known) return false;
+            if (Player.m_localPlayer.IsDead()) return false;
+            if (InventoryGui.IsVisible() || Menu.IsVisible()) return false;
+            return !Hud.instance.m_userHidden;
+        }
+
+        /// <summary>
+        /// A waiting card flashes the bar, using the animator trigger the eitr bar already
+        /// has for the same job. The centre message fades after a few seconds and one missed
+        /// during a fight would otherwise leave a card unclaimed with nothing on screen to
+        /// say so.
+        /// </summary>
+        private static void Announce()
+        {
+            if (!_hasFlash || !ClientState.HasOffer) return;
+            if (Time.time < _nextFlash) return;
+
+            _nextFlash = Time.time + Mathf.Max(1f, BoonConfig.BarFlashSeconds.Value);
+            _animator.SetTrigger("Flash");
+        }
+
+        private static bool Build()
+        {
+            if (_failed) return false;
+
+            var donor = Hud.instance.m_eitrBarRoot != null
+                ? Hud.instance.m_eitrBarRoot
+                : Hud.instance.m_staminaBar2Root;
+
+            if (donor == null || donor.parent == null)
+            {
+                Fail("no upright bar to clone from - falling back to the plain bar.");
+                return false;
+            }
+
+            // Same parent, so canvas scale, sort order and the HUD's own show/hide all come
+            // along. Position is overridden below; everything else is inherited on purpose.
+            var go = Object.Instantiate(donor.gameObject, donor.parent);
+            go.name = "BoonXpBar";
+            go.SetActive(true);
+
+            _rect = go.GetComponent<RectTransform>();
+            _canvas = go.GetComponentInParent<Canvas>();
+
+            // Which bar is which is read off the components rather than off child names: the
+            // trailing one is the one told to smooth. Names are scene data and would be a
+            // guess, m_smoothDrain is public API and is not.
+            foreach (var bar in go.GetComponentsInChildren<GuiBar>(true))
+            {
+                if (bar.m_smoothDrain || bar.m_smoothFill) { if (_slow == null) _slow = bar; }
+                else if (_fast == null) _fast = bar;
+            }
+
+            if (_fast == null) _fast = _slow;
+            if (_slow == null) _slow = _fast;
+
+            if (_fast == null)
+            {
+                Object.Destroy(go);
+                Fail("the cloned bar has no GuiBar - falling back to the plain bar.");
+                return false;
+            }
+
+            _text = go.GetComponentInChildren<TMP_Text>(true);
+
+            _animator = go.GetComponent<Animator>();
+            if (_animator == null) _animator = go.GetComponentInChildren<Animator>(true);
+            ReadParameters();
+
+            Size();
+            Colour();
+
+            // The donor's own hide animation may have left it transparent at the moment it
+            // was copied - the eitr bar in particular sits faded out for anyone who has no
+            // eitr. Driving the animator's Visible bool rather than hunting for alpha values
+            // reuses vanilla's fade-in and cannot get the frame and the fill out of step with
+            // each other.
+            if (_hasVisible) _animator.SetBool("Visible", true);
+            else Unfade(go);
+
+            _root = go;
+            _shownLevel = -1;
+
+            BoonPlugin.Log.LogInfo("Experience bar cloned from " + donor.name + ".");
+            return true;
+        }
+
+        /// <summary>
+        /// The rescue for a donor whose animator we cannot drive: stop it animating and undo
+        /// whatever fade it was frozen mid-way through.
+        ///
+        /// Only alphas that are *effectively invisible* are raised. Several of these pieces
+        /// are meant to be semi-transparent - the darkened track especially - so forcing
+        /// everything to opaque would trade an invisible bar for a wrong-looking one.
+        /// </summary>
+        private static void Unfade(GameObject go)
+        {
+            if (_animator != null) Object.Destroy(_animator);
+
+            // Gone with it goes the flash, whether or not the controller had that trigger.
+            _animator = null;
+            _hasFlash = false;
+
+            foreach (var group in go.GetComponentsInChildren<CanvasGroup>(true))
+                if (group.alpha < 0.05f) group.alpha = 1f;
+
+            foreach (var graphic in go.GetComponentsInChildren<Graphic>(true))
+            {
+                var c = graphic.color;
+                if (c.a >= 0.05f) continue;
+
+                c.a = 1f;
+                graphic.color = c;
+            }
+
+            BoonPlugin.Log.LogInfo("Cloned bar has no Visible animator parameter; unfaded by hand.");
+        }
+
+        private static void ReadParameters()
+        {
+            _hasVisible = false;
+            _hasFlash = false;
+
+            if (_animator == null || _animator.runtimeAnimatorController == null) return;
+
+            foreach (var p in _animator.parameters)
+            {
+                if (p.type == AnimatorControllerParameterType.Bool && p.name == "Visible") _hasVisible = true;
+                if (p.type == AnimatorControllerParameterType.Trigger && p.name == "Flash") _hasFlash = true;
+            }
+        }
+
+        /// <summary>
+        /// Length, in canvas units, set the way Hud.SetEitrBarSize sets it: the root carries
+        /// the border buffer and the two fills do not. Vanilla sizes these from max stamina
+        /// or max eitr, which is meaningless for a bar that is always 0..1, so it is config
+        /// with a starting stamina bar's 64 as the default.
+        /// </summary>
+        private static void Size()
+        {
+            _sizedAt = BoonConfig.BarSize.Value;
+            var length = Mathf.Max(16f, _sizedAt);
+
+            _rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, length + BorderBuffer);
+            _slow.SetWidth(length);
+            _fast.SetWidth(length);
+        }
+
+        private static void Colour()
+        {
+            _tintedAt = BoonConfig.BarColour.Value;
+            var tint = BoonConfig.BarTint();
+
+            // GuiBar.SetColor writes the fill image only, so the borrowed frame and track
+            // keep their own colours. The trailing bar is the same hue held back, which is
+            // how vanilla distinguishes the pair.
+            _fast.SetColor(tint);
+            _slow.SetColor(new Color(tint.r * 0.55f, tint.g * 0.55f, tint.b * 0.55f, tint.a));
+
+            if (_text != null) _text.color = tint;
+        }
+
+        /// <summary>
+        /// Placed by screen point rather than by copying the donor's anchoredPosition, which
+        /// Hud rewrites every frame (0,130 normally, 0,285 with the build or ship HUD up) and
+        /// is therefore never a stable thing to read. Going through
+        /// ScreenPointToWorldPointInRectangle also sidesteps having to know whether the
+        /// rotation that makes these bars upright sits on the bar or on its parent - the
+        /// answer is scene data, and this works either way.
+        /// </summary>
+        private static void Place()
+        {
+            var parent = _rect.parent as RectTransform;
+            if (parent == null) return;
+
+            // Vanilla lifts its bars out of the way of the build panel. Ours is pinned in
+            // screen space, so it has to make the same move by hand or it sits under the
+            // piece selection.
+            var raised = (Hud.instance.m_buildHud != null && Hud.instance.m_buildHud.activeSelf) ||
+                         (Hud.instance.m_shipHudRoot != null && Hud.instance.m_shipHudRoot.activeSelf);
+
+            var point = new Vector2(BoonConfig.BarPosX.Value,
+                                    BoonConfig.BarPosY.Value + (raised ? BoonConfig.BarBuildRaise.Value : 0f));
+
+            var cam = _canvas != null && _canvas.renderMode != RenderMode.ScreenSpaceOverlay
+                ? _canvas.worldCamera
+                : null;
+
+            if (RectTransformUtility.ScreenPointToWorldPointInRectangle(parent, point, cam, out var world))
+                _rect.position = world;
+        }
+
+        private static void Fail(string why)
+        {
+            _failed = true;
+            BoonPlugin.Log.LogWarning("Boon: " + why);
+        }
+
+        internal static void Drop()
+        {
+            if (_root != null) Object.Destroy(_root);
+
+            _root = null;
+            _rect = null;
+            _fast = null;
+            _slow = null;
+            _text = null;
+            _animator = null;
+            _canvas = null;
+            _shownLevel = -1;
+            _sizedAt = 0f;
+            _tintedAt = null;
+
+            // Forgiven on a world change rather than for the process. A failure costs one log
+            // line per world, and the alternative is that a single bad frame during a load
+            // leaves the bar plain until the game is restarted.
+            _failed = false;
+        }
+    }
+}

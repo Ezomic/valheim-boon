@@ -37,6 +37,13 @@ namespace Boon
         internal static ConfigEntry<KeyboardShortcut> KeyBoon;
 
         internal static ConfigEntry<bool> ShowXpBar;
+        internal static ConfigEntry<bool> VanillaBar;
+        internal static ConfigEntry<float> BarPosX;
+        internal static ConfigEntry<float> BarPosY;
+        internal static ConfigEntry<float> BarSize;
+        internal static ConfigEntry<float> BarBuildRaise;
+        internal static ConfigEntry<string> BarColour;
+        internal static ConfigEntry<float> BarFlashSeconds;
         internal static ConfigEntry<float> BarX;
         internal static ConfigEntry<float> BarBottom;
         internal static ConfigEntry<float> BarThickness;
@@ -79,10 +86,50 @@ namespace Boon
                 "Show the experience bar beside the health bar. It hides itself with the rest " +
                 "of the interface, including when the HUD is hidden by hand.");
 
+            // On by default, because a hand-drawn bar never matched: vanilla bars carry a
+            // frame, a bevelled track, softened ends and a trailing second fill, and none of
+            // that survives being approximated with a flat rectangle.
+            VanillaBar = cfg.Bind("Bar", "VanillaBar", true,
+                "Build the bar by cloning one of the game's own upright bars, so it carries " +
+                "the same frame, fill sprite and trailing fill as stamina and eitr.\n" +
+                "Off draws a plain rectangle instead. That is also the automatic fallback if " +
+                "the clone fails, since the HUD hierarchy is scene data rather than API and " +
+                "can change under a game update.");
+
+            // Screen pixels, not the donor's anchoredPosition: Hud rewrites that every frame
+            // (0,130 normally, 0,285 with the build HUD up), so it is never a stable thing to
+            // copy. The defaults put the bar where the hand-drawn one was tuned to sit.
+            BarPosX = cfg.Bind("Bar", "BarPosX", 172f,
+                "Pixels from the left edge of the screen to the centre of the cloned bar.");
+
+            BarPosY = cfg.Bind("Bar", "BarPosY", 105f,
+                "Pixels from the bottom of the screen to the centre of the cloned bar. Depends " +
+                "on your resolution and HUD scale, so it will probably need nudging once.");
+
+            // Vanilla sizes these bars from max stamina or max eitr, which means nothing for a
+            // bar that is always 0..1. 64 is what a starting stamina bar measures (50/25*32).
+            BarSize = cfg.Bind("Bar", "BarSize", 64f,
+                "Length of the cloned bar in canvas units, the same units vanilla sizes the " +
+                "stamina and eitr bars in. 64 matches a starting stamina bar. Thickness comes " +
+                "from the borrowed sprite and is not settable.");
+
+            BarBuildRaise = cfg.Bind("Bar", "BarBuildRaise", 155f,
+                "Pixels to lift the cloned bar while the build or ship panel is open. Vanilla " +
+                "moves its own bars up by the same amount to clear that panel; ours is pinned " +
+                "in screen space, so it has to make the move by hand.");
+
+            BarColour = cfg.Bind("Bar", "BarColour", "D4A94A",
+                "Bar colour as RRGGBB hex. The trailing fill is the same hue held back, the " +
+                "way vanilla tells its bar pairs apart. Unparseable values fall back to gold.");
+
+            BarFlashSeconds = cfg.Bind("Bar", "BarFlashSeconds", 4f,
+                "How often the bar flashes while a card is waiting to be drafted, in seconds. " +
+                "Uses the flash the borrowed bar already has. Only applies to the cloned bar.");
+
             // Pixels rather than an anchor to the real health bar: converting a scaled Canvas
             // RectTransform into IMGUI screen space breaks differently at every HUD scale, and
             // two numbers anyone can nudge are easier to correct than a formula that is subtly
-            // wrong. These defaults are a starting guess for 1080p at default HUD scale.
+            // wrong. These four place the fallback bar only; the cloned one uses BarPos*.
             BarX = cfg.Bind("Bar", "BarX", 168f,
                 "Pixels from the left edge of the screen to the left edge of the bar. The " +
                 "default aims to sit just right of the health bar.");
@@ -153,6 +200,30 @@ namespace Boon
                 "Server-side ceiling on accepted skill-up reports per player. A backstop " +
                 "only: skills live on the client, so reports are self-reported and this " +
                 "caps the damage rather than verifying anything.");
+        }
+
+        private static readonly Color Gold = new Color(0.83f, 0.663f, 0.29f, 1f);
+        private static string _tintFrom;
+        private static Color _tint = Gold;
+
+        /// <summary>
+        /// BarColour parsed, cached against the string it came from so the bar can re-read it
+        /// every frame without parsing every frame. A bad value keeps the gold rather than
+        /// throwing, the way an unknown card effect is skipped rather than fatal.
+        /// </summary>
+        internal static Color BarTint()
+        {
+            var text = BarColour != null ? BarColour.Value : null;
+            if (_tintFrom == text) return _tint;
+
+            _tintFrom = text;
+            _tint = Gold;
+
+            if (string.IsNullOrEmpty(text)) return _tint;
+            if (text[0] != '#') text = "#" + text;
+
+            if (ColorUtility.TryParseHtmlString(text, out var parsed)) _tint = parsed;
+            return _tint;
         }
     }
 }

@@ -71,6 +71,10 @@ namespace Boon
             ReadKey();
 
             if (ClientState.Known) Effects.Apply(player, ClientState.Ranks);
+
+            // The cloned bar lives in the HUD canvas rather than in OnGUI, so it is driven
+            // from here. It rebuilds itself whenever the Hud is, which is once per world.
+            HudBar.Update();
         }
 
         private void OnGUI()

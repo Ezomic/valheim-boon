@@ -41,6 +41,42 @@ curve is `pow(level+1, 1.5)`, so early levels are nearly free. A flat rate would
 the first hours and dry up exactly when the deep ranks start to matter — and would make
 grinding a fresh cheap skill from zero the fastest way to farm drafts.
 
+## The bar
+
+The experience bar is a **clone of one of the game's own upright bars** — the eitr bar, with
+the stamina bar behind it as a fallback donor.
+
+The first version drew two flat rectangles in IMGUI. It sat in the right place and still read
+as a mod, because a vanilla bar is not a rectangle: it carries a frame sprite, a bevelled
+inner track, softened ends, and a second fill behind the first that lags a change. None of
+that survives being approximated with a 1×1 texture. Cloning the real thing inherits all of
+it at once — the same argument as borrowing a material rather than authoring one.
+
+`GuiBar` only ever resizes its fill on `RectTransform.Axis.Horizontal`, so an upright vanilla
+bar is a **rotated horizontal one**. That is why the bar is cloned rather than built: the
+geometry cannot be reproduced without it.
+
+What the clone gives for free:
+
+- the frame, track and fill sprites, at whatever HUD scale is set
+- the fast/slow pair, so a level-up **drains** rather than snapping to empty
+- the fade the bar already uses to show and hide itself
+- the flash it already has, fired every few seconds while a card is waiting
+- a TextMeshPro number in the game's own font, reused for the level
+
+Two things are read off components rather than off child names, because names are scene data
+and would be a guess: the trailing bar is the one with `m_smoothDrain` set, and the animator
+is driven only through parameters it is confirmed to have.
+
+Position is **screen pixels**, not the donor's `anchoredPosition` — `Hud.UpdateEitr` rewrites
+that every frame `(0,130)`, or `(0,285)` with the build HUD up, so it is never a stable thing
+to copy. Being pinned in screen space means the bar also has to make vanilla's own
+build-panel dodge by hand, which is what `BarBuildRaise` is.
+
+The old IMGUI bar is kept as the **automatic fallback**. A HUD hierarchy is scene data rather
+than API, so this can break under a game update in a way ilspy cannot warn about, and falling
+back to a bar that certainly draws beats falling back to an empty corner.
+
 ## Dying no longer costs skill progress
 
 Valheim already has a world modifier for this and it is **not enough**. `Skills.OnDeath` calls
@@ -192,15 +228,29 @@ prefab name that does not resolve. A typo costs one card, not the catalogue.
 | `GateEnforce` | `true` | Disconnect a refused player; off logs only |
 | `MaxSkillUpsPerMinute` | `30` | Server-side ceiling on accepted reports |
 | `Verbose` | `false` | Log every grant, rejection and card applied |
+| `ShowXpBar` | `true` | Show the experience bar at all |
+| `VanillaBar` | `true` | Clone one of the game's own bars; off draws the plain fallback |
+| `BarPosX` / `BarPosY` | `172` / `105` | Screen pixels to the **centre** of the cloned bar |
+| `BarSize` | `64` | Length in canvas units — 64 is a starting stamina bar |
+| `BarBuildRaise` | `155` | Pixels to lift the bar while the build or ship panel is open |
+| `BarColour` | `D4A94A` | `RRGGBB`; the trailing fill is the same hue held back |
+| `BarFlashSeconds` | `4` | How often the bar flashes while a card is waiting |
+| `BarX` / `BarBottom` / `BarThickness` / `BarLength` | `168` / `75` / `10` / `60` | Place the **fallback** bar only |
 
 A value already written to the `.cfg` beats a new default in code — change the `.cfg`.
 
-## Status: v0.1 — untested
+## Status: v0.1 — barely run
 
-Builds and deploys. **It has never been run in game.** Nothing below has been observed working.
+Builds and deploys, and has been run once in singleplayer: the log shows 14 cards loaded, the
+gate passing, four skill-ups scored, and one card applied. The ledger stands at level 1, 19
+XP, Ox-backed at rank 1. **Everything past that first level is still unobserved**, and the
+cloned bar has not been seen at all.
 
 ## What to check first
 
+0. Look at the bar. It should read as one of the vanilla ones, upright, gold, with a level
+   number under it. If it is in the wrong place, `BarPosX`/`BarPosY` are screen pixels to its
+   centre; if it is missing entirely, the log says whether the clone failed and fell back.
 1. Raise any skill and watch the log for an XP grant on the server side.
 2. Reach level 1 and confirm the draft window appears, and that the **mouse works** in it —
    that is what the four input patches are for, and it is the usual thing to get wrong.
@@ -215,8 +265,10 @@ Builds and deploys. **It has never been run in game.** Nothing below has been ob
 
 ## Known gaps
 
-- **No level or XP display outside the draft window.** There is nowhere to see progress
-  between levels yet.
+- **The cloned bar has never been seen.** Everything about it follows from decompiled code,
+  but the HUD hierarchy it clones is scene data: whether the eitr bar's text child comes
+  along, whether its animator fades the whole root, and where `BarPosX`/`BarPosY` actually
+  land are all first-look questions. Expect one nudge.
 - **The card icon from the mockup is not drawn.** It would need a sprite asset, and this mod
   is deliberately a DLL and two text files.
 - **`SE_Stats` has no max health, stamina or eitr field** — those come from food in Valheim —

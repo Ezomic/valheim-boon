@@ -3,8 +3,15 @@ using UnityEngine;
 namespace Boon
 {
     /// <summary>
-    /// The always-on experience bar, stacked under the vanilla health and stamina bars so it
-    /// reads as one of them rather than as something bolted on.
+    /// The fallback experience bar: two flat rectangles, drawn only when HudBar has not
+    /// managed to clone one of the game's own upright bars, or when the clone is switched
+    /// off. It never matched vanilla and was not going to - a borrowed bar brings a frame, a
+    /// bevelled track, softened ends and a trailing fill that a 1x1 texture cannot fake - but
+    /// it draws under any HUD hierarchy, which is exactly what a fallback is for.
+    ///
+    /// It also keeps the two pieces of text in either mode. The level goes under the bar
+    /// unless the clone brought a text of its own along, and the waiting note is drawn here
+    /// in both, positioned off whichever bar is actually up.
     ///
     /// Position is config rather than computed. Anchoring to the real health bar would mean
     /// converting a scaled Canvas RectTransform into IMGUI screen space, which breaks
@@ -17,7 +24,7 @@ namespace Boon
         private static GUIStyle _label, _waiting;
 
         private static readonly Color TrackColour = new Color(0.227f, 0.188f, 0.145f, 0.9f);
-        private static readonly Color FillColour = new Color(0.83f, 0.663f, 0.29f, 1f);
+        private static Color FillColour = new Color(0.83f, 0.663f, 0.29f, 1f);
 
         internal static void Draw()
         {
@@ -33,6 +40,32 @@ namespace Boon
             if (Hud.instance != null && Hud.instance.m_userHidden) return;
 
             Build();
+
+            // The clone draws itself in canvas space; all that is left here is the text it
+            // cannot carry. Its length is in canvas units, so the offsets come back from
+            // HudBar already converted to pixels.
+            if (HudBar.Live)
+            {
+                var centreX = BoonConfig.BarPosX.Value;
+                var centreY = Screen.height - BoonConfig.BarPosY.Value;
+                var half = HudBar.HalfLength;
+
+                if (!HudBar.HasText)
+                {
+                    _label.alignment = TextAnchor.UpperCenter;
+                    GUI.Label(new Rect(centreX - 24f, centreY + half + 3f, 48f, 18f),
+                              ClientState.Level.ToString(), _label);
+                }
+
+                if (ClientState.HasOffer)
+                {
+                    _waiting.alignment = TextAnchor.MiddleLeft;
+                    GUI.Label(new Rect(centreX + 16f, centreY - 24f, 200f, 48f),
+                              "boon\nwaiting\n(" + DraftUI.KeyName() + ")", _waiting);
+                }
+
+                return;
+            }
 
             var x = BoonConfig.BarX.Value;
             var thickness = Mathf.Max(3f, BoonConfig.BarThickness.Value);
@@ -72,8 +105,12 @@ namespace Boon
 
         private static void Build()
         {
-            if (_label != null) return;
+            // Rebuilt when the colour changes, so nudging it in the cfg shows up without a
+            // restart - the same reason HudBar re-reads its own size and tint.
+            var tint = BoonConfig.BarTint();
+            if (_label != null && FillColour == tint) return;
 
+            FillColour = tint;
             _track = Solid(TrackColour);
             _fill = Solid(FillColour);
 
