@@ -36,3 +36,17 @@ softstep    | Soft step      | The woods do not notice you.      | m_stealthModi
 quietwake   | Quiet wake     | You leave less behind you.        | m_noiseModifier          | -0.08
 strongswim  | Strong swimmer | The water carries rather than drags.| m_swimStaminaUseModifier | -0.08
 quickstudy  | Quick study    | Lessons stick the first time.     | m_raiseSkillModifier     | 0.05
+
+# Valheim has no attack-speed stat: SE_Stats carries no such field and SEMan has no
+# ModifyAttackSpeed among its twenty-two hooks, because swing speed comes off the animator.
+# Damage per hit is the offensive stat that does exist, so that is what Keen edge is.
+keenedge    | Keen edge      | The blow goes deeper.             | m_damageModifier         | 0.03
+longstride  | Long stride    | Ground passes under you.          | m_speedModifier          | 0.03
+
+slipaside   | Slip aside     | The roll costs almost nothing.    | m_dodgeStaminaUseModifier| -0.06
+springheel  | Spring-heeled  | Up comes easy.                    | m_jumpStaminaUseModifier | -0.06
+patientcrouch | Patient crouch | Waiting costs you nothing.      | m_sneakStaminaUseModifier| -0.06
+
+tideborne   | Tide-borne     | The water gives way.              | m_swimSpeedModifier      | 0.06
+turnedblade | Turned blade   | The parry answers back.           | m_timedBlockBonus        | 0.08
+brimming    | Brimming       | It returns before you need it.    | m_eitrRegenMultiplier    | 0.08

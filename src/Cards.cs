@@ -45,6 +45,29 @@ namespace Boon
             return (total >= 0f ? "+" : "−") + Mathf.Abs(total).ToString("0.#", CultureInfo.InvariantCulture) + " " + label;
         }
 
+        /// <summary>
+        /// Fields whose neutral value is 1 rather than 0.
+        ///
+        /// The game reads these as multipliers and several test them before use - the three
+        /// regen ones with a literal `if (m_xRegenMultiplier > 1f)`, which silently skipped a
+        /// card writing 0.08 and made Long wind and Swift-mending do nothing at all at any
+        /// rank. m_damageModifier is worse than silent: it multiplies the hit, so a raw 0.03
+        /// would have cut damage to 3% rather than adding it.
+        ///
+        /// The catalogue still carries the plain fraction and Effects adds the 1 on the way
+        /// in, so a card line and its tile both read the way anyone would expect.
+        /// </summary>
+        internal static bool IsOneBased(string effect)
+        {
+            return OneBased.Contains(effect);
+        }
+
+        private static readonly HashSet<string> OneBased = new HashSet<string>
+        {
+            "m_healthRegenMultiplier", "m_staminaRegenMultiplier", "m_eitrRegenMultiplier",
+            "m_damageModifier",
+        };
+
         // Only for display. A field with no entry falls back to its own name, which is ugly
         // but never wrong, and is a visible prompt to add it here.
         private static readonly Dictionary<string, string> Labels = new Dictionary<string, string>
@@ -68,6 +91,9 @@ namespace Boon
             { "m_raiseSkillModifier", "skill gain" },
             { "m_speedModifier", "movement speed" },
             { "m_damageModifier", "damage" },
+            { "m_dodgeStaminaUseModifier", "dodge stamina" },
+            { "m_swimSpeedModifier", "swim speed" },
+            { "m_timedBlockBonus", "parry bonus" },
         };
 
         private static readonly HashSet<string> Percent = new HashSet<string>
@@ -77,6 +103,7 @@ namespace Boon
             "m_staminaRegenMultiplier", "m_healthRegenMultiplier", "m_eitrRegenMultiplier",
             "m_fallDamageModifier", "m_stealthModifier", "m_noiseModifier", "m_staggerModifier",
             "m_raiseSkillModifier", "m_speedModifier", "m_damageModifier",
+            "m_dodgeStaminaUseModifier", "m_swimSpeedModifier", "m_timedBlockBonus",
         };
     }
 

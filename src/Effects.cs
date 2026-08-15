@@ -104,7 +104,27 @@ namespace Boon
             stats.m_name = EffectName;
             stats.m_ttl = 0f;   // 0 is permanent; anything else expires mid-session.
 
-            foreach (var kv in totals) kv.Key.SetValue(stats, kv.Value);
+            // Two of the game's modifiers are gated behind a skill rather than applying to
+            // everything, and a fresh SE_Stats has both as SkillType.None:
+            //
+            //   ModifyRaiseSkill  runs only if m_raiseSkill != 0
+            //   ModifyAttack      runs m_damageModifier only if it matches m_modifyAttackSkill
+            //
+            // Without these two lines Quick study did nothing whatsoever, at any rank, and a
+            // damage card could never have worked. Set unconditionally because both are inert
+            // when no card targets them - m_raiseSkillModifier is 0, and m_damageModifier is
+            // left at its neutral 1.
+            stats.m_raiseSkill = Skills.SkillType.All;
+            stats.m_modifyAttackSkill = Skills.SkillType.All;
+
+            foreach (var kv in totals)
+            {
+                // Some fields count from 1 rather than 0 - see Card.IsOneBased. A card still
+                // carries the plain fraction, because that is what reads correctly both in the
+                // catalogue and on the tile; the conversion belongs here, once.
+                var value = Card.IsOneBased(kv.Key.Name) ? 1f + kv.Value : kv.Value;
+                kv.Key.SetValue(stats, value);
+            }
 
             seman.AddStatusEffect(stats);
             _applied = stats;
