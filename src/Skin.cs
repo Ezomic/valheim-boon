@@ -103,6 +103,7 @@ namespace Boon
             _tried = true;
 
             Dump();
+            UiProbe.Run();
 
             Panel = Find(PanelNames, "woodpanel", out PanelBorder, out PanelTint);
             Interior = Find(InteriorNames, "interior", out InteriorBorder, out InteriorTint);

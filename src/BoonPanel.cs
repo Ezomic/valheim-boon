@@ -68,9 +68,16 @@ namespace Boon
         // Tints for a borrowed tile sprite: a pick-able card sits at full strength, a held
         // one slightly under, an untaken one well back, so the board reads as a set with
         // gaps in it without three separate textures.
-        private static readonly Color TileLit = new Color(1f, 0.94f, 0.80f, 1f);
-        private static readonly Color TileHeld = new Color(0.88f, 0.86f, 0.82f, 1f);
-        private static readonly Color TileIdle = new Color(0.62f, 0.60f, 0.58f, 0.85f);
+        // Vanilla is dark: a desaturated brown-grey frame over a near-black interior, with
+        // light text on top. The borrowed sprites arrive far lighter than that, so these shade
+        // them down rather than leaving the panel in the opposite polarity to every window
+        // beside it. Numbers, not a fix - the real answer is cloning a window.
+        private static readonly Color PanelShade = new Color(0.58f, 0.54f, 0.50f, 1f);
+        private static readonly Color InteriorShade = new Color(0.40f, 0.38f, 0.36f, 1f);
+
+        private static readonly Color TileLit = new Color(0.50f, 0.45f, 0.36f, 1f);
+        private static readonly Color TileHeld = new Color(0.34f, 0.32f, 0.30f, 1f);
+        private static readonly Color TileIdle = new Color(0.25f, 0.24f, 0.23f, 1f);
         private static readonly Color Green = new Color(0.498f, 0.62f, 0.541f, 1f);
 
         // A cold silver-blue for the capstone. Deliberately outside the gold/green pair the
@@ -133,7 +140,7 @@ namespace Boon
             var rect = new Rect((Screen.width - Width) * 0.5f, (Screen.height - height) * 0.5f, Width, height);
 
             var previousColour = GUI.color;
-            if (Skin.HasPanel) GUI.color = Skin.PanelTint;
+            if (Skin.HasPanel) GUI.color = PanelShade;
             GUI.Box(rect, GUIContent.none, _panel);
             GUI.color = previousColour;
 
@@ -175,7 +182,7 @@ namespace Boon
             if (Skin.HasInterior)
             {
                 var previousInterior = GUI.color;
-                GUI.color = Skin.InteriorTint;
+                GUI.color = InteriorShade;
                 GUI.Box(new Rect(gridRect.x - 6f, gridRect.y - 6f, gridRect.width + 12f, gridRect.height + 12f),
                         GUIContent.none, _interior);
                 GUI.color = previousInterior;
@@ -242,7 +249,7 @@ namespace Boon
             // something tints it, so replacing the tint is what turned every tile cream.
             var tinted = Skin.HasTile;
             var previousColour = GUI.color;
-            if (tinted) GUI.color = Skin.TileTint * (canTake ? TileLit : rank > 0 ? TileHeld : TileIdle);
+            if (tinted) GUI.color = (canTake ? TileLit : rank > 0 ? TileHeld : TileIdle);
 
             if (canTake)
             {
