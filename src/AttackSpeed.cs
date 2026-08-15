@@ -39,11 +39,14 @@ namespace Boon
         /// Read off m_skillType rather than the item type, because that is what the game
         /// itself dispatches on and it separates a pickaxe from a sword without a name list.
         ///
-        /// Two edges worth knowing. An axe is SkillType.Axes whether it is meeting a tree or a
-        /// greydwarf - one item, one animation, no way to tell during the swing - so felling
-        /// timber rides the melee card, not the tool card. And a staff is ElementalMagic or
-        /// BloodMagic, which no card covers: casting stays at vanilla speed until there is a
-        /// fourth card for it.
+        /// The axe sits with the tools, by choice. It is SkillType.Axes whether it is meeting a
+        /// tree or a greydwarf - one item, one animation, no way to tell during the swing - so
+        /// it has to be one card or the other, and a card called tool speed that did not cover
+        /// the thing most people chop with was the wrong half to keep. The cost is that axe
+        /// *combat* is sped by the tool card rather than the melee one.
+        ///
+        /// A staff is ElementalMagic or BloodMagic, which no card covers: casting stays at
+        /// vanilla speed until there is a fourth card for it.
         /// </summary>
         private static string CategoryOf(ItemDrop.ItemData weapon)
         {
@@ -57,6 +60,7 @@ namespace Boon
 
                 case Skills.SkillType.Pickaxes:
                 case Skills.SkillType.WoodCutting:
+                case Skills.SkillType.Axes:
                     return Tools;
 
                 case Skills.SkillType.Swords:
@@ -64,7 +68,6 @@ namespace Boon
                 case Skills.SkillType.Clubs:
                 case Skills.SkillType.Polearms:
                 case Skills.SkillType.Spears:
-                case Skills.SkillType.Axes:
                 case Skills.SkillType.Unarmed:
                     return Melee;
             }

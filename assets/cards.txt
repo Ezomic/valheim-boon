@@ -67,10 +67,11 @@ quickstudy  | Quick study    | Lessons stick the first time.     | m_raiseSkillM
 # three ride a patch on Attack.Start instead - see AttackSpeed.cs - and are split by what
 # is in your hands, so a card that helps you fight does not also help you mine.
 #
-# An axe is one item with one animation, so felling trees rides the melee card. A staff is
-# ElementalMagic or BloodMagic and no card covers it; casting stays at vanilla speed.
+# The axe counts as a tool, so Sure hand speeds both chopping and axe combat - it is one
+# item with one animation and had to be one card or the other. A staff is ElementalMagic or
+# BloodMagic and no card covers it; casting stays at vanilla speed.
 keenhand    | Keen hand      | The swing comes back sooner.      | *attackspeed:melee       | 0.03  | m_damageModifier          | 0.05 | Z
-surehand    | Sure hand      | The tool bites without waiting.   | *attackspeed:tools       | 0.03  | *inventoryrow             | 1 | J
+surehand    | Sure hand      | Axe and pick bite without waiting.| *attackspeed:tools       | 0.03  | *inventoryrow             | 1 | J
 quickdraw   | Quick draw     | The string is back before you are.| *attackspeed:ranged      | 0.03  | m_damageModifier          | 0.05 | Y
 
 keenedge    | Keen edge      | The blow goes deeper.             | m_damageModifier         | 0.03  | m_attackStaminaUseModifier| -0.08 | K
