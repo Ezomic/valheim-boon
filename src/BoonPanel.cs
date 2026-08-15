@@ -89,6 +89,12 @@ namespace Boon
             _open = !_open;
         }
 
+        /// <summary>Opened by the compendium tab, which is a click rather than a toggle.</summary>
+        internal static void Open()
+        {
+            _open = true;
+        }
+
         internal static void Close()
         {
             _open = false;

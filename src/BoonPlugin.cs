@@ -83,6 +83,12 @@ namespace Boon
             // The cloned bar lives in the HUD canvas rather than in OnGUI, so it is driven
             // from here. It rebuilds itself whenever the Hud is, which is once per world.
             HudBar.Update();
+
+            // Both hang off the inventory window rather than the HUD: the extra rows Deep pack
+            // adds need the wooden backdrop grown to cover them, and the compendium bar needs
+            // its fifth tab put back whenever that window is rebuilt.
+            InventoryPanel.Update();
+            InfoTab.Update();
         }
 
         private void OnGUI()

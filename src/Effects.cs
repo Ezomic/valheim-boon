@@ -27,6 +27,9 @@ namespace Boon
         private static Player _appliedTo;
 
         private static int _baseInventoryHeight = -1;
+
+        /// <summary>Rows added over vanilla, for the window backdrop to grow by.</summary>
+        internal static int ExtraRows { get; private set; }
         private static FieldInfo _inventoryHeight;
 
         internal static void Reset()
@@ -213,7 +216,9 @@ namespace Boon
             Totals(ranks).TryGetValue("*inventoryrow", out var rows);
             var extra = Mathf.RoundToInt(rows);
 
-            var want = _baseInventoryHeight + Mathf.Max(0, extra);
+            ExtraRows = Mathf.Max(0, extra);
+
+            var want = _baseInventoryHeight + ExtraRows;
             if (inventory.GetHeight() != want) _inventoryHeight.SetValue(inventory, want);
         }
 

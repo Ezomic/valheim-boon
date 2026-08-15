@@ -39,6 +39,7 @@ namespace Boon
         internal static ConfigEntry<bool> Verbose;
         internal static ConfigEntry<KeyboardShortcut> KeyBoon;
 
+        internal static ConfigEntry<bool> ShowInfoTab;
         internal static ConfigEntry<bool> ShowXpBar;
         internal static ConfigEntry<bool> VanillaBar;
         internal static ConfigEntry<float> BarPosX;
@@ -84,6 +85,13 @@ namespace Boon
                 "Cumulative XP for level N is LevelBaseXp * N^LevelExponent. Above 1 means " +
                 "each level costs more than the last. Vanilla's own skill curve is already " +
                 "front-loaded, so this counteracts a flood of early cards.");
+
+            // A thing on screen rather than a key, which is the standing preference here.
+            // KeyBoon stays bound and keeps working either way.
+            ShowInfoTab = cfg.Bind("General", "ShowInfoTab", true,
+                "Add a fifth tab to the compendium bar, beside the raven and the trophy, that " +
+                "opens your boons. Cloned from a tab already there, so it carries the game's " +
+                "own frame, hover and click sound.");
 
             ShowXpBar = cfg.Bind("Bar", "ShowXpBar", true,
                 "Show the experience bar beside the health bar. It hides itself with the rest " +
