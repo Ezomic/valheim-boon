@@ -1,122 +1,171 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Boon
 {
     /// <summary>
-    /// The runestone discs, generated rather than borrowed.
+    /// One runestone per boon, generated on first sight and kept for the session.
     ///
     /// Authoring a texture is normally the wrong answer in this repo - the game has art and
-    /// borrowing it matches by construction. It is right here for one reason: a shaded circle
-    /// is a *shape*, not a material. There is nothing in the game to match it against, and
+    /// borrowing it matches by construction. It is right here for one reason: a stone is a
+    /// *shape*, not a material. There is nothing in the game to match it against, and
     /// generating it sidesteps the problem that cost three attempts on the wooden panel,
     /// because pixels written here are drawn in the space they were written in.
     ///
-    /// Built to the mockup's own numbers rather than by eye. The first version added Perlin
-    /// grain to keep it from reading as a gradient, and at 0.09 frequency downsampled from
-    /// 128 to 100 it dimpled - twenty-five golf balls. The mockup has no noise in it at all:
-    /// a stone is four gradient stops from a point up and left of centre, a shadow along the
-    /// bottom of the inner rim, a faint highlight along the top of it, and a soft shadow
-    /// underneath. That is the whole recipe, and smoothness is most of what makes it read as
-    /// stone rather than as a ball.
+    /// Two mistakes are recorded in the shading below, both from looking at it in game. Perlin
+    /// grain, meant to stop a stone reading as a gradient, dimpled at 0.09 frequency
+    /// downsampled from 128 to 100 - twenty-five golf balls. And the gradient ran to the far
+    /// corner of the texture rather than the far edge of the disc, so its two darkest stops
+    /// fell outside the circle and every stone came out pale.
+    ///
+    /// Everything varies off one seed, the card's own id: the outline, the rock it is cut
+    /// from, and which runes are cut into it. Seeded rather than random so a boon looks the
+    /// same in every session and on every machine - the stone becomes part of how you
+    /// recognise a card, which only works if it never changes.
     /// </summary>
     internal static class Stones
     {
         private const int Size = 128;
 
-        // A margin inside the texture for the drop shadow to live in, so the stone can cast
-        // one without being clipped by its own bounds.
-        private const float Margin = 7f;
+        // Room inside the texture for the stone to cast a shadow without being clipped by its
+        // own bounds, and for the outline to bulge into.
+        private const float Margin = 9f;
 
-        internal static Texture2D Carved;   // worked granite, a boon that is held
-        internal static Texture2D Raw;      // dark and unworked, nothing taken yet
-        internal static Texture2D Rim;      // the gold ring on a fully carved stone
-        internal static Texture2D Halo;     // a soft lift under the stone the cursor is on
+        private static readonly Dictionary<string, Texture2D> _stones = new Dictionary<string, Texture2D>();
 
-        private static bool _built;
-
-        // The mockup's stops, in order, as (position, colour). CSS reads them as percentages
-        // of the distance from the gradient's origin to the farthest corner.
-        private static readonly float[] CarvedStops = { 0f, 0.44f, 0.78f, 1f };
-        private static readonly Color[] CarvedColours =
+        /// <summary>
+        /// The rocks a stone can be cut from. Each is a gradient from its lit face to its
+        /// shadowed edge, and they are deliberately far apart - a field of twenty-five is only
+        /// worth scanning if two stones beside each other are obviously different rock.
+        /// </summary>
+        private static readonly Color[][] Rocks =
         {
-            Hex(0x7C, 0x77, 0x6F), Hex(0x60, 0x5C, 0x55), Hex(0x42, 0x3F, 0x3A), Hex(0x32, 0x2F, 0x2A),
+            // granite - the grey of the mockup
+            new[] { Hex(0x7C, 0x77, 0x6F), Hex(0x60, 0x5C, 0x55), Hex(0x42, 0x3F, 0x3A), Hex(0x32, 0x2F, 0x2A) },
+            // basalt - cold and dark
+            new[] { Hex(0x5A, 0x5E, 0x66), Hex(0x44, 0x48, 0x4F), Hex(0x2E, 0x31, 0x37), Hex(0x21, 0x23, 0x28) },
+            // sandstone - warm, the lightest of them
+            new[] { Hex(0x9A, 0x88, 0x6B), Hex(0x7E, 0x6D, 0x53), Hex(0x5A, 0x4C, 0x39), Hex(0x42, 0x37, 0x28) },
+            // slate - blue and flat
+            new[] { Hex(0x66, 0x6E, 0x76), Hex(0x4E, 0x55, 0x5C), Hex(0x36, 0x3B, 0x41), Hex(0x26, 0x2A, 0x2E) },
+            // greenstone - mossy, the odd one out
+            new[] { Hex(0x6C, 0x77, 0x63), Hex(0x54, 0x5E, 0x4C), Hex(0x3A, 0x42, 0x35), Hex(0x2A, 0x30, 0x26) },
+            // ironstone - rusted, warm dark
+            new[] { Hex(0x77, 0x62, 0x55), Hex(0x5D, 0x4B, 0x40), Hex(0x40, 0x33, 0x2B), Hex(0x2E, 0x25, 0x1F) },
         };
 
-        private static readonly float[] RawStops = { 0f, 0.46f, 1f };
-        private static readonly Color[] RawColours =
+        private static readonly float[] Stops = { 0f, 0.44f, 0.78f, 1f };
+
+        /// <summary>
+        /// The pool the marks around a stone are drawn from. Latin letters, because the game's
+        /// "rune" face is a Latin-mapped decorative font - type F, get the rune - and runic
+        /// code points come out of it as empty boxes.
+        /// </summary>
+        private static readonly string[] Pool =
         {
-            Hex(0x45, 0x42, 0x3D), Hex(0x3A, 0x37, 0x33), Hex(0x2E, 0x2C, 0x28),
+            "F", "U", "TH", "A", "R", "K", "G", "W", "H", "N", "I", "J",
+            "P", "Z", "S", "T", "B", "E", "M", "L", "NG", "D", "O", "Y",
         };
 
-        internal static void Ensure()
+        /// <summary>The stone this boon is cut into, built the first time it is drawn.</summary>
+        internal static Texture2D For(Card card)
         {
-            if (_built) return;
-            _built = true;
+            if (card == null) return null;
 
-            Carved = Disc(CarvedStops, CarvedColours, 0.55f, 0.10f);
-            Raw = Disc(RawStops, RawColours, 0.60f, 0f);
+            if (_stones.TryGetValue(card.Id, out var tex) && tex != null) return tex;
 
-            Rim = Ring(new Color(0.83f, 0.663f, 0.29f, 1f));
-            Halo = Ring(new Color(0.83f, 0.663f, 0.29f, 0.45f), 3f);
+            tex = Build(Seed(card));
+            _stones[card.Id] = tex;
+            return tex;
         }
 
         /// <summary>
-        /// One stone.
-        ///
-        /// <paramref name="bottomShade"/> and <paramref name="topLight"/> are the two inset
-        /// shadows from the mockup: a dark band along the lower inside edge that gives the
-        /// stone its weight, and a thin light one along the upper edge that reads as the lit
-        /// face. Both fade over the outer fifth of the radius, which is what an inset shadow
-        /// with a ten pixel blur does on a hundred pixel circle.
+        /// The runes cut into this boon, one per rank, in the order they are cut. Drawn from
+        /// the same seed as the stone, so a boon's marks are as much a part of recognising it
+        /// as its shape - and distinct within a stone, because the same rune twice would read
+        /// as a mistake.
         /// </summary>
-        private static Texture2D Disc(float[] stops, Color[] colours, float bottomShade, float topLight)
+        internal static string[] MarksFor(Card card, int count)
+        {
+            var rng = new System.Random(Seed(card) ^ 0x5EED);
+            var pool = new List<string>(Pool);
+            var marks = new string[count];
+
+            for (var i = 0; i < count; i++)
+            {
+                if (pool.Count == 0) pool.AddRange(Pool);
+
+                var pick = rng.Next(pool.Count);
+                marks[i] = pool[pick];
+                pool.RemoveAt(pick);
+            }
+
+            return marks;
+        }
+
+        private static int Seed(Card card)
+        {
+            return card.Id.GetStableHashCode();
+        }
+
+        private static Texture2D Build(int seed)
         {
             var tex = New();
 
-            var radius = Size * 0.5f - Margin;
+            var rng = new System.Random(seed);
+            var rock = Rocks[rng.Next(Rocks.Length)];
+
+            // Three harmonics with seeded phases. Enough to make an outline that is clearly
+            // not a circle, and few enough that it stays a boulder rather than becoming a
+            // blob - the amplitudes are small on purpose, because the marks are placed on a
+            // fixed radius and a deep dent would push one outside the stone.
+            var phase1 = (float)rng.NextDouble() * Mathf.PI * 2f;
+            var phase2 = (float)rng.NextDouble() * Mathf.PI * 2f;
+            var phase3 = (float)rng.NextDouble() * Mathf.PI * 2f;
+            var lean = (float)rng.NextDouble() * Mathf.PI * 2f;
+
+            var baseRadius = Size * 0.5f - Margin;
             var centre = new Vector2(Size * 0.5f, Size * 0.5f);
 
-            // Up and to the left, as the mockup's "circle at 34% 28%". Written in screen terms
-            // - y counted from the top - because that is how the result is drawn.
-            var origin = new Vector2(Size * 0.34f, Size * 0.28f);
-
-            // The far end of the gradient is the far edge of the *stone*, not of the texture
-            // it is drawn into. Measuring to the texture corner was why the first build came
-            // out pale: the disc only reaches about three quarters of that distance, so the
-            // two darkest stops fell outside the circle and were never drawn, and the stone
-            // topped out near #46433D instead of #322F2A.
-            var far = Vector2.Distance(origin, centre) + radius;
+            // Up and left of centre, as the mockup's "circle at 34% 28%", nudged per stone so
+            // the light does not land identically on all twenty-five.
+            var origin = centre + new Vector2(-baseRadius * 0.38f, -baseRadius * 0.44f) +
+                         new Vector2(Mathf.Cos(lean), Mathf.Sin(lean)) * baseRadius * 0.06f;
 
             for (var y = 0; y < Size; y++)
             {
                 for (var x = 0; x < Size; x++)
                 {
                     // SetPixel counts y from the bottom and GUI.DrawTexture draws from the
-                    // top, so every calculation here is done in flipped space and written
-                    // back the other way up. Without this the light comes from below and a
-                    // stone reads as a hole.
+                    // top, so the work is done in flipped space. Without this the light comes
+                    // from below and a stone reads as a hole.
                     var p = new Vector2(x + 0.5f, Size - 1 - y + 0.5f);
-                    var d = Vector2.Distance(p, centre);
+                    var offset = p - centre;
+                    var d = offset.magnitude;
 
-                    var colour = Sample(stops, colours, Mathf.Clamp01(Vector2.Distance(p, origin) / far));
+                    var angle = Mathf.Atan2(offset.y, offset.x);
+                    var radius = baseRadius * (1f
+                        + 0.055f * Mathf.Sin(angle * 3f + phase1)
+                        + 0.032f * Mathf.Sin(angle * 5f + phase2)
+                        + 0.020f * Mathf.Sin(angle * 7f + phase3));
+
+                    // The gradient ends at the far edge of the stone, not of the texture. It
+                    // was measured to the texture corner once, and the two darkest stops fell
+                    // outside the outline and never drew - every stone came out pale.
+                    var far = Vector2.Distance(origin, centre) + radius;
+                    var colour = Sample(rock, Mathf.Clamp01(Vector2.Distance(p, origin) / far));
 
                     var intoRim = Mathf.Clamp01((radius - d) / (radius * 0.2f));
-                    var vertical = (p.y - centre.y) / radius;
+                    var vertical = offset.y / radius;
 
-                    if (bottomShade > 0f)
-                        colour = Color.Lerp(colour, Color.black,
-                                            Mathf.Clamp01(vertical) * (1f - intoRim) * bottomShade);
+                    // Weight along the lower inside edge, and a thin lit face along the top.
+                    colour = Color.Lerp(colour, Color.black, Mathf.Clamp01(vertical) * (1f - intoRim) * 0.55f);
+                    colour = Color.Lerp(colour, Color.white, Mathf.Clamp01(-vertical) * (1f - intoRim) * 0.10f);
 
-                    if (topLight > 0f)
-                        colour = Color.Lerp(colour, Color.white,
-                                            Mathf.Clamp01(-vertical) * (1f - intoRim) * topLight);
-
-                    // The stone itself, antialiased over the last pixel of its edge.
                     var stone = Mathf.Clamp01(radius - d);
 
-                    // A soft shadow under it, offset down the way the mockup's is.
-                    var shadow = Mathf.Clamp01(1f - (Vector2.Distance(p, centre + new Vector2(0f, -3f)) - radius) / 6f);
-                    shadow = Mathf.Clamp01(shadow) * 0.5f * (1f - stone);
+                    var shadow = Mathf.Clamp01(1f - (Vector2.Distance(p, centre + new Vector2(0f, -3f)) - radius) / 6f) *
+                                 0.5f * (1f - stone);
 
                     colour.a = stone;
                     if (stone < 1f) colour = Color.Lerp(new Color(0f, 0f, 0f, shadow), colour, stone);
@@ -130,41 +179,18 @@ namespace Boon
         }
 
         /// <summary>Multi-stop gradient sampling, the way a CSS gradient interpolates.</summary>
-        private static Color Sample(float[] stops, Color[] colours, float t)
+        private static Color Sample(Color[] colours, float t)
         {
-            for (var i = 1; i < stops.Length; i++)
+            for (var i = 1; i < Stops.Length; i++)
             {
-                if (t > stops[i]) continue;
+                if (t > Stops[i]) continue;
 
-                var span = stops[i] - stops[i - 1];
-                var k = span <= 0f ? 0f : (t - stops[i - 1]) / span;
+                var span = Stops[i] - Stops[i - 1];
+                var k = span <= 0f ? 0f : (t - Stops[i - 1]) / span;
                 return Color.Lerp(colours[i - 1], colours[i], k);
             }
 
             return colours[colours.Length - 1];
-        }
-
-        private static Texture2D Ring(Color colour, float thickness = 2f)
-        {
-            var tex = New();
-
-            var radius = Size * 0.5f - Margin;
-            var centre = new Vector2(Size * 0.5f, Size * 0.5f);
-
-            for (var y = 0; y < Size; y++)
-            {
-                for (var x = 0; x < Size; x++)
-                {
-                    var d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), centre);
-                    var edge = Mathf.Abs(d - (radius - thickness * 0.5f));
-
-                    var a = Mathf.Clamp01((thickness - edge) / thickness);
-                    tex.SetPixel(x, y, new Color(colour.r, colour.g, colour.b, colour.a * a));
-                }
-            }
-
-            tex.Apply();
-            return tex;
         }
 
         private static Color Hex(int r, int g, int b)

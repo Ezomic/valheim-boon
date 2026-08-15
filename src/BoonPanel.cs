@@ -37,15 +37,11 @@ namespace Boon
         private const float DetailWidth = 268f;
         private const float DetailPad = 22f;
 
-        // Marks around the rim, spread evenly and starting at the top. The same set on every
-        // stone: what differs between boons is the sigil in the middle, not the ranks cut
-        // around it.
-        private const float MarkRadius = 33f;
+        // Marks around the rim, spread evenly and starting at the top. Which runes they are
+        // comes from the stone, seeded off the card - one shared set made every stone read as
+        // the same stone with a different label.
+        private const float MarkRadius = 31f;
         private const float MarkSize = 22f;
-        // Latin letters, not runic code points. The game's "rune" face is a Latin-mapped
-        // decorative font - type F, get the rune - and U+16A0-range characters render as
-        // empty boxes in it. Learned from a screen of twenty-five tofu squares.
-        private static readonly string[] Marks = { "F", "R", "K", "G", "W", "TH", "I", "T" };
 
         private static bool _built;
         private static bool _open;
@@ -66,6 +62,9 @@ namespace Boon
         private static readonly Color CarveDim = new Color(0.165f, 0.153f, 0.137f, 1f);
         private static readonly Color Track = new Color(0.165f, 0.149f, 0.125f, 1f);
         private static readonly Color Edge = new Color(0.184f, 0.169f, 0.141f, 1f);
+
+        // Uncarved rock: the same stone, held back rather than replaced.
+        private static readonly Color Unworked = new Color(0.42f, 0.41f, 0.40f, 0.92f);
 
         internal static bool IsOpen => _open && Usable;
 
@@ -105,7 +104,6 @@ namespace Boon
             if (!IsOpen) return;
 
             Build();
-            Stones.Ensure();
 
             // The whole screen, so nothing behind it competes and there is no frame that has
             // to hold its own beside the game's windows.
@@ -192,24 +190,42 @@ namespace Boon
             // click only ever spends a pick. Two gestures that never overlap.
             if (hovered) _selected = index;
 
-            if (hovered && canTake) GUI.DrawTexture(Grow(disc, 4f), Stones.Halo);
+            var texture = Stones.For(card);
+            if (texture == null) return;
 
-            GUI.DrawTexture(disc, rank > 0 ? Stones.Carved : Stones.Raw);
-            if (maxed) GUI.DrawTexture(disc, Stones.Rim);
+            // The outline differs per stone, so a highlight cannot be a circle drawn over the
+            // top. It is the stone itself, drawn slightly larger and tinted behind - which
+            // follows any shape for free and needs no second texture.
+            var previous = GUI.color;
+
+            if (maxed || (hovered && canTake))
+            {
+                GUI.color = maxed ? Gold : new Color(Gold.r, Gold.g, Gold.b, 0.55f);
+                GUI.DrawTexture(Grow(disc, maxed ? 3f : 4f), texture);
+            }
+
+            // Uncarved rock is the same stone held well back, rather than a second texture:
+            // the shape is how a boon is recognised, and it should not change when it is
+            // taken.
+            GUI.color = rank > 0 ? Color.white : Unworked;
+            GUI.DrawTexture(disc, texture);
+            GUI.color = previous;
 
             var cx = disc.x + Stone * 0.5f;
             var cy = disc.y + Stone * 0.5f;
 
             GUI.Label(new Rect(cx - 26f, cy - 26f, 52f, 52f), Sigil(card), rank > 0 ? _sigil : _sigilDim);
 
-            for (var m = 0; m < rank && m < Marks.Length; m++)
+            var marks = Stones.MarksFor(card, maxRank);
+
+            for (var m = 0; m < rank && m < marks.Length; m++)
             {
                 var angle = m / (float)maxRank * Mathf.PI * 2f;
                 var px = cx + Mathf.Sin(angle) * MarkRadius;
                 var py = cy - Mathf.Cos(angle) * MarkRadius;
 
                 GUI.Label(new Rect(px - MarkSize * 0.5f, py - MarkSize * 0.5f, MarkSize, MarkSize),
-                          Marks[m], _mark);
+                          marks[m], _mark);
             }
 
             if (canTake && hovered && Event.current.type == EventType.MouseDown && Event.current.button == 0)

@@ -137,14 +137,16 @@ namespace Boon
         /// </summary>
         private static void Icon(GameObject tab)
         {
-            Stones.Ensure();
-            if (Stones.Carved == null) return;
-
+            // Any one of the stones does for an icon, and the first card's is stable across
+            // sessions because every stone is seeded off its card's id.
             if (_icon == null)
             {
-                _icon = Sprite.Create(Stones.Carved,
-                                      new Rect(0f, 0f, Stones.Carved.width, Stones.Carved.height),
-                                      new Vector2(0.5f, 0.5f));
+                if (Cards.All.Count == 0) return;
+
+                var tex = Stones.For(Cards.All[0]);
+                if (tex == null) return;
+
+                _icon = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f));
                 _icon.name = "BoonStone";
             }
 
