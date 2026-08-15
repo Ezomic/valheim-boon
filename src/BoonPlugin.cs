@@ -115,7 +115,7 @@ namespace Boon
             if (profile == null) return;
 
             _bound = true;
-            Home.Bind(profile.m_filename, uid);
+            Home.Bind(Home.IdOf(profile), profile.GetName(), uid);
         }
 
         /// <summary>

@@ -35,9 +35,13 @@ namespace Boon
             Build();
 
             var x = BoonConfig.BarX.Value;
-            var y = BoonConfig.BarY.Value;
             var w = Mathf.Max(20f, BoonConfig.BarWidth.Value);
             var h = Mathf.Max(2f, BoonConfig.BarHeight.Value);
+
+            // Anchored to the bottom, because that is the corner it belongs in - health and
+            // stamina sit bottom-left and this goes under them. IMGUI measures from the top,
+            // so the offset is subtracted rather than used directly.
+            var y = Screen.height - BoonConfig.BarBottom.Value;
 
             GUI.DrawTexture(new Rect(x, y, w, h), _track);
 

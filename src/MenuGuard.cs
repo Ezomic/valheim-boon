@@ -5,20 +5,23 @@ using HarmonyLib;
 namespace Boon
 {
     /// <summary>
-    /// Refuses to start a world that would damage the selected character.
+    /// Warns before starting a world that would damage the selected character.
     ///
-    /// FejdStartup.OnWorldStart is the commit point for a local world, and it is the last
-    /// moment anything can be done. Once the world loads, PlayerProfile.m_worldData gains an
-    /// entry for it, nothing in the game ever removes that entry, and the fresh-character gate
-    /// will refuse the character on its own server from then on. There is no undo short of
-    /// restoring a backup taken beforehand - which is precisely what nobody has when they
-    /// needed one.
+    /// FejdStartup.OnWorldStart is the commit point for a local world and the last moment
+    /// anything can be done. Once the world loads, PlayerProfile.m_worldData gains an entry
+    /// for it, nothing in the game ever removes that entry, and the fresh-character gate will
+    /// refuse the character on its own server from then on. There is no undo short of a backup
+    /// taken beforehand - which is precisely what nobody has when they need one.
     ///
-    /// So the block goes here, in front of the door, rather than anywhere after it.
+    /// It refuses outright rather than asking. A confirm dialog was tried and rejected: the
+    /// damage is irreversible, so a prompt is a button that lets you do the unfixable thing by
+    /// clicking through it. A dead end forces a wrong answer to be diagnosed and fixed instead
+    /// of waved past, which is the behaviour actually wanted here. The popup therefore has to
+    /// carry everything needed to correct it - both ids and the file to edit.
     ///
-    /// Only local worlds are covered. Joining a server cannot be checked the same way, because
-    /// the world's identity is not known until after connecting - but that path is far less
-    /// dangerous, since the server's own gate refuses the character before it ever spawns.
+    /// Only local worlds are covered. A server's world identity is not known until after
+    /// connecting, but that path is far safer anyway: the server's own gate refuses the
+    /// character before it ever spawns.
     /// </summary>
     internal static class MenuGuard
     {
@@ -34,23 +37,29 @@ namespace Boon
             var profile = SelectedProfile(__instance);
             if (world == null || profile == null) return true;
 
-            var home = Home.Get(profile.m_filename);
+            var id = Home.IdOf(profile);
+            var home = Home.Get(id);
 
             // Nothing recorded means nothing to protect yet - the character has not been
             // accepted anywhere, so any world is a legitimate first one.
-            if (home == 0L || home == world.m_uid) return true;
+            if (id == 0L || home == 0L || home == world.m_uid) return true;
 
-            BoonPlugin.Log.LogWarning("Refused to start world '" + world.m_name + "' (" + world.m_uid +
-                                      ") with character '" + profile.GetName() + "' - it belongs to world " +
-                                      home + ".");
+            BoonPlugin.Log.LogWarning("Character '" + profile.GetName() + "' (" + id + ") belongs to world " +
+                                      home + " but is being started in world '" + world.m_name + "' (" +
+                                      world.m_uid + "). Asking.");
 
+            // Everything needed to diagnose or override this, since there is no way through it
+            // from here: both ids, and the one file that decides.
             UnifiedPopup.Push(new WarningPopup(
                 "Boon: wrong world for this character",
-                profile.GetName() + " belongs to a different world.\n\n" +
-                "Loading '" + world.m_name + "' would permanently record that world in this " +
-                "character and lock it out of its own server. There is no way to undo it " +
-                "except restoring a backup.\n\n" +
-                "Pick another character, or edit boon-home.txt if this binding is wrong.",
+                "Character: " + profile.GetName() + "  (id " + id + ")\n" +
+                "This world: " + world.m_name + "  (" + world.m_uid + ")\n" +
+                "Belongs to world: " + home + "\n\n" +
+                "Loading it here records this world permanently in the character and locks it " +
+                "out of its own server. The only undo is restoring a backup, so this is refused " +
+                "rather than confirmed.\n\n" +
+                "If the binding is wrong, delete the line starting " + id + " from " +
+                "BepInEx/config/boon-home.txt.",
                 UnifiedPopup.Pop,
                 localizeText: false));
 

@@ -38,7 +38,7 @@ namespace Boon
 
         internal static ConfigEntry<bool> ShowXpBar;
         internal static ConfigEntry<float> BarX;
-        internal static ConfigEntry<float> BarY;
+        internal static ConfigEntry<float> BarBottom;
         internal static ConfigEntry<float> BarWidth;
         internal static ConfigEntry<float> BarHeight;
 
@@ -84,10 +84,14 @@ namespace Boon
             // two numbers anyone can nudge are easier to correct than a formula that is subtly
             // wrong. These defaults are a starting guess for 1080p at default HUD scale.
             BarX = cfg.Bind("Bar", "BarX", 68f, "Pixels from the left edge of the screen.");
-            BarY = cfg.Bind("Bar", "BarY", 96f,
-                "Pixels from the top of the screen. Raise or lower until it sits just under " +
-                "the stamina bar - this depends on your resolution and HUD scale, so it will " +
-                "almost certainly need nudging once.");
+
+            // Measured from the bottom, because that is the corner it belongs in - health and
+            // stamina live bottom-left, and this sits under them. Anchoring to the top would
+            // move it every time the resolution changed.
+            BarBottom = cfg.Bind("Bar", "BarBottom", 40f,
+                "Pixels from the bottom of the screen to the top of the bar. Lower this to " +
+                "push it further down, raise it to lift it toward the stamina bar. Depends on " +
+                "your resolution and HUD scale, so it will probably need nudging once.");
             BarWidth = cfg.Bind("Bar", "BarWidth", 180f, "Bar width in pixels.");
             BarHeight = cfg.Bind("Bar", "BarHeight", 6f, "Bar height in pixels.");
 
