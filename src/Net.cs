@@ -380,7 +380,21 @@ namespace Boon
 
         private static void OnState(long sender, string wire)
         {
+            var before = string.Join(",", ClientState.Offer.ToArray());
+
             ClientState.FromWire(wire);
+
+            var after = string.Join(",", ClientState.Offer.ToArray());
+
+            // Announce, never interrupt. The window used to open itself the moment a level
+            // landed, which took the mouse and covered the screen mid-fight.
+            if (ClientState.HasOffer && after != before)
+            {
+                var player = Player.m_localPlayer;
+                if (player != null)
+                    player.Message(MessageHud.MessageType.Center,
+                                   "A boon is offered — press " + DraftUI.KeyName());
+            }
 
             if (BoonConfig.Verbose.Value)
                 BoonPlugin.Log.LogInfo("State: level " + ClientState.Level + ", " +

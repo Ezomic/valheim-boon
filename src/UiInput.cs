@@ -52,19 +52,16 @@ namespace Boon
         }
 
         /// <summary>
-        /// Escape defers the offer rather than opening the game's menu.
-        ///
-        /// Deferring rather than refusing: the pick is still owed and the same three come
-        /// back, so nothing is lost. A modal that cannot be dismissed would be a window that
-        /// gets you killed for opening at the wrong moment.
+        /// Escape closes the window rather than opening the game's menu. An unpicked offer
+        /// stays owed, and the same three come back, so nothing is lost by walking away.
         /// </summary>
         [HarmonyPrefix]
         [HarmonyPatch(typeof(Menu), nameof(Menu.Show))]
-        private static bool EscapeDefers()
+        private static bool EscapeCloses()
         {
             if (!DraftUI.IsOpen) return true;
 
-            DraftUI.Defer();
+            DraftUI.Close();
             return false;
         }
     }

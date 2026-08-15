@@ -17,8 +17,7 @@ namespace Boon
     internal static class DraftUI
     {
         private static bool _built;
-        private static bool _deferred;
-        private static string _deferredFor = "";
+        private static bool _draft;
         private static bool _status;
 
         private static GUIStyle _panel, _card, _title, _sub, _name, _effect, _flavour, _rank, _rule, _footer, _bar;
@@ -44,46 +43,38 @@ namespace Boon
             }
         }
 
-        private static bool DraftVisible
-        {
-            get
-            {
-                if (!Usable || !ClientState.HasOffer) return false;
-                return !(_deferred && _deferredFor == OfferKey());
-            }
-        }
+        /// <summary>
+        /// Never opens by itself.
+        ///
+        /// It used to appear the moment a level landed, which put a modal over the screen and
+        /// took the mouse in the middle of a fight - a good way to get killed by your own
+        /// reward. A level now only announces itself, and the window waits until it is asked
+        /// for.
+        /// </summary>
+        private static bool DraftVisible => _draft && Usable && ClientState.HasOffer;
 
         private static bool StatusVisible => _status && Usable && !DraftVisible;
 
         /// <summary>
-        /// The key press. Brings a deferred offer back if one is waiting, otherwise shows what
-        /// you hold - a deferred draft is the more urgent of the two, and needing two different
-        /// keys to reach two views of the same thing would be worse than either.
+        /// The key press. Shows the waiting draft if there is one, otherwise what you hold -
+        /// an offer is the more useful of the two, and two keys for two views of the same
+        /// thing would be worse than either.
         /// </summary>
         internal static void Toggle()
         {
-            if (ClientState.HasOffer && _deferred && _deferredFor == OfferKey())
-            {
-                _deferred = false;
-                _status = false;
-                return;
-            }
+            if (DraftVisible || StatusVisible) { Close(); return; }
 
-            if (DraftVisible) { Defer(); return; }
+            if (ClientState.HasOffer) { _draft = true; _status = false; return; }
 
-            _status = !_status;
+            _status = true;
         }
 
-        /// <summary>Escape puts the offer off. It is still owed, so the key brings it back.</summary>
-        internal static void Defer()
+        /// <summary>Escape closes whichever is open. An unpicked offer simply stays owed.</summary>
+        internal static void Close()
         {
-            if (StatusVisible) { _status = false; return; }
-
-            _deferred = true;
-            _deferredFor = OfferKey();
+            _draft = false;
+            _status = false;
         }
-
-        private static string OfferKey() => string.Join(",", ClientState.Offer.ToArray());
 
         internal static void Draw()
         {
@@ -155,7 +146,7 @@ namespace Boon
             }
 
             GUI.Label(new Rect(rect.x + pad, rect.yMax - pad - 16f, width - pad * 2f, 20f),
-                      "Escape to decide later · " + KeyName() + " to bring it back", _footer);
+                      "Escape to decide later · " + KeyName() + " to reopen", _footer);
         }
 
         private static void DrawStatus()
@@ -214,7 +205,7 @@ namespace Boon
                       KeyName() + " or Escape to close", _footer);
         }
 
-        private static string KeyName()
+        internal static string KeyName()
         {
             var key = BoonConfig.KeyBoon.Value.MainKey;
             return key == KeyCode.None ? "the Boon key" : key.ToString();
@@ -227,7 +218,7 @@ namespace Boon
             // Clear locally so the window closes at once rather than waiting for the round
             // trip. The server's reply is authoritative and corrects this if it refuses.
             ClientState.Offer.Clear();
-            _deferred = false;
+            _draft = false;
         }
 
         private static string Ordinal(int n)

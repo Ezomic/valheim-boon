@@ -51,7 +51,14 @@ namespace Boon
             // Level only. The exact numbers live on the F7 panel, which is what that panel is
             // for - a permanent readout of "24 / 60" is noise you stop reading by the second
             // hour.
-            GUI.Label(new Rect(x, y + h + 2f, w + 60f, 18f), "Boon " + ClientState.Level, _label);
+            //
+            // The waiting note stays until the pick is made. The centre message that announces
+            // a boon fades after a few seconds, and one missed during a fight would otherwise
+            // leave a card sitting unclaimed with nothing to say so.
+            var text = "Boon " + ClientState.Level;
+            if (ClientState.HasOffer) text += "  ·  boon waiting (" + DraftUI.KeyName() + ")";
+
+            GUI.Label(new Rect(x, y + h + 2f, w + 220f, 18f), text, _label);
         }
 
         private static void Build()
