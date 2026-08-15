@@ -6,7 +6,11 @@ using UnityEngine;
 namespace Boon
 {
     [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
-    [BepInProcess("valheim.exe")]
+    // No BepInProcess. It used to say valheim.exe, which is a whitelist - and a dedicated
+    // server runs valheim_server.exe, so the entire server half of this mod would never have
+    // loaded there. The ledger, the gate and every authority decision live on the server; on a
+    // dedicated host none of them would have existed and clients would have reported skill-ups
+    // into nothing. Core and Wither were both bitten by exactly this.
     public class BoonPlugin : BaseUnityPlugin
     {
         public const string PluginGuid = "ezomic.valheim.boon";
