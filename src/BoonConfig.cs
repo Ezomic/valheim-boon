@@ -34,7 +34,6 @@ namespace Boon
         internal static ConfigEntry<float> MaxSkillUpsPerMinute;
         internal static ConfigEntry<float> SkillDriftAllowance;
 
-        internal static ConfigEntry<int> InventoryBaseHeight;
 
         internal static ConfigEntry<bool> Verbose;
         internal static ConfigEntry<KeyboardShortcut> KeyBoon;
@@ -185,9 +184,6 @@ namespace Boon
                 "How deep a single card can be taken. A card at this rank stops being " +
                 "pickable, and is also how many slots its track shows.");
 
-            InventoryBaseHeight = cfg.Bind("Cards", "InventoryBaseHeight", 4,
-                "Vanilla player inventory rows, used as the base the *inventoryrow card adds " +
-                "to. Read from the game at runtime when possible; this is the fallback.");
 
             ProtectCharacter = cfg.Bind("Gate", "ProtectCharacter", true,
                 "Refuse to start a local world with a character that belongs to a different " +

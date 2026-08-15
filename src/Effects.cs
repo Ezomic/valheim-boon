@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Reflection;
-using HarmonyLib;
+using Ezomic.Core;
 using UnityEngine;
 
 namespace Boon
@@ -26,11 +26,8 @@ namespace Boon
         private static string _appliedSignature;
         private static Player _appliedTo;
 
-        private static int _baseInventoryHeight = -1;
-
         /// <summary>Rows added over vanilla, for the window backdrop to grow by.</summary>
         internal static int ExtraRows { get; private set; }
-        private static FieldInfo _inventoryHeight;
 
         internal static void Reset()
         {
@@ -39,7 +36,6 @@ namespace Boon
             _applied = null;
             _appliedSignature = null;
             _appliedTo = null;
-            _baseInventoryHeight = -1;
         }
 
         /// <summary>
@@ -184,42 +180,23 @@ namespace Boon
         }
 
         /// <summary>
-        /// The one card that is not a stat. Inventory capacity is two ints on Inventory and
-        /// InventoryGrid re-reads them every frame, rebuilding its grid when they change, so
-        /// adding a row needs no UI work at all.
+        /// The one card that is not a stat.
+        ///
+        /// The rows are claimed rather than written. Inventory.m_height is one private int
+        /// and any other mod wanting rows would be writing the same one - last writer wins,
+        /// and a mod that writes only when its own state changes loses silently to one that
+        /// writes every frame. Core adds every claim up and owns the write, so two mods stack
+        /// instead of fighting, and the baseline capture and the window backdrop live in one
+        /// place rather than being re-implemented per mod.
         /// </summary>
         private static void ApplyInventoryRows(Player player, Dictionary<string, int> ranks)
         {
-            var inventory = player.GetInventory();
-            if (inventory == null) return;
-
-            if (_inventoryHeight == null)
-                _inventoryHeight = AccessTools.Field(typeof(Inventory), "m_height");
-
-            if (_inventoryHeight == null)
-            {
-                BoonPlugin.Log.LogError("Inventory.m_height not found - the inventory row card cannot work.");
-                return;
-            }
-
-            // Capture vanilla's own height the first time, before anything is added, so the
-            // card is always measured from the real base rather than from a previous run's
-            // result. Compounding here would grow the pack a row per reload.
-            if (_baseInventoryHeight < 0)
-            {
-                _baseInventoryHeight = inventory.GetHeight();
-                if (_baseInventoryHeight <= 0) _baseInventoryHeight = BoonConfig.InventoryBaseHeight.Value;
-            }
-
             // Through Totals rather than over the cards directly, so a capstone that grants a
             // row counts too.
             Totals(ranks).TryGetValue("*inventoryrow", out var rows);
-            var extra = Mathf.RoundToInt(rows);
 
-            ExtraRows = Mathf.Max(0, extra);
-
-            var want = _baseInventoryHeight + ExtraRows;
-            if (inventory.GetHeight() != want) _inventoryHeight.SetValue(inventory, want);
+            ExtraRows = Mathf.Max(0, Mathf.RoundToInt(rows));
+            InventoryRows.Claim(BoonPlugin.PluginGuid, ExtraRows);
         }
 
         private static string Signature(Dictionary<string, int> ranks)
