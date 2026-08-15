@@ -170,7 +170,7 @@ namespace Boon
 
             _characters[sender] = characterId;
 
-            var rec = Ledger.For(platform + "|" + characterId);
+            var rec = Ledger.For(Key(platform, characterId));
             if (rec == null) return;
 
             BoonPlugin.Log.LogInfo("Hello from " + platform + " playing character " + characterId +
@@ -316,7 +316,20 @@ namespace Boon
             }
 
             var platform = PlatformOf(sender);
-            return platform == null ? null : platform + "|" + characterId;
+            return platform == null ? null : Key(platform, characterId);
+        }
+
+        /// <summary>
+        /// Join the two halves with '@', never '|'.
+        ///
+        /// The ledger line is pipe-separated, so a key containing a pipe splits into extra
+        /// fields and every value after it shifts along. The first version of the composite key
+        /// used a pipe and wrote "v2|localhost|-608350150|0|0|||", which on reload parsed the
+        /// character id as the XP total.
+        /// </summary>
+        private static string Key(string platform, long characterId)
+        {
+            return platform + "@" + characterId;
         }
 
         /// <summary>
@@ -332,7 +345,10 @@ namespace Boon
             if (peer != null && peer.m_socket != null)
             {
                 var host = peer.m_socket.GetHostName();
-                if (!string.IsNullOrEmpty(host)) return host.Replace("|", "_");
+
+                // Neither separator may survive into a key: '|' splits the ledger line and '@'
+                // splits the key itself.
+                if (!string.IsNullOrEmpty(host)) return host.Replace("|", "_").Replace("@", "_");
             }
 
             // No peer means the sender is this process - a listen server's own host player.

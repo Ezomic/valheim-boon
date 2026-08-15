@@ -46,10 +46,14 @@ namespace Boon
 
                 var currentWorld = ZNet.instance != null ? ZNet.instance.GetWorldUID() : 0L;
 
+                // Only what the decision actually uses. An earlier version also summed
+                // PlayerStats, which threw on the PlayerStatType.Count member that is not in
+                // the dictionary - and because that killed the whole gather, the gate received
+                // "error=exception" and checked nothing at all. A fact nothing decides on is
+                // not worth a failure mode.
                 sb.Append("otherWorlds=").Append(CountOtherWorlds(profile, currentWorld));
                 sb.Append(";cheats=").Append(profile.m_usedCheats ? 1 : 0);
                 sb.Append(";commands=").Append(profile.m_knownCommands != null ? profile.m_knownCommands.Count : 0);
-                sb.Append(";stats=").Append(TotalStats(profile).ToString("0", CultureInfo.InvariantCulture));
             }
             catch (Exception e)
             {
@@ -89,19 +93,6 @@ namespace Boon
             }
 
             return count;
-        }
-
-        private static float TotalStats(PlayerProfile profile)
-        {
-            var total = 0f;
-            if (profile.m_playerStats == null) return total;
-
-            foreach (PlayerStatType type in Enum.GetValues(typeof(PlayerStatType)))
-            {
-                total += profile.m_playerStats[type];
-            }
-
-            return total;
         }
 
         /// <summary>
