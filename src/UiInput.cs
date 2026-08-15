@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Boon
 {
     /// <summary>
-    /// Making the draft window actually usable takes four patches, not one - the same set
+    /// Making the boon panel actually usable takes four patches, not one - the same set
     /// devkit needed, and for the same reasons.
     ///
     /// Blocking input stops the player swinging an axe while choosing. Tripping
@@ -20,21 +20,21 @@ namespace Boon
         private static void BlockInput(ref bool __result)
         {
             // Composes with other mods doing the same: both return false, and false wins.
-            if (DraftUI.IsOpen) __result = false;
+            if (BoonPanel.IsOpen) __result = false;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(PlayerController), "TakeInput")]
         private static void BlockController(ref bool __result)
         {
-            if (DraftUI.IsOpen) __result = false;
+            if (BoonPanel.IsOpen) __result = false;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(PlayerController), "InInventoryEtc")]
         private static void HoldLookStill(ref bool __result)
         {
-            if (DraftUI.IsOpen) __result = true;
+            if (BoonPanel.IsOpen) __result = true;
         }
 
         /// <summary>
@@ -45,23 +45,23 @@ namespace Boon
         [HarmonyPatch(typeof(GameCamera), nameof(GameCamera.UpdateMouseCapture))]
         private static void FreeCursor()
         {
-            if (!DraftUI.IsOpen) return;
+            if (!BoonPanel.IsOpen) return;
 
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }
 
         /// <summary>
-        /// Escape closes the window rather than opening the game's menu. An unpicked offer
+        /// Escape closes the window rather than opening the game's menu. An unspent pick
         /// stays owed, and the same three come back, so nothing is lost by walking away.
         /// </summary>
         [HarmonyPrefix]
         [HarmonyPatch(typeof(Menu), nameof(Menu.Show))]
         private static bool EscapeCloses()
         {
-            if (!DraftUI.IsOpen) return true;
+            if (!BoonPanel.IsOpen) return true;
 
-            DraftUI.Close();
+            BoonPanel.Close();
             return false;
         }
     }

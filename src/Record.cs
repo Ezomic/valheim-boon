@@ -7,7 +7,7 @@ namespace Boon
 {
     /// <summary>
     /// One player's standing with Boon: how much XP they have earned on this server, which
-    /// cards they hold and at what rank, and which three they are currently being offered.
+    /// cards they hold, and at which level each rank of each card was bought.
     ///
     /// Held by the server, never by the character. That is the whole anti-cheat premise - a
     /// character file sits on the player's own disk and can be edited, so nothing that
@@ -23,14 +23,19 @@ namespace Boon
         internal string Owner = "";
         internal float Xp;
 
-        /// <summary>Levels already paid out as draft offers. Lags Level when picks are owed.</summary>
+        /// <summary>Levels already spent on cards. Lags Level when picks are owed.</summary>
         internal int DraftsTaken;
 
-        /// <summary>Card id to rank.</summary>
-        internal readonly Dictionary<string, int> Ranks = new Dictionary<string, int>();
-
-        /// <summary>The ids currently on the table. Empty when nothing is owed.</summary>
-        internal readonly List<string> Offer = new List<string>();
+        /// <summary>
+        /// Card id to the levels that bought its ranks, in the order they were bought. The
+        /// rank *is* the count, so the two can never disagree - an earlier design kept a
+        /// separate rank number beside the history and would have needed them reconciled.
+        ///
+        /// A 0 means the rank is real but its level is unknown: ledger lines written before
+        /// this existed recorded only a rank, and there is nothing on disk that says which
+        /// level bought it. Those stay 0 forever rather than being guessed at.
+        /// </summary>
+        internal readonly Dictionary<string, List<int>> Taken = new Dictionary<string, List<int>>();
 
         /// <summary>
         /// The highest level this server has itself watched each skill reach, keyed by
@@ -48,43 +53,29 @@ namespace Boon
 
         internal int Level => Levels.LevelForXp(Xp);
 
-        /// <summary>How many picks the player still owes, and so how many drafts to run.</summary>
+        /// <summary>How many picks the player still has to spend.</summary>
         internal int Owed => Math.Max(0, Level - DraftsTaken);
 
         internal int RankOf(string id)
         {
-            return id != null && Ranks.TryGetValue(id, out var r) ? r : 0;
+            return id != null && Taken.TryGetValue(id, out var levels) ? levels.Count : 0;
         }
 
         /// <summary>
-        /// Roll the cards on offer.
-        ///
-        /// Seeded from the owner and the draft number rather than left to chance, so that
-        /// quitting on a bad offer and coming back re-offers the same three. Without that the
-        /// pick is theatre - anyone can reroll until they get what they wanted.
+        /// Spend one pick on a card. The level recorded is the one that *granted* the pick,
+        /// not the level standing when it was spent: someone who banks three picks and spends
+        /// them all at level 12 earned them at 10, 11 and 12, and the panel should say so.
         /// </summary>
-        internal void RollOffer()
+        internal void Take(string id)
         {
-            Offer.Clear();
-
-            var pool = new List<Card>();
-            foreach (var card in Cards.All)
+            if (!Taken.TryGetValue(id, out var levels))
             {
-                if (RankOf(card.Id) < BoonConfig.MaxRank.Value) pool.Add(card);
+                levels = new List<int>();
+                Taken[id] = levels;
             }
 
-            if (pool.Count == 0) return;
-
-            var seed = unchecked((Owner ?? "").GetStableHashCode() * 31 + DraftsTaken * 92821);
-            var rng = new System.Random(seed);
-
-            var want = Math.Min(BoonConfig.OfferCount.Value, pool.Count);
-            for (var i = 0; i < want; i++)
-            {
-                var pick = rng.Next(pool.Count);
-                Offer.Add(pool[pick].Id);
-                pool.RemoveAt(pick);
-            }
+            levels.Add(DraftsTaken + 1);
+            DraftsTaken++;
         }
 
         // ---- serialisation -------------------------------------------------------------
@@ -93,21 +84,21 @@ namespace Boon
         // has to survive being opened in a text editor on a server, and a dependency for
         // four fields is not worth it.
         //
-        //   v2|owner|xp|draftsTaken|id:rank,id:rank|offerId,offerId|skillType:level,...
+        //   v3|owner|xp|draftsTaken|id:level;level,id:level|skillType:level,...
         //
-        // v1 lines are the same without the trailing snapshot and are still read, so a ledger
-        // written before the snapshot existed keeps working - those players simply have their
-        // baseline adopted on next join.
+        // v1 and v2 are still read. Both carried "id:rank" and a field of standing offers,
+        // from when a level dealt three cards at random rather than letting you choose. Their
+        // ranks are adopted with unknown levels and the offer field is dropped on the floor.
 
         internal string Serialise()
         {
             var sb = new StringBuilder();
-            sb.Append("v2|").Append(Owner).Append('|')
+            sb.Append("v3|").Append(Owner).Append('|')
               .Append(Xp.ToString("R", CultureInfo.InvariantCulture)).Append('|')
               .Append(DraftsTaken).Append('|');
 
-            AppendRanks(sb);
-            sb.Append('|').Append(string.Join(",", Offer.ToArray())).Append('|');
+            AppendTaken(sb);
+            sb.Append('|');
 
             var first = true;
             foreach (var kv in Snapshot)
@@ -125,31 +116,51 @@ namespace Boon
             if (string.IsNullOrEmpty(line)) return null;
 
             var parts = line.Split('|');
-            if (parts.Length < 6) return null;
-            if (parts[0] != "v1" && parts[0] != "v2") return null;
+            var version = parts[0];
+            if (version != "v1" && version != "v2" && version != "v3") return null;
+
+            // v3 dropped the offer field, so everything after the cards sits one place earlier.
+            var legacy = version != "v3";
+            if (parts.Length < (legacy ? 6 : 5)) return null;
+
             if (parts[1].Length == 0) return null;
             if (!float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var xp)) return null;
             if (!int.TryParse(parts[3], out var drafts)) return null;
 
             var rec = new BoonRecord { Owner = parts[1], Xp = xp, DraftsTaken = drafts };
 
-            foreach (var pair in parts[4].Split(','))
+            foreach (var entry in parts[4].Split(','))
             {
-                if (pair.Length == 0) continue;
-                var bits = pair.Split(':');
+                if (entry.Length == 0) continue;
+
+                var bits = entry.Split(':');
                 if (bits.Length != 2) continue;
-                if (!int.TryParse(bits[1], out var rank)) continue;
-                rec.Ranks[bits[0]] = rank;
+
+                var levels = new List<int>();
+
+                if (legacy)
+                {
+                    // "id:rank" - the ranks are real, the levels behind them are not recorded
+                    // anywhere and cannot be recovered, so they come back as unknown.
+                    if (!int.TryParse(bits[1], out var rank)) continue;
+                    for (var i = 0; i < rank; i++) levels.Add(0);
+                }
+                else
+                {
+                    foreach (var text in bits[1].Split(';'))
+                    {
+                        if (text.Length == 0) continue;
+                        if (int.TryParse(text, out var level)) levels.Add(level);
+                    }
+                }
+
+                if (levels.Count > 0) rec.Taken[bits[0]] = levels;
             }
 
-            foreach (var offerId in parts[5].Split(','))
+            var snapshotAt = legacy ? 6 : 5;
+            if (parts.Length > snapshotAt)
             {
-                if (offerId.Length > 0) rec.Offer.Add(offerId);
-            }
-
-            if (parts[0] == "v2" && parts.Length >= 7)
-            {
-                foreach (var pair in parts[6].Split(','))
+                foreach (var pair in parts[snapshotAt].Split(','))
                 {
                     if (pair.Length == 0) continue;
                     var bits = pair.Split(':');
@@ -168,24 +179,31 @@ namespace Boon
         /// client never needs the owner id, and must never be handed anything it could send
         /// back as authority.
         ///
-        ///   xp|draftsTaken|id:rank,id:rank|offerId,offerId
+        ///   xp|draftsTaken|id:level;level,id:level
         /// </summary>
         internal string ToWire()
         {
             var sb = new StringBuilder();
             sb.Append(Xp.ToString("R", CultureInfo.InvariantCulture)).Append('|').Append(DraftsTaken).Append('|');
-            AppendRanks(sb);
-            sb.Append('|').Append(string.Join(",", Offer.ToArray()));
+            AppendTaken(sb);
             return sb.ToString();
         }
 
-        private void AppendRanks(StringBuilder sb)
+        private void AppendTaken(StringBuilder sb)
         {
             var first = true;
-            foreach (var kv in Ranks)
+            foreach (var kv in Taken)
             {
+                if (kv.Value.Count == 0) continue;
                 if (!first) sb.Append(',');
-                sb.Append(kv.Key).Append(':').Append(kv.Value);
+
+                sb.Append(kv.Key).Append(':');
+                for (var i = 0; i < kv.Value.Count; i++)
+                {
+                    if (i > 0) sb.Append(';');
+                    sb.Append(kv.Value[i]);
+                }
+
                 first = false;
             }
         }

@@ -20,7 +20,7 @@ namespace Boon
             // pow(level+1, 1.5), so early levels are nearly free; paying a flat amount for
             // each would rain cards in the first hours and dry up exactly when the deep
             // ranks start to matter. It also removes the incentive to grind a fresh cheap
-            // skill from zero purely to farm drafts.
+            // skill from zero purely to farm picks.
             return Mathf.Max(1f, skillLevel) * BoonConfig.XpPerSkillLevel.Value;
         }
 

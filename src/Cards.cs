@@ -8,7 +8,7 @@ using UnityEngine;
 namespace Boon
 {
     /// <summary>
-    /// One draftable card. The effect is the literal name of a public float field on the
+    /// One card. The effect is the literal name of a public float field on the
     /// game's own SE_Stats, which is why the catalogue is a text file rather than a switch
     /// statement: the game already ships about forty-five of these modifiers, and naming
     /// one turns it into a card without any code here knowing it exists.
@@ -106,7 +106,7 @@ namespace Boon
             if (!File.Exists(path))
             {
                 BoonPlugin.Log.LogError("cards.txt not found beside the DLL at " + path +
-                                        " - no cards will be offered.");
+                                        " - no cards can be taken.");
                 return;
             }
 

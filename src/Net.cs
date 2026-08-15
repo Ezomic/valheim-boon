@@ -13,24 +13,65 @@ namespace Boon
     {
         internal static float Xp;
         internal static int DraftsTaken;
+
+        /// <summary>Card id to the levels that bought its ranks. A 0 is a rank whose level
+        /// was never recorded - see BoonRecord.Taken.</summary>
+        internal static readonly Dictionary<string, List<int>> Taken = new Dictionary<string, List<int>>();
+
+        /// <summary>Ranks alone, rebuilt from Taken, because that is all Effects needs.</summary>
         internal static readonly Dictionary<string, int> Ranks = new Dictionary<string, int>();
-        internal static readonly List<string> Offer = new List<string>();
+
         internal static bool Known;
 
         internal static int Level => Levels.LevelForXp(Xp);
-        internal static bool HasOffer => Offer.Count > 0;
+
+        /// <summary>Picks earned and not yet spent. The server holds the same number and is
+        /// the one that decides; this is for the panel to know what to offer.</summary>
+        internal static int Owed => Mathf.Max(0, Level - DraftsTaken);
+
+        internal static bool HasPick => Owed > 0;
 
         internal static int RankOf(string id)
         {
             return id != null && Ranks.TryGetValue(id, out var r) ? r : 0;
         }
 
+        internal static List<int> LevelsOf(string id)
+        {
+            return id != null && Taken.TryGetValue(id, out var levels) ? levels : null;
+        }
+
+        /// <summary>
+        /// Apply a pick locally the moment it is clicked, so the tile answers rather than
+        /// waiting a round trip. Never authority: the server pushes the real state back on
+        /// every pick, accepted or refused, and that overwrites this.
+        ///
+        /// The level guessed here is the same one the server will record - the level that
+        /// granted the pick, DraftsTaken + 1 - so an accepted pick redraws identically and
+        /// the correction is invisible.
+        /// </summary>
+        internal static void PredictTake(string id)
+        {
+            if (!Known || string.IsNullOrEmpty(id) || Owed <= 0) return;
+            if (RankOf(id) >= BoonConfig.MaxRank.Value) return;
+
+            if (!Taken.TryGetValue(id, out var levels))
+            {
+                levels = new List<int>();
+                Taken[id] = levels;
+            }
+
+            levels.Add(DraftsTaken + 1);
+            Ranks[id] = levels.Count;
+            DraftsTaken++;
+        }
+
         internal static void Clear()
         {
             Xp = 0f;
             DraftsTaken = 0;
+            Taken.Clear();
             Ranks.Clear();
-            Offer.Clear();
             Known = false;
         }
 
@@ -40,23 +81,29 @@ namespace Boon
             if (string.IsNullOrEmpty(wire)) return;
 
             var parts = wire.Split('|');
-            if (parts.Length < 4) return;
+            if (parts.Length < 3) return;
 
             float.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out Xp);
             int.TryParse(parts[1], out DraftsTaken);
 
-            foreach (var pair in parts[2].Split(','))
+            foreach (var entry in parts[2].Split(','))
             {
-                if (pair.Length == 0) continue;
-                var bits = pair.Split(':');
-                if (bits.Length != 2) continue;
-                if (!int.TryParse(bits[1], out var rank)) continue;
-                Ranks[bits[0]] = rank;
-            }
+                if (entry.Length == 0) continue;
 
-            foreach (var id in parts[3].Split(','))
-            {
-                if (id.Length > 0) Offer.Add(id);
+                var bits = entry.Split(':');
+                if (bits.Length != 2) continue;
+
+                var levels = new List<int>();
+                foreach (var text in bits[1].Split(';'))
+                {
+                    if (text.Length == 0) continue;
+                    if (int.TryParse(text, out var level)) levels.Add(level);
+                }
+
+                if (levels.Count == 0) continue;
+
+                Taken[bits[0]] = levels;
+                Ranks[bits[0]] = levels.Count;
             }
 
             Known = true;
@@ -174,9 +221,9 @@ namespace Boon
             if (rec == null) return;
 
             BoonPlugin.Log.LogInfo("Hello from " + platform + " playing character " + characterId +
-                                   " - level " + rec.Level + ", " + rec.Ranks.Count + " cards.");
+                                   " - level " + rec.Level + ", " + rec.Taken.Count + " cards, " +
+                                   rec.Owed + " to spend.");
 
-            EnsureOffer(rec);
             PushState(sender, rec);
 
             if (BoonConfig.RequireFreshCharacter.Value) AskProfile(sender);
@@ -227,7 +274,6 @@ namespace Boon
             if (rec.Level > before)
                 BoonPlugin.Log.LogInfo(owner + " reached Boon level " + rec.Level + ".");
 
-            EnsureOffer(rec);
             PushState(sender, rec);
         }
 
@@ -241,30 +287,38 @@ namespace Boon
             var rec = Ledger.For(owner);
             if (rec == null) return;
 
-            // The offer is the authority, not the pick. A client asking for a card it was not
-            // shown - or asking twice for one it was - gets nothing.
-            if (rec.Owed <= 0 || !rec.Offer.Contains(cardId))
+            // With any card pickable, the authority is no longer "was this one of the three
+            // we dealt" but simply "is a pick owed, and is there room in that card". The
+            // count and the ceiling are both held here, so a client asking twice for one
+            // pick, or asking past MaxRank, still gets nothing.
+            if (rec.Owed <= 0)
             {
-                BoonPlugin.Log.LogWarning("Rejected pick '" + cardId + "' from " + owner +
-                                          " - not on offer" + (rec.Owed <= 0 ? " and nothing owed" : "") + ".");
+                BoonPlugin.Log.LogWarning("Rejected pick '" + cardId + "' from " + owner + " - nothing owed.");
                 PushState(sender, rec);
                 return;
             }
 
             var card = Cards.Get(cardId);
-            if (card == null) { PushState(sender, rec); return; }
+            if (card == null)
+            {
+                BoonPlugin.Log.LogWarning("Rejected pick '" + cardId + "' from " + owner + " - no such card.");
+                PushState(sender, rec);
+                return;
+            }
 
-            var rank = rec.RankOf(cardId);
-            if (rank >= BoonConfig.MaxRank.Value) { PushState(sender, rec); return; }
+            if (rec.RankOf(cardId) >= BoonConfig.MaxRank.Value)
+            {
+                BoonPlugin.Log.LogWarning("Rejected pick '" + cardId + "' from " + owner + " - already at max rank.");
+                PushState(sender, rec);
+                return;
+            }
 
-            rec.Ranks[cardId] = rank + 1;
-            rec.DraftsTaken++;
-            rec.Offer.Clear();
+            rec.Take(cardId);
             Ledger.Touch();
 
-            BoonPlugin.Log.LogInfo(owner + " took '" + card.Name + "' to rank " + rec.Ranks[cardId] + ".");
+            BoonPlugin.Log.LogInfo(owner + " took '" + card.Name + "' to rank " + rec.RankOf(cardId) +
+                                   " with the level " + rec.DraftsTaken + " pick.");
 
-            EnsureOffer(rec);
             PushState(sender, rec);
         }
 
@@ -272,21 +326,6 @@ namespace Boon
         {
             if (!IsServer) return;
             Gate.Judge(sender, OwnerOf(sender), facts, skills);
-        }
-
-        /// <summary>Roll a fresh offer if one is owed and none is standing.</summary>
-        private static void EnsureOffer(BoonRecord rec)
-        {
-            if (rec.Owed > 0 && rec.Offer.Count == 0)
-            {
-                rec.RollOffer();
-                Ledger.Touch();
-            }
-            else if (rec.Owed <= 0 && rec.Offer.Count > 0)
-            {
-                rec.Offer.Clear();
-                Ledger.Touch();
-            }
         }
 
         internal static void PushState(long peerUid, BoonRecord rec)
@@ -380,26 +419,24 @@ namespace Boon
 
         private static void OnState(long sender, string wire)
         {
-            var before = string.Join(",", ClientState.Offer.ToArray());
+            var before = ClientState.Owed;
 
             ClientState.FromWire(wire);
 
-            var after = string.Join(",", ClientState.Offer.ToArray());
-
             // Announce, never interrupt. The window used to open itself the moment a level
             // landed, which took the mouse and covered the screen mid-fight.
-            if (ClientState.HasOffer && after != before)
+            if (ClientState.Owed > before)
             {
                 var player = Player.m_localPlayer;
                 if (player != null)
                     player.Message(MessageHud.MessageType.Center,
-                                   "A boon is offered — press " + DraftUI.KeyName());
+                                   "A boon to spend — press " + BoonPanel.KeyName());
             }
 
             if (BoonConfig.Verbose.Value)
                 BoonPlugin.Log.LogInfo("State: level " + ClientState.Level + ", " +
                                        ClientState.Ranks.Count + " cards, " +
-                                       ClientState.Offer.Count + " on offer.");
+                                       ClientState.Owed + " to spend.");
         }
 
         private static void OnAskProfile(long sender)

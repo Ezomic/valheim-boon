@@ -21,7 +21,6 @@ namespace Boon
         internal static ConfigEntry<float> LevelExponent;
 
         internal static ConfigEntry<int> MaxRank;
-        internal static ConfigEntry<int> OfferCount;
 
         internal static ConfigEntry<bool> RemoveDeathSkillLoss;
 
@@ -57,11 +56,11 @@ namespace Boon
             Verbose = cfg.Bind("General", "Verbose", false,
                 "Log every XP grant, every rejected report and every card applied.");
 
-            // A window needs a way back to it. Deferring an offer with Escape used to hide it
+            // A window needs a way back to it. Closing it with Escape used to hide it
             // until the game restarted, which made "decide later" a lie.
             KeyBoon = cfg.Bind("General", "KeyBoon", new KeyboardShortcut(KeyCode.F7),
                 "Opens your boons: the cards you hold and how far you are through the current " +
-                "level. If a draft is waiting, this brings it back instead. F6 is devkit's, " +
+                "level, and where an earned pick is spent. F6 is devkit's, " +
                 "and Numpad 0-7 are taken by Thralls and Tether.");
 
             // The character level is its own number with its own curve. It is fed by skill
@@ -123,7 +122,7 @@ namespace Boon
                 "way vanilla tells its bar pairs apart. Unparseable values fall back to gold.");
 
             BarFlashSeconds = cfg.Bind("Bar", "BarFlashSeconds", 4f,
-                "How often the bar flashes while a card is waiting to be drafted, in seconds. " +
+                "How often the bar flashes while a pick is waiting to be spent, in seconds. " +
                 "Uses the flash the borrowed bar already has. Only applies to the cloned bar.");
 
             // Pixels rather than an anchor to the real health bar: converting a scaled Canvas
@@ -147,11 +146,8 @@ namespace Boon
             BarLength = cfg.Bind("Bar", "BarLength", 60f, "Bar height in pixels.");
 
             MaxRank = cfg.Bind("Cards", "MaxRank", 5,
-                "How deep a single card can be taken. Offers stop including cards at this rank.");
-
-            OfferCount = cfg.Bind("Cards", "OfferCount", 3,
-                "How many cards are offered per level. Fewer than this are shown only when " +
-                "too few cards remain below MaxRank.");
+                "How deep a single card can be taken. A card at this rank stops being " +
+                "pickable, and is also how many slots its track shows.");
 
             InventoryBaseHeight = cfg.Bind("Cards", "InventoryBaseHeight", 4,
                 "Vanilla player inventory rows, used as the base the *inventoryrow card adds " +

@@ -1,6 +1,6 @@
 # Boon
 
-A character level beside the skills, paid out in cards you draft and deepen.
+A character level beside the skills, paid out in cards you choose and deepen.
 
 Built against the installed game (0.221.12, Unity 6000.0.61, BepInEx 5.4.23.3, Harmony 2.9).
 Single DLL plus a text file, no asset bundle.
@@ -10,10 +10,26 @@ Single DLL plus a text file, no asset bundle.
 Valheim has skills but no character level. Boon adds one that runs **alongside** the skill
 system — vanilla skills are read, never written, never rescaled, never reskinned.
 
-Levelling that character up offers you **three cards at random**. Pick one and it gains a
-rank, up to **five**. Refusing the other two does not remove them; they come round again.
+Every character level earns one **pick**. Spend it on any card in the catalogue and that card
+gains a rank, up to **five**. Picks bank: nothing expires, and the panel waits.
 
 There are no drawbacks. A card is a reward or it is nothing.
+
+### It used to deal three at random
+
+The first version dealt three cards per level, seeded so that quitting on a bad offer and
+coming back re-offered the same three — otherwise the pick is theatre, since anyone can reroll
+until they get what they wanted.
+
+Choosing freely deletes that whole problem rather than defending against it. There is no roll
+to reroll, no offer to store in the ledger or on the wire, and no second window with its own
+visibility rules. What it costs is the tension of a hand you are dealt: a free choice means the
+strongest card is always available, so balance now has to live in the cards themselves and in
+`MaxRank` rather than in whether one happened to come up.
+
+The panel earns its keep here. Choosing between fourteen cards is only a real choice if each
+one says what it is worth now **and** what the pick would make it, which is why every tile
+carries both lines.
 
 ## Why cards, and why capacity is one of them
 
@@ -26,9 +42,25 @@ rebuilds itself when they change, so more space is a twenty-line mod. That is al
 the answer [Hoard](../hoard) argues against: the mid game is a logistics problem, and the
 tedium and the difficulty are the same mechanic seen from two sides.
 
-So capacity is a card. **Deep pack** is drafted like anything else, competing with armour and
+So capacity is a card. **Deep pack** is taken like anything else, competing with armour and
 stamina for the same pick. The space is earned rather than granted, which is the only version
 that leaves the system it belongs to intact.
+
+## The panel
+
+`F7` opens every card in the catalogue at once: what each one is worth at the rank you hold,
+what the next rank would make it, and a five-slot track with **the level that bought each rank
+sitting in the slot it bought**. A card can be taken five times, so the honest answer to "when
+did I get this" is five answers, not one.
+
+Held cards are lit, untaken ones are hollow and show what they would give at rank 1. When a
+pick is owed every card below `MaxRank` becomes a button; when none is, they are boxes, so the
+panel does not offer a hover it cannot honour. A pick is applied locally the instant it is
+clicked and the server's reply overwrites it either way — accepted or refused, state is pushed
+back, so a wrong guess corrects itself in a frame.
+
+The theme groupings from the mockup are not built: they would need a sixth field in
+`cards.txt`, and at fourteen cards they buy nothing. Past twenty they are worth revisiting.
 
 ## XP
 
@@ -221,8 +253,7 @@ prefab name that does not resolve. A typo costs one card, not the catalogue.
 | `XpPerSkillLevel` | `1` | XP per skill-up, multiplied by the level reached |
 | `LevelBaseXp` | `60` | Cumulative XP for level 1 |
 | `LevelExponent` | `1.5` | Cumulative XP for level N is base × N^exponent |
-| `MaxRank` | `5` | How deep one card goes |
-| `OfferCount` | `3` | Cards per draft |
+| `MaxRank` | `5` | How deep one card goes, and how many slots its track shows |
 | `RemoveDeathSkillLoss` | `true` | Skip `Skills.OnDeath` |
 | `RequireFreshCharacter` | `true` | Run the gate check |
 | `GateEnforce` | `true` | Disconnect a refused player; off logs only |
@@ -252,14 +283,15 @@ cloned bar has not been seen at all.
    number under it. If it is in the wrong place, `BarPosX`/`BarPosY` are screen pixels to its
    centre; if it is missing entirely, the log says whether the clone failed and fell back.
 1. Raise any skill and watch the log for an XP grant on the server side.
-2. Reach level 1 and confirm the draft window appears, and that the **mouse works** in it —
-   that is what the four input patches are for, and it is the usual thing to get wrong.
+2. Open `F7` with a pick owed and confirm every card below `MaxRank` is clickable, that the
+   **mouse works** — that is what the four input patches are for, and it is the usual thing to
+   get wrong — and that the tile updates the instant it is clicked rather than after a pause.
 3. Take **Deep pack** and confirm the inventory gains a row, and that it does *not* gain
    another on reload. The base height is captured once for exactly that reason.
 4. Take a stat card and confirm the number moves — carry weight is the easiest to read.
 5. Die, and confirm no skills dropped and no "skills lowered" message appeared.
-6. Quit on an offer and come back: **the same three cards** should be waiting. If they are
-   not, the seeding is wrong and the pick is meaningless.
+6. Look at Ox-backed. Its first slot should read `—`, because it was taken before levels were
+   recorded; anything taken from now on should carry the level that bought it.
 7. Read the log for `Gate (not enforcing): would have refused …` and see whether it is
    flagging characters you expected.
 
@@ -271,6 +303,12 @@ cloned bar has not been seen at all.
   land are all first-look questions. Expect one nudge.
 - **The card icon from the mockup is not drawn.** It would need a sprite asset, and this mod
   is deliberately a DLL and two text files.
+- **Ranks taken before v3 have no level.** The old ledger recorded a rank and nothing else,
+  and picks were not stored in order, so there is no way to tell which level bought which
+  rank. Those slots read `—` permanently. Everything taken from now on is exact.
+- **Balance now rests entirely on the cards.** With a free choice the strongest card is always
+  available, so the ordering of `MaxRank` and the per-rank values are doing the work the
+  random offer used to do. That has not been played yet.
 - **`SE_Stats` has no max health, stamina or eitr field** — those come from food in Valheim —
   so no max-pool card is possible without a different vehicle.
 - **A permanent status effect may show in the HUD status bar** with no icon. Not yet seen in

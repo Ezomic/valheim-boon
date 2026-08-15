@@ -57,11 +57,11 @@ namespace Boon
                               ClientState.Level.ToString(), _label);
                 }
 
-                if (ClientState.HasOffer)
+                if (ClientState.HasPick)
                 {
                     _waiting.alignment = TextAnchor.MiddleLeft;
                     GUI.Label(new Rect(centreX + 16f, centreY - 24f, 200f, 48f),
-                              "boon\nwaiting\n(" + DraftUI.KeyName() + ")", _waiting);
+                              "boon\nwaiting\n(" + BoonPanel.KeyName() + ")", _waiting);
                 }
 
                 return;
@@ -96,11 +96,11 @@ namespace Boon
             // Only while something is actually waiting. The centre message announcing a boon
             // fades after a few seconds, and one missed during a fight would otherwise leave a
             // card unclaimed with nothing on screen to say so.
-            if (!ClientState.HasOffer) return;
+            if (!ClientState.HasPick) return;
 
             _waiting.alignment = TextAnchor.MiddleLeft;
             GUI.Label(new Rect(x + thickness + 6f, top, 200f, length),
-                      "boon\nwaiting\n(" + DraftUI.KeyName() + ")", _waiting);
+                      "boon\nwaiting\n(" + BoonPanel.KeyName() + ")", _waiting);
         }
 
         private static void Build()

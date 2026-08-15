@@ -80,7 +80,7 @@ namespace Boon
         private void OnGUI()
         {
             XpBar.Draw();
-            DraftUI.Draw();
+            BoonPanel.Draw();
         }
 
         /// <summary>
@@ -140,7 +140,7 @@ namespace Boon
             // them would fight for it.
             if (InventoryGui.IsVisible() || Menu.IsVisible()) return;
 
-            DraftUI.Toggle();
+            BoonPanel.Toggle();
         }
     }
 }

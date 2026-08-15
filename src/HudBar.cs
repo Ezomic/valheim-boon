@@ -128,7 +128,7 @@ namespace Boon
         /// </summary>
         private static void Announce()
         {
-            if (!_hasFlash || !ClientState.HasOffer) return;
+            if (!_hasFlash || !ClientState.HasPick) return;
             if (Time.time < _nextFlash) return;
 
             _nextFlash = Time.time + Mathf.Max(1f, BoonConfig.BarFlashSeconds.Value);
