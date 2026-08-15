@@ -47,7 +47,7 @@ namespace Boon
 
         private static GUIStyle _panel, _card, _cardEmpty, _title, _sub, _spend, _name,
                                 _effect, _upgrade, _muted, _nameDim, _bonus, _bonusPending, _edge,
-                                _slotOn, _slotOff, _rule, _bar, _footer;
+                                _slotOn, _slotOff, _rule, _bar, _footer, _interior, _select;
 
         private static readonly Color Ink = new Color(0.09f, 0.07f, 0.055f, 0.98f);
         private static readonly Color CardBg = new Color(0.133f, 0.106f, 0.082f, 1f);
@@ -129,7 +129,11 @@ namespace Boon
             var scrolls = wanted > height;
 
             var rect = new Rect((Screen.width - Width) * 0.5f, (Screen.height - height) * 0.5f, Width, height);
+
+            var previousColour = GUI.color;
+            if (Skin.HasPanel) GUI.color = Skin.PanelTint;
             GUI.Box(rect, GUIContent.none, _panel);
+            GUI.color = previousColour;
 
             var inner = Width - Pad * 2f;
             var y = rect.y + Pad;
@@ -163,6 +167,17 @@ namespace Boon
             }
 
             var gridRect = new Rect(rect.x + Pad, y, inner, rect.yMax - Pad - 22f - y);
+
+            // Vanilla seats a list on a darker recessed area inside the wooden frame rather
+            // than straight onto the wood. Without this the tiles float on the grain.
+            if (Skin.HasInterior)
+            {
+                var previousInterior = GUI.color;
+                GUI.color = Skin.InteriorTint;
+                GUI.Box(new Rect(gridRect.x - 6f, gridRect.y - 6f, gridRect.width + 12f, gridRect.height + 12f),
+                        GUIContent.none, _interior);
+                GUI.color = previousInterior;
+            }
 
             if (scrolls)
             {
@@ -220,9 +235,12 @@ namespace Boon
             // spend it is a box instead, so it does not offer a hover it cannot honour.
             // A borrowed tile carries its own carved edge, so the three states are told apart
             // by tinting it rather than by drawing a border over the top of one.
+            // Multiplied onto the colour the game itself draws this sprite in, rather than
+            // replacing it - item_background is a pale square that only becomes a slot once
+            // something tints it, so replacing the tint is what turned every tile cream.
             var tinted = Skin.HasTile;
             var previousColour = GUI.color;
-            if (tinted) GUI.color = canTake ? TileLit : rank > 0 ? TileHeld : TileIdle;
+            if (tinted) GUI.color = Skin.TileTint * (canTake ? TileLit : rank > 0 ? TileHeld : TileIdle);
 
             if (canTake)
             {
@@ -234,6 +252,16 @@ namespace Boon
             }
 
             if (tinted) GUI.color = previousColour;
+
+            // The game's own highlight frame, so "you can spend a pick here" is said the way
+            // the inventory says it rather than with a colour of our invention.
+            if (canTake && Skin.HasSelect)
+            {
+                var previousSelect = GUI.color;
+                GUI.color = Skin.SelectTint;
+                GUI.Box(rect, GUIContent.none, _select);
+                GUI.color = previousSelect;
+            }
 
             // Only without borrowed art. Replacing GUI.skin.box's background with a flat colour
             // throws away the border image that came with it, and without this an untaken tile
@@ -367,14 +395,24 @@ namespace Boon
                     active = { background = Solid(Blend(CardBg, Gold, 0.2f)) },
                 };
 
+            _interior = Skin.HasInterior
+                ? new GUIStyle(GUI.skin.box) { normal = { background = Skin.Interior }, border = Skin.InteriorBorder }
+                : new GUIStyle();
+
+            _select = Skin.HasSelect
+                ? new GUIStyle(GUI.skin.box) { normal = { background = Skin.Select }, border = Skin.SelectBorder }
+                : new GUIStyle();
+
             _cardEmpty = Skin.HasTile
                 ? new GUIStyle(GUI.skin.box) { normal = { background = Skin.Tile }, border = Skin.TileBorder }
                 : new GUIStyle(GUI.skin.box) { normal = { background = Solid(EmptyBg) } };
 
             _title = Text(20, Gold);
+            if (Skin.HeadFace != null) _title.font = Skin.HeadFace;
             _sub = Text(13, Muted);
             _spend = Text(14, Gold);
             _name = Text(16, Cream);
+            if (Skin.HeadFace != null) _name.font = Skin.HeadFace;
             _effect = Text(13, Green);
             _upgrade = Text(13, Gold);
             _muted = Text(13, Faded);

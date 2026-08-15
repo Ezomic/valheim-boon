@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Boon
 {
@@ -29,33 +30,72 @@ namespace Boon
         internal static Texture2D Tile;
         internal static RectOffset TileBorder;
 
+        internal static Texture2D Interior;
+        internal static RectOffset InteriorBorder;
+
+        internal static Texture2D Select;
+        internal static RectOffset SelectBorder;
+
+        internal static Texture2D Separator;
+        internal static RectOffset SeparatorBorder;
+
+        internal static Texture2D BarTrack;
+        internal static RectOffset BarTrackBorder;
+
         internal static Font Face;
+        internal static Font HeadFace;
+
+        /// <summary>
+        /// The colour the game itself draws each of these sprites in.
+        ///
+        /// This is the whole reason the first attempt looked wrong. Valheim's UI sprites are
+        /// near-white and are tinted by the Image component drawing them - item_background is
+        /// a pale square that becomes a dark slot only once the inventory tints it. Drawn raw,
+        /// the wood came out bright orange and every tile came out cream, which then put
+        /// cream-on-near-black text onto a cream ground.
+        ///
+        /// So the tint is measured rather than guessed: find an Image in the scene already
+        /// using this sprite and take its colour. Vanilla's own treatment, for free.
+        /// </summary>
+        internal static Color PanelTint = Color.white;
+        internal static Color InteriorTint = Color.white;
+        internal static Color TileTint = Color.white;
+        internal static Color SelectTint = Color.white;
+        internal static Color SeparatorTint = Color.white;
+        internal static Color BarTrackTint = Color.white;
 
         private static bool _tried;
 
         /// <summary>Whether anything at all was borrowed, for the panel to decide with.</summary>
         internal static bool HasPanel => Panel != null;
         internal static bool HasTile => Tile != null;
+        internal static bool HasInterior => Interior != null;
+        internal static bool HasSelect => Select != null;
+        internal static bool HasSeparator => Separator != null;
+        internal static bool HasBarTrack => BarTrack != null;
 
         // Ordered by preference, then a keyword sweep behind them. These names come from other
         // people's mods and from the game's own conventions rather than from anything verified
         // here, which is exactly why Dump exists: the first run says what is really loaded and
         // the list gets corrected from that rather than from guesswork.
+        // Read off the first run's dump rather than guessed. woodpanel_large is the generic
+        // big window; woodpanel_trophys was the first guess and works, but it is a specific
+        // window's frame at 562x329 and stretches less honestly across 1100px.
         private static readonly string[] PanelNames =
         {
-            "woodpanel_trophys", "woodpanel_settings", "woodpanel_password", "woodpanel",
-            "panel_dark", "darken_blob",
+            "woodpanel_large", "woodpanel_highres", "woodpanel_512x512", "woodpanel_trophys",
         };
 
-        private static readonly string[] TileNames =
-        {
-            "item_background", "inventory_slot", "slot_background", "button_fill", "bkg",
-        };
+        private static readonly string[] InteriorNames = { "panel_interior_bkg_128", "panel_bkg_128", "panel_bkg" };
+        private static readonly string[] TileNames = { "item_background", "chest_bkg", "panel_bkg" };
+        private static readonly string[] SelectNames = { "selection_frame" };
+        private static readonly string[] SeparatorNames = { "panel_separator" };
+        private static readonly string[] BarNames = { "skill_bkg", "health_border" };
 
-        private static readonly string[] FaceNames =
-        {
-            "AveriaSerifLibre-Bold", "AveriaSerifLibre-Regular", "Norse", "Norsebold",
-        };
+        // Valheim's own UI face, in the weights it uses them. Bold carries the headings and
+        // card names; Regular is easier to read for the four stat lines on every tile.
+        private static readonly string[] FaceNames = { "AveriaSerifLibre-Regular", "AveriaSerifLibre-Light" };
+        private static readonly string[] HeadFaceNames = { "AveriaSerifLibre-Bold", "Norsebold", "Norse" };
 
         internal static void Ensure()
         {
@@ -64,13 +104,29 @@ namespace Boon
 
             Dump();
 
-            Panel = Find(PanelNames, "woodpanel", out PanelBorder);
-            Tile = Find(TileNames, "slot", out TileBorder);
-            Face = FindFace();
+            Panel = Find(PanelNames, "woodpanel", out PanelBorder, out PanelTint);
+            Interior = Find(InteriorNames, "interior", out InteriorBorder, out InteriorTint);
+            Tile = Find(TileNames, "item_back", out TileBorder, out TileTint);
+            Select = Find(SelectNames, "selection", out SelectBorder, out SelectTint);
+            Separator = Find(SeparatorNames, "separator", out SeparatorBorder, out SeparatorTint);
+            BarTrack = Find(BarNames, "skill_bkg", out BarTrackBorder, out BarTrackTint);
 
-            BoonPlugin.Log.LogInfo("Skin: panel=" + (Panel != null ? Panel.name : "none") +
-                                   ", tile=" + (Tile != null ? Tile.name : "none") +
-                                   ", font=" + (Face != null ? Face.name : "default"));
+            Face = FindFace(FaceNames);
+            HeadFace = FindFace(HeadFaceNames) ?? Face;
+
+            BoonPlugin.Log.LogInfo("Skin: panel=" + Name(Panel) + ", interior=" + Name(Interior) +
+                                   ", tile=" + Name(Tile) + ", select=" + Name(Select) +
+                                   ", separator=" + Name(Separator) + ", bar=" + Name(BarTrack) +
+                                   ", font=" + (Face != null ? Face.name : "default") +
+                                   ", heading=" + (HeadFace != null ? HeadFace.name : "default"));
+
+            BoonPlugin.Log.LogInfo("Skin tints: panel=" + PanelTint + ", interior=" + InteriorTint +
+                                   ", tile=" + TileTint + ", select=" + SelectTint);
+        }
+
+        private static string Name(Texture2D tex)
+        {
+            return tex != null ? tex.name : "none";
         }
 
         /// <summary>
@@ -112,9 +168,10 @@ namespace Boon
                                    string.Join("\n  ", hits.ToArray()));
         }
 
-        private static Texture2D Find(string[] preferred, string keyword, out RectOffset border)
+        private static Texture2D Find(string[] preferred, string keyword, out RectOffset border, out Color tint)
         {
             border = new RectOffset(0, 0, 0, 0);
+            tint = Color.white;
 
             var all = Resources.FindObjectsOfTypeAll<Sprite>();
 
@@ -128,6 +185,7 @@ namespace Boon
                     if (tex == null) continue;
 
                     border = BorderOf(sprite);
+                    tint = TintOf(sprite);
                     return tex;
                 }
             }
@@ -152,7 +210,29 @@ namespace Boon
             if (baked == null) return null;
 
             border = BorderOf(best);
+            tint = TintOf(best);
             return baked;
+        }
+
+        /// <summary>
+        /// The colour an existing Image draws this sprite in. Inactive windows count - most of
+        /// this art belongs to windows that are shut, which is the point of searching loaded
+        /// objects rather than the active hierarchy.
+        ///
+        /// A fully transparent one is ignored: several of these sit on objects an animation
+        /// fades, and catching one mid-fade would make the panel invisible.
+        /// </summary>
+        private static Color TintOf(Sprite sprite)
+        {
+            foreach (var image in Resources.FindObjectsOfTypeAll<Image>())
+            {
+                if (image == null || image.sprite != sprite) continue;
+                if (image.color.a < 0.05f) continue;
+
+                return image.color;
+            }
+
+            return Color.white;
         }
 
         private static RectOffset BorderOf(Sprite sprite)
@@ -179,6 +259,18 @@ namespace Boon
         {
             var source = sprite.texture;
             if (source == null) return null;
+
+            // Every one of these is atlas-packed, and Unity may rotate a sprite when it packs
+            // it. textureRect gives the region but says nothing about rotation, so a rotated
+            // donor would come out sideways - refused rather than drawn wrong, because a
+            // sideways window frame looks like a corrupt texture and would send the next hour
+            // in the wrong direction.
+            if (sprite.packed && sprite.packingRotation != SpritePackingRotation.None)
+            {
+                BoonPlugin.Log.LogWarning("Skin: '" + sprite.name + "' is packed rotated (" +
+                                          sprite.packingRotation + ") - skipped.");
+                return null;
+            }
 
             var rect = sprite.textureRect;
             var w = Mathf.RoundToInt(rect.width);
@@ -229,11 +321,11 @@ namespace Boon
         /// That is the single biggest remaining tell, and there is no way around it without
         /// either shipping a font file or rebuilding the panel in Unity UI.
         /// </summary>
-        private static Font FindFace()
+        private static Font FindFace(string[] preferred)
         {
             var all = Resources.FindObjectsOfTypeAll<Font>();
 
-            foreach (var name in FaceNames)
+            foreach (var name in preferred)
             {
                 foreach (var font in all)
                 {
