@@ -139,11 +139,9 @@ namespace Boon
         {
             if (_icon == null)
             {
-                var tex = Stones.Silhouette();
-                if (tex == null) return;
-
+                var tex = Algiz();
                 _icon = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f));
-                _icon.name = "BoonStone";
+                _icon.name = "BoonAlgiz";
             }
 
             // The *last* child Image, not the first. A tab is a background blob with its glyph
@@ -164,6 +162,71 @@ namespace Boon
             // Colour is left alone on purpose: the donor's gold is what makes this match the
             // raven and the trophy, and the silhouette is white so it takes that tint.
             if (glyph != null) glyph.sprite = _icon;
+        }
+
+        /// <summary>
+        /// Algiz, drawn as three strokes.
+        ///
+        /// Strokes rather than a character in the rune font, for the reason a screen of tofu
+        /// squares already taught once: a font may or may not carry the glyph you ask it for,
+        /// and an Image needs a Sprite regardless. Three line segments have neither problem
+        /// and stay crisp at whatever size the bar happens to use.
+        ///
+        /// White, so the donor tab's own colour tints it - which is what makes it the same
+        /// gold as the raven and the trophy without that gold being written here.
+        /// </summary>
+        private static Texture2D Algiz()
+        {
+            const int size = 128;
+
+            // Normalised, y counted downward the way the shape was drawn and judged. Stem,
+            // then the two arms rising from its middle.
+            var strokes = new[]
+            {
+                new[] { 0.50f, 0.88f, 0.50f, 0.14f },
+                new[] { 0.50f, 0.50f, 0.18f, 0.16f },
+                new[] { 0.50f, 0.50f, 0.82f, 0.16f },
+            };
+
+            var half = size * 0.045f;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.HideAndDontSave,
+            };
+
+            for (var y = 0; y < size; y++)
+            {
+                for (var x = 0; x < size; x++)
+                {
+                    // SetPixel counts y from the bottom; the strokes above are written top
+                    // down, so the row is flipped here rather than in the numbers.
+                    var p = new Vector2(x + 0.5f, size - 1 - y + 0.5f);
+
+                    var nearest = float.MaxValue;
+                    foreach (var s in strokes)
+                    {
+                        var d = Distance(p, new Vector2(s[0] * size, s[1] * size),
+                                            new Vector2(s[2] * size, s[3] * size));
+                        if (d < nearest) nearest = d;
+                    }
+
+                    // Distance to the nearest segment gives round caps and joins for free,
+                    // which is what the drawn version had.
+                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, Mathf.Clamp01(half - nearest + 0.5f)));
+                }
+            }
+
+            tex.Apply();
+            return tex;
+        }
+
+        private static float Distance(Vector2 p, Vector2 a, Vector2 b)
+        {
+            var ab = b - a;
+            var t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / Mathf.Max(0.0001f, ab.sqrMagnitude));
+            return Vector2.Distance(p, a + ab * t);
         }
 
         private static void Open()

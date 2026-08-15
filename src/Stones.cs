@@ -103,51 +103,6 @@ namespace Boon
             return marks;
         }
 
-        /// <summary>
-        /// A flat silhouette of a stone, for the compendium tab.
-        ///
-        /// White rather than coloured, and unshaded: the four tabs beside it are flat gold
-        /// line art, so a lit and textured rock would read as something pasted in from another
-        /// game. Left white so the donor tab's own colour tints it, which is how it ends up
-        /// the same gold as the raven and the trophy without that colour being written here.
-        /// </summary>
-        internal static Texture2D Silhouette()
-        {
-            if (_silhouette != null) return _silhouette;
-
-            var tex = New();
-            var rng = new System.Random(0x5701E);
-
-            var phase1 = (float)rng.NextDouble() * Mathf.PI * 2f;
-            var phase2 = (float)rng.NextDouble() * Mathf.PI * 2f;
-            var phase3 = (float)rng.NextDouble() * Mathf.PI * 2f;
-
-            var baseRadius = Size * 0.5f - Margin;
-            var centre = new Vector2(Size * 0.5f, Size * 0.5f);
-
-            for (var y = 0; y < Size; y++)
-            {
-                for (var x = 0; x < Size; x++)
-                {
-                    var offset = new Vector2(x + 0.5f, y + 0.5f) - centre;
-                    var angle = Mathf.Atan2(offset.y, offset.x);
-
-                    var radius = baseRadius * (1f
-                        + 0.075f * Mathf.Sin(angle * 3f + phase1)
-                        + 0.042f * Mathf.Sin(angle * 5f + phase2)
-                        + 0.026f * Mathf.Sin(angle * 7f + phase3));
-
-                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, Mathf.Clamp01(radius - offset.magnitude)));
-                }
-            }
-
-            tex.Apply();
-            _silhouette = tex;
-            return tex;
-        }
-
-        private static Texture2D _silhouette;
-
         private static int Seed(Card card)
         {
             return card.Id.GetStableHashCode();
