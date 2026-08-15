@@ -36,6 +36,12 @@ namespace Boon
         internal static ConfigEntry<bool> Verbose;
         internal static ConfigEntry<KeyboardShortcut> KeyBoon;
 
+        internal static ConfigEntry<bool> ShowXpBar;
+        internal static ConfigEntry<float> BarX;
+        internal static ConfigEntry<float> BarY;
+        internal static ConfigEntry<float> BarWidth;
+        internal static ConfigEntry<float> BarHeight;
+
         internal static void Bind(ConfigFile cfg)
         {
             Enabled = cfg.Bind("General", "Enabled", true,
@@ -68,6 +74,22 @@ namespace Boon
                 "Cumulative XP for level N is LevelBaseXp * N^LevelExponent. Above 1 means " +
                 "each level costs more than the last. Vanilla's own skill curve is already " +
                 "front-loaded, so this counteracts a flood of early cards.");
+
+            ShowXpBar = cfg.Bind("Bar", "ShowXpBar", true,
+                "Show the experience bar under the health and stamina bars. It hides itself " +
+                "with the rest of the interface, including when the HUD is hidden by hand.");
+
+            // Pixels rather than an anchor to the real health bar: converting a scaled Canvas
+            // RectTransform into IMGUI screen space breaks differently at every HUD scale, and
+            // two numbers anyone can nudge are easier to correct than a formula that is subtly
+            // wrong. These defaults are a starting guess for 1080p at default HUD scale.
+            BarX = cfg.Bind("Bar", "BarX", 68f, "Pixels from the left edge of the screen.");
+            BarY = cfg.Bind("Bar", "BarY", 96f,
+                "Pixels from the top of the screen. Raise or lower until it sits just under " +
+                "the stamina bar - this depends on your resolution and HUD scale, so it will " +
+                "almost certainly need nudging once.");
+            BarWidth = cfg.Bind("Bar", "BarWidth", 180f, "Bar width in pixels.");
+            BarHeight = cfg.Bind("Bar", "BarHeight", 6f, "Bar height in pixels.");
 
             MaxRank = cfg.Bind("Cards", "MaxRank", 5,
                 "How deep a single card can be taken. Offers stop including cards at this rank.");

@@ -69,6 +69,7 @@ namespace Boon
 
         private void OnGUI()
         {
+            XpBar.Draw();
             DraftUI.Draw();
         }
 
