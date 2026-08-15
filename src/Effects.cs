@@ -98,9 +98,41 @@ namespace Boon
             return totals;
         }
 
+        /// <summary>
+        /// The stamina specials, spread over the fields they cover.
+        ///
+        /// Seven cards each shaving a few percent off one verb were seven cards nobody could
+        /// feel and which crowded out every pick that mattered. Two cards covering a set of
+        /// verbs each are perceptible, and the choice between moving and fighting is an
+        /// actual choice where "jump costs 6% less" never was.
+        ///
+        /// Spread here rather than in ApplyStats so a card still describes itself as one
+        /// thing on the panel, and so a capstone can name a special exactly as it names a
+        /// field.
+        /// </summary>
+        private static readonly Dictionary<string, string[]> Spread = new Dictionary<string, string[]>
+        {
+            {
+                "*stamina:move", new[]
+                {
+                    "m_runStaminaUseModifier", "m_jumpStaminaUseModifier", "m_dodgeStaminaUseModifier",
+                    "m_swimStaminaUseModifier", "m_sneakStaminaUseModifier",
+                }
+            },
+            {
+                "*stamina:fight", new[] { "m_attackStaminaUseModifier", "m_blockStaminaUseModifier" }
+            },
+        };
+
         private static void Add(Dictionary<string, float> totals, string effect, float amount)
         {
             if (string.IsNullOrEmpty(effect)) return;
+
+            if (Spread.TryGetValue(effect, out var fields))
+            {
+                foreach (var field in fields) Add(totals, field, amount);
+                return;
+            }
 
             // Several cards may target the same effect, so accumulate rather than assign.
             totals.TryGetValue(effect, out var running);
@@ -165,6 +197,10 @@ namespace Boon
             // left at its neutral 1.
             stats.m_raiseSkill = Skills.SkillType.All;
             stats.m_modifyAttackSkill = Skills.SkillType.All;
+
+            // ModifySkillLevel is gated the same way, and a capstone grants levels rather than
+            // a faster climb toward them - which is felt immediately where a gain rate is not.
+            stats.m_skillLevel = Skills.SkillType.All;
 
             foreach (var kv in totals)
             {

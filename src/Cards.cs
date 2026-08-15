@@ -133,6 +133,8 @@ namespace Boon
             { "m_dodgeStaminaUseModifier", "dodge stamina" },
             { "m_swimSpeedModifier", "swim speed" },
             { "m_timedBlockBonus", "parry bonus" },
+            { "*stamina:move", "movement stamina" },
+            { "*stamina:fight", "combat stamina" },
             { AttackSpeed.Melee, "melee speed" },
             { AttackSpeed.Tools, "tool speed" },
             { AttackSpeed.Ranged, "draw speed" },
@@ -147,6 +149,7 @@ namespace Boon
             "m_raiseSkillModifier", "m_speedModifier", "m_damageModifier",
             "m_dodgeStaminaUseModifier", "m_swimSpeedModifier", "m_timedBlockBonus",
             AttackSpeed.Melee, AttackSpeed.Tools, AttackSpeed.Ranged,
+            "*stamina:move", "*stamina:fight",
         };
 
         /// <summary>
@@ -157,6 +160,7 @@ namespace Boon
         internal static readonly HashSet<string> Specials = new HashSet<string>
         {
             "*inventoryrow", AttackSpeed.Melee, AttackSpeed.Tools, AttackSpeed.Ranged,
+            "*stamina:move", "*stamina:fight",
         };
     }
 

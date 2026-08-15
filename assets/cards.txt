@@ -11,9 +11,16 @@
 #
 # Specials:
 #   *inventoryrow           adds rows to the player inventory grid
+#   *stamina:move           run, jump, dodge, swim and sneak all cost less
+#   *stamina:fight          attacking and blocking both cost less
 #   *attackspeed:melee      swings faster with a weapon
 #   *attackspeed:tools      swings faster with a pickaxe, hammer, hoe or cultivator
 #   *attackspeed:ranged     draws faster with a bow or crossbow
+#
+# Rank 5 is meant to be the moment, so a capstone should be an unlock rather than a larger
+# number wherever the game gives us one: a row of inventory, immunity to falling, levels in
+# every skill. Four of them do that. Nothing anywhere carries a drawback, on purpose - a
+# choice you regret is a choice that stops you playing.
 #
 # A row of inventory is deliberately only ever a capstone, never a card of its own. As its
 # own card it was the strongest pick in the catalogue and taken first every time, which is
@@ -42,20 +49,18 @@
 
 oxback      | Ox-backed      | The load sits easy on you.        | m_addMaxCarryWeight      | 50    | *inventoryrow             | 1 | U
 
-lightfoot   | Light of foot  | The ground gives less.            | m_runStaminaUseModifier  | -0.05 | m_speedModifier           | 0.04 | A
-surefooted  | Sure-footed    | You have fallen further than this.| m_fallDamageModifier     | -0.10 | m_staggerModifier         | -0.08 | S
+surefooted  | Sure-footed    | You have fallen further than this.| m_fallDamageModifier     | -0.10 | m_fallDamageModifier      | -0.50 | S
+tireless    | Tireless       | The day does not wear on you.     | *stamina:move            | -0.05 | m_speedModifier           | 0.08 | A
+steadyarm   | Steady arm     | Nothing you swing costs what it did.| *stamina:fight         | -0.05 | m_timedBlockBonus         | 0.20 | P
 longwind    | Long wind      | Breath comes back quicker.        | m_staminaRegenMultiplier | 0.08  | m_runStaminaUseModifier   | -0.05 | L
 swiftmend   | Swift-mending  | Flesh knits without asking.       | m_healthRegenMultiplier  | 0.08  | m_addArmor                | 2 | D
 
 thickhide   | Thick-hided    | Blows land shallower.             | m_addArmor               | 2     | m_staggerModifier         | -0.08 | H
-bracedarm   | Braced arm     | The shield holds where it stood.  | m_blockStaminaUseModifier| -0.06 | m_timedBlockBonus         | 0.15 | P
-heavyhand   | Heavy-handed   | The swing costs you less.         | m_attackStaminaUseModifier | -0.05 | m_damageModifier        | 0.05 | T
 steadyfoot  | Steady footing | Harder to knock out of stance.    | m_staggerModifier        | -0.06 | m_addArmor                | 2 | E
 
 softstep    | Soft step      | The woods do not notice you.      | m_stealthModifier        | 0.08  | m_noiseModifier           | -0.10 | I
 quietwake   | Quiet wake     | You leave less behind you.        | m_noiseModifier          | -0.08 | m_stealthModifier         | 0.10 | N
-strongswim  | Strong swimmer | The water carries rather than drags.| m_swimStaminaUseModifier | -0.08 | m_swimSpeedModifier     | 0.10 | G
-quickstudy  | Quick study    | Lessons stick the first time.     | m_raiseSkillModifier     | 0.05  | m_raiseSkillModifier      | 0.10 | M
+quickstudy  | Quick study    | Lessons stick the first time.     | m_raiseSkillModifier     | 0.05  | m_skillLevelModifier      | 2 | M
 
 # Valheim has no attack-speed stat: SE_Stats carries no such field and SEMan has no
 # ModifyAttackSpeed among its hooks, because swing speed comes off the animator. These
@@ -71,9 +76,6 @@ quickdraw   | Quick draw     | The string is back before you are.| *attackspeed:
 keenedge    | Keen edge      | The blow goes deeper.             | m_damageModifier         | 0.03  | m_attackStaminaUseModifier| -0.08 | K
 longstride  | Long stride    | Ground passes under you.          | m_speedModifier          | 0.03  | m_runStaminaUseModifier   | -0.06 | R
 
-slipaside   | Slip aside     | The roll costs almost nothing.    | m_dodgeStaminaUseModifier| -0.06 | m_staggerModifier         | -0.06 | V
-springheel  | Spring-heeled  | Up comes easy.                    | m_jumpStaminaUseModifier | -0.06 | m_fallDamageModifier      | -0.15 | W
-patientcrouch | Patient crouch | Waiting costs you nothing.      | m_sneakStaminaUseModifier| -0.06 | m_stealthModifier         | 0.10 | C
 
 tideborne   | Tide-borne     | The water gives way.              | m_swimSpeedModifier      | 0.06  | m_swimStaminaUseModifier  | -0.10 | O
 turnedblade | Turned blade   | The parry answers back.           | m_timedBlockBonus        | 0.08  | m_blockStaminaUseModifier | -0.08 | X
