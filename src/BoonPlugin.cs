@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
@@ -19,8 +18,9 @@ namespace Boon
 
         private Harmony _harmony;
 
-        /// <summary>Peers already greeted this session: state pushed and profile asked for.</summary>
-        private readonly HashSet<long> _greeted = new HashSet<long>();
+        private bool _saidHello;
+        private bool _bound;
+        private bool _keyHeld;
 
         private void Awake()
         {
@@ -51,16 +51,18 @@ namespace Boon
 
             if (!BoonConfig.Enabled.Value) return;
 
-            if (Net.IsServer)
-            {
-                Ledger.Tick(Time.time);
-                GreetPeers();
-                SeedLocalHost();
-            }
+            if (Net.IsServer) Ledger.Tick(Time.time);
 
             var player = Player.m_localPlayer;
-            if (player == null) return;
+            if (player == null)
+            {
+                // Left the world; the next one starts the introductions again.
+                _saidHello = false;
+                _bound = false;
+                return;
+            }
 
+            SayHello();
             BindHome();
             ReadKey();
 
@@ -74,12 +76,46 @@ namespace Boon
         }
 
         /// <summary>
-        /// Remember which world this character belongs to, the first time it is seen in one.
-        /// After this the menu will refuse to start it anywhere else, which is the only point
-        /// at which that can still be prevented.
+        /// Name the character being played, once per session.
+        ///
+        /// This is what the server keys the ledger on, together with the platform identity it
+        /// reads off the socket itself. Sending it as a routed RPC rather than special-casing
+        /// the host means singleplayer takes the identical path: a message addressed to
+        /// yourself is handled locally, so the host introduces itself to itself.
         /// </summary>
-        private bool _bound;
-        private bool _keyHeld;
+        private void SayHello()
+        {
+            if (_saidHello || ZRoutedRpc.instance == null || Game.instance == null) return;
+
+            var profile = Game.instance.GetPlayerProfile();
+            if (profile == null) return;
+
+            var id = Home.IdOf(profile);
+            if (id == 0L) return;
+
+            _saidHello = true;
+            Net.SayHello(id);
+        }
+
+        /// <summary>
+        /// Remember which world this character belongs to, the first time it is seen in one.
+        /// After this the menu refuses to start it anywhere else, which is the only point at
+        /// which that can still be prevented.
+        /// </summary>
+        private void BindHome()
+        {
+            if (_bound || !BoonConfig.ProtectCharacter.Value) return;
+            if (ZNet.instance == null || Game.instance == null) return;
+
+            var uid = ZNet.instance.GetWorldUID();
+            if (uid == 0L) return;
+
+            var profile = Game.instance.GetPlayerProfile();
+            if (profile == null) return;
+
+            _bound = true;
+            Home.Bind(Home.IdOf(profile), profile.GetName(), uid);
+        }
 
         /// <summary>
         /// Edge-triggered by hand, the same way Tether does it: a held key would otherwise
@@ -97,95 +133,6 @@ namespace Boon
             if (InventoryGui.IsVisible() || Menu.IsVisible()) return;
 
             DraftUI.Toggle();
-        }
-
-        private void BindHome()
-        {
-            if (!BoonConfig.ProtectCharacter.Value) return;
-
-            // Cleared when leaving a world, so joining another one binds again rather than
-            // being skipped for the rest of the process.
-            if (ZNet.instance == null || Game.instance == null) { _bound = false; return; }
-            if (_bound) return;
-
-            var uid = ZNet.instance.GetWorldUID();
-            if (uid == 0L) return;
-
-            var profile = Game.instance.GetPlayerProfile();
-            if (profile == null) return;
-
-            _bound = true;
-            Home.Bind(Home.IdOf(profile), profile.GetName(), uid);
-        }
-
-        /// <summary>
-        /// Push a joining player their standing, and ask their client what the character has
-        /// been up to. Both happen once per peer per session.
-        /// </summary>
-        private void GreetPeers()
-        {
-            if (ZNet.instance == null) return;
-
-            var peers = ZNet.instance.GetPeers();
-            if (peers == null) return;
-
-            var live = new HashSet<long>();
-
-            foreach (var peer in peers)
-            {
-                if (peer == null || !peer.IsReady()) continue;
-                live.Add(peer.m_uid);
-
-                if (!_greeted.Add(peer.m_uid)) continue;
-
-                var owner = peer.m_socket != null ? peer.m_socket.GetHostName() : null;
-                if (string.IsNullOrEmpty(owner)) continue;
-
-                var rec = Ledger.For(owner.Replace("|", "_"));
-                if (rec == null) continue;
-
-                if (rec.Owed > 0 && rec.Offer.Count == 0) rec.RollOffer();
-
-                Net.PushState(peer.m_uid, rec);
-
-                if (BoonConfig.RequireFreshCharacter.Value) Net.AskProfile(peer.m_uid);
-            }
-
-            // Forget peers that have gone, so a reconnect is greeted again.
-            _greeted.RemoveWhere(uid => !live.Contains(uid));
-        }
-
-        /// <summary>
-        /// Singleplayer and listen servers work without any special casing, because
-        /// ZRoutedRpc handles a message addressed to yourself locally:
-        ///
-        ///     if (targetPeerID == m_id || targetPeerID == 0L) HandleRoutedRPC(data);
-        ///
-        /// and GetServerPeerID returns m_id when you are the server. So skill reports, picks
-        /// and state pushes all loop straight back and resolve against the local ledger.
-        ///
-        /// The one thing that does not happen is the greeting: the host has no peer entry for
-        /// itself, so GreetPeers never sees it and nothing seeds the opening state. That is
-        /// all this does, once. Everything after arrives through the same path as a client's.
-        /// </summary>
-        private void SeedLocalHost()
-        {
-            if (ZNet.instance == null || ZNet.instance.IsDedicated()) return;
-            if (Player.m_localPlayer == null) return;
-
-            // Known is cleared when the RPC layer re-registers, so this re-seeds once per
-            // session and is otherwise a single comparison per frame. An earlier version
-            // rebuilt the whole state from strings every frame, which allocated two strings
-            // and a dictionary per frame for no gain.
-            if (ClientState.Known) return;
-
-            var rec = Ledger.For("localhost");
-            if (rec == null) return;
-
-            if (rec.Owed > 0 && rec.Offer.Count == 0) { rec.RollOffer(); Ledger.Touch(); }
-            else if (rec.Owed <= 0 && rec.Offer.Count > 0) { rec.Offer.Clear(); Ledger.Touch(); }
-
-            ClientState.FromWire(rec.ToWire());
         }
     }
 }

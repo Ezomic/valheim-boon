@@ -73,6 +73,7 @@ namespace Boon
     /// </summary>
     internal static class Net
     {
+        private const string RpcHello = "Boon_Hello";
         private const string RpcSkillUp = "Boon_SkillUp";
         private const string RpcPick = "Boon_Pick";
         private const string RpcState = "Boon_State";
@@ -85,6 +86,18 @@ namespace Boon
         // live on the client, so a report is a claim. This caps how fast a claim can pay.
         private static readonly Dictionary<string, Queue<float>> _reports =
             new Dictionary<string, Queue<float>>();
+
+        /// <summary>
+        /// Which character each connection is playing, learned from its hello.
+        ///
+        /// The ledger key needs both halves. The platform identity alone is per *account*, so
+        /// every character on a machine shared one record and a new character inherited the
+        /// last one's level and cards - which is exactly what happened the first time a
+        /// character was remade. The character id alone comes from the client and could name
+        /// someone else's record. Together, the platform half fences a player into their own
+        /// account's records and the character half separates their characters within it.
+        /// </summary>
+        private static readonly Dictionary<long, long> _characters = new Dictionary<long, long>();
 
         internal static bool IsServer => ZNet.instance != null && ZNet.instance.IsServer();
 
@@ -101,7 +114,9 @@ namespace Boon
 
             _registeredOn = rpc;
             _reports.Clear();
+            _characters.Clear();
 
+            rpc.Register<long>(RpcHello, OnHello);
             rpc.Register<int, float>(RpcSkillUp, OnSkillUp);
             rpc.Register<string>(RpcPick, OnPick);
             rpc.Register<string>(RpcState, OnState);
@@ -116,6 +131,18 @@ namespace Boon
 
         // ---- client to server ----------------------------------------------------------
 
+        /// <summary>
+        /// Tell the server which character is being played. Sent once per session by every
+        /// client, including the host - a routed RPC addressed to yourself is handled locally,
+        /// so a listen server and singleplayer take exactly the same path as a remote client
+        /// with no special casing.
+        /// </summary>
+        internal static void SayHello(long characterId)
+        {
+            if (ZRoutedRpc.instance == null || characterId == 0L) return;
+            ZRoutedRpc.instance.InvokeRoutedRPC(RpcHello, characterId);
+        }
+
         internal static void ReportSkillUp(Skills.SkillType type, float level)
         {
             if (ZRoutedRpc.instance == null) return;
@@ -129,6 +156,31 @@ namespace Boon
         }
 
         // ---- server handlers -----------------------------------------------------------
+
+        /// <summary>
+        /// A client naming the character it is playing. Everything else keys off this, so it
+        /// is also where a joining player is handed their standing and asked about its history.
+        /// </summary>
+        private static void OnHello(long sender, long characterId)
+        {
+            if (!IsServer || !BoonConfig.Enabled.Value) return;
+
+            var platform = PlatformOf(sender);
+            if (platform == null || characterId == 0L) return;
+
+            _characters[sender] = characterId;
+
+            var rec = Ledger.For(platform + "|" + characterId);
+            if (rec == null) return;
+
+            BoonPlugin.Log.LogInfo("Hello from " + platform + " playing character " + characterId +
+                                   " - level " + rec.Level + ", " + rec.Ranks.Count + " cards.");
+
+            EnsureOffer(rec);
+            PushState(sender, rec);
+
+            if (BoonConfig.RequireFreshCharacter.Value) AskProfile(sender);
+        }
 
         private static void OnSkillUp(long sender, int skillType, float skillLevel)
         {
@@ -250,11 +302,29 @@ namespace Boon
         }
 
         /// <summary>
-        /// The platform identity of the connection, read from the peer's own socket. This is
-        /// established before any of our code runs and cannot be claimed by the client, which
-        /// is exactly why the ledger is keyed on it rather than on Player.GetPlayerID.
+        /// The ledger key: platform identity, then the character being played. Null until the
+        /// client has said hello, which is deliberate - a report that cannot be attributed to
+        /// a character must not be paid to a guess.
         /// </summary>
         private static string OwnerOf(long sender)
+        {
+            if (!_characters.TryGetValue(sender, out var characterId))
+            {
+                if (BoonConfig.Verbose.Value)
+                    BoonPlugin.Log.LogWarning("Message from an unidentified connection; ignored until it says hello.");
+                return null;
+            }
+
+            var platform = PlatformOf(sender);
+            return platform == null ? null : platform + "|" + characterId;
+        }
+
+        /// <summary>
+        /// The platform identity of the connection, read from the peer's own socket. This is
+        /// established before any of our code runs and cannot be claimed by the client, which
+        /// is why it is half the key rather than trusting the client's word alone.
+        /// </summary>
+        private static string PlatformOf(long sender)
         {
             if (ZNet.instance == null) return null;
 
