@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace Boon
 {
@@ -46,16 +45,17 @@ namespace Boon
         internal static Font HeadFace;
 
         /// <summary>
-        /// The colour the game itself draws each of these sprites in.
+        /// Left at white, deliberately, after measuring.
         ///
-        /// This is the whole reason the first attempt looked wrong. Valheim's UI sprites are
-        /// near-white and are tinted by the Image component drawing them - item_background is
-        /// a pale square that becomes a dark slot only once the inventory tints it. Drawn raw,
-        /// the wood came out bright orange and every tile came out cream, which then put
-        /// cream-on-near-black text onto a cream ground.
+        /// These were briefly read off whatever Image in the scene already used the sprite,
+        /// on the theory that Valheim tints near-white UI art. That measured white for the
+        /// panel, the interior and the selection frame - they are not tinted at all - and for
+        /// item_background it found a *highlighted* slot at RGBA(1, 0.683, 0), which then
+        /// painted all twenty-five tiles amber.
         ///
-        /// So the tint is measured rather than guessed: find an Image in the scene already
-        /// using this sprite and take its colour. Vanilla's own treatment, for free.
+        /// The brightness was never a tint. It was the bake converting colour space twice.
+        /// One arbitrary donor Image is not a measurement, and the honest answer is that there
+        /// is nothing here to measure.
         /// </summary>
         internal static Color PanelTint = Color.white;
         internal static Color InteriorTint = Color.white;
@@ -119,9 +119,6 @@ namespace Boon
                                    ", separator=" + Name(Separator) + ", bar=" + Name(BarTrack) +
                                    ", font=" + (Face != null ? Face.name : "default") +
                                    ", heading=" + (HeadFace != null ? HeadFace.name : "default"));
-
-            BoonPlugin.Log.LogInfo("Skin tints: panel=" + PanelTint + ", interior=" + InteriorTint +
-                                   ", tile=" + TileTint + ", select=" + SelectTint);
         }
 
         private static string Name(Texture2D tex)
@@ -138,9 +135,8 @@ namespace Boon
         {
             if (!BoonConfig.Verbose.Value) return;
 
-            var fonts = Resources.FindObjectsOfTypeAll<Font>();
             var fontNames = new List<string>();
-            foreach (var f in fonts) if (f != null) fontNames.Add(f.name);
+            foreach (var f in Resources.FindObjectsOfTypeAll<Font>()) if (f != null) fontNames.Add(f.name);
             BoonPlugin.Log.LogInfo("Skin: " + fontNames.Count + " fonts loaded: " +
                                    string.Join(", ", fontNames.ToArray()));
 
@@ -185,7 +181,6 @@ namespace Boon
                     if (tex == null) continue;
 
                     border = BorderOf(sprite);
-                    tint = TintOf(sprite);
                     return tex;
                 }
             }
@@ -210,29 +205,7 @@ namespace Boon
             if (baked == null) return null;
 
             border = BorderOf(best);
-            tint = TintOf(best);
             return baked;
-        }
-
-        /// <summary>
-        /// The colour an existing Image draws this sprite in. Inactive windows count - most of
-        /// this art belongs to windows that are shut, which is the point of searching loaded
-        /// objects rather than the active hierarchy.
-        ///
-        /// A fully transparent one is ignored: several of these sit on objects an animation
-        /// fades, and catching one mid-fade would make the panel invisible.
-        /// </summary>
-        private static Color TintOf(Sprite sprite)
-        {
-            foreach (var image in Resources.FindObjectsOfTypeAll<Image>())
-            {
-                if (image == null || image.sprite != sprite) continue;
-                if (image.color.a < 0.05f) continue;
-
-                return image.color;
-            }
-
-            return Color.white;
         }
 
         private static RectOffset BorderOf(Sprite sprite)
@@ -277,8 +250,18 @@ namespace Boon
             var h = Mathf.RoundToInt(rect.height);
             if (w <= 0 || h <= 0) return null;
 
+            // Linear at every step, and the reason the first attempt came out bright orange.
+            //
+            // Valheim renders in linear colour space. Blitting through an sRGB RenderTexture
+            // and reading into a gamma Texture2D converts twice, which lifts and saturates
+            // everything - a dark brown panel arrives as bright orange, and a slot arrives as
+            // cream. Keeping both ends linear passes the bytes through untouched, which is
+            // what copying art is supposed to do.
+            //
+            // This is also why the measured tints came back white and it still looked wrong:
+            // the sprites were never tinted, the copy was.
             var previous = RenderTexture.active;
-            var rt = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            var rt = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
 
             try
             {
@@ -289,7 +272,7 @@ namespace Boon
 
                 RenderTexture.active = rt;
 
-                var baked = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                var baked = new Texture2D(w, h, TextureFormat.RGBA32, false, true);
                 baked.ReadPixels(new Rect(0f, 0f, w, h), 0, 0);
                 baked.Apply();
                 baked.name = sprite.name;

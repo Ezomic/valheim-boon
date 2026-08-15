@@ -26,11 +26,13 @@ namespace Boon
     {
         private const float Pad = 18f;
         private const float Gap = 8f;
-        // Four text lines at 10 + 21 + 19 + 19 + 18, then the track bottom-anchored at
-        // yMax - 10 - SlotHeight. At 112 the capstone line ran to y+87 and the track began at
-        // y+83, so the two drew on top of each other - measured off a screenshot rather than
-        // guessed, and the reason this is written down.
-        private const float TileHeight = 120f;
+        // Sized for AveriaSerifLibre rather than for Arial. The borrowed face has taller line
+        // metrics than Unity's default and every rect here was cut to Arial's, so the first
+        // build with the real font clipped descenders and sliced the capstone line in half.
+        // 8 + 24 + 20 + 20 + 20 = 92, then the track bottom-anchored at yMax - 10 - 19.
+        private const float TileHeight = 128f;
+        private const float LineName = 24f;
+        private const float Line = 20f;
 
         // Config rather than constants: the catalogue is a text file, so the number of tiles
         // is not something this file can know. Twenty-four cards stopped fitting three across.
@@ -58,8 +60,8 @@ namespace Boon
         private static readonly Color Muted = new Color(0.659f, 0.612f, 0.518f, 1f);
         // Lifted from 0.42 after a screenshot: at that value the untaken names, the
         // 'Not yet taken' line and the empty slot numbers were unreadable on this setup.
-        private static readonly Color Faded = new Color(0.58f, 0.54f, 0.47f, 1f);
-        private static readonly Color NameDim = new Color(0.75f, 0.71f, 0.63f, 1f);
+        private static readonly Color Faded = new Color(0.66f, 0.62f, 0.55f, 1f);
+        private static readonly Color NameDim = new Color(0.82f, 0.78f, 0.70f, 1f);
         private static readonly Color EdgeLit = new Color(0.45f, 0.37f, 0.23f, 1f);
         private static readonly Color EdgeDim = new Color(0.20f, 0.17f, 0.13f, 1f);
 
@@ -75,7 +77,7 @@ namespace Boon
         // running effect and the next rank already use, because it is a different kind of
         // thing rather than more of the same one.
         private static readonly Color Silver = new Color(0.678f, 0.722f, 0.847f, 1f);
-        private static readonly Color SilverDim = new Color(0.55f, 0.58f, 0.66f, 1f);
+        private static readonly Color SilverDim = new Color(0.62f, 0.65f, 0.73f, 1f);
 
         /// <summary>True while the panel is up, which is what the input patches key on.</summary>
         internal static bool IsOpen => _open && Usable;
@@ -118,7 +120,7 @@ namespace Boon
             var rows = Mathf.CeilToInt(Mathf.Max(1, Cards.All.Count) / (float)Columns);
             var gridHeight = rows * TileHeight + (rows - 1) * Gap;
 
-            var headHeight = 96f + (ClientState.HasPick ? 24f : 0f);
+            var headHeight = 112f + (ClientState.HasPick ? 26f : 0f);
             var chrome = Pad * 2f + headHeight + 26f;
 
             // The catalogue is a text file and can grow, so the panel is sized to its contents
@@ -138,11 +140,11 @@ namespace Boon
             var inner = Width - Pad * 2f;
             var y = rect.y + Pad;
 
-            GUI.Label(new Rect(rect.x + Pad, y, inner, 26f), "Your boons", _title);
-            y += 28f;
+            GUI.Label(new Rect(rect.x + Pad, y, inner, 30f), "Your boons", _title);
+            y += 32f;
 
-            GUI.Label(new Rect(rect.x + Pad, y, inner, 20f), Summary(), _sub);
-            y += 22f;
+            GUI.Label(new Rect(rect.x + Pad, y, inner, 22f), Summary(), _sub);
+            y += 24f;
 
             var barRect = new Rect(rect.x + Pad, y, inner, 6f);
             GUI.Label(barRect, GUIContent.none, _rule);
@@ -155,7 +157,7 @@ namespace Boon
             GUI.Label(new Rect(rect.x + Pad, y, inner, 20f),
                       Mathf.FloorToInt(into) + " / " + Mathf.CeilToInt(need) +
                       " xp to level " + (ClientState.Level + 1), _sub);
-            y += 24f;
+            y += 26f;
 
             if (ClientState.HasPick)
             {
@@ -163,7 +165,7 @@ namespace Boon
                 GUI.Label(new Rect(rect.x + Pad, y, inner, 22f),
                           owed == 1 ? "One boon to spend — choose any card below"
                                     : owed + " boons to spend — choose any card below", _spend);
-                y += 24f;
+                y += 26f;
             }
 
             var gridRect = new Rect(rect.x + Pad, y, inner, rect.yMax - Pad - 22f - y);
@@ -270,24 +272,24 @@ namespace Boon
 
             var x = rect.x + 12f;
             var w = rect.width - 24f;
-            var y = rect.y + 10f;
+            var y = rect.y + 8f;
 
-            GUI.Label(new Rect(x, y, w, 20f), card.Name, rank > 0 ? _name : _nameDim);
-            y += 21f;
+            GUI.Label(new Rect(x, y, w, LineName), card.Name, rank > 0 ? _name : _nameDim);
+            y += LineName;
 
             // What it does now, then what the pick would make it. The second line is the
             // whole reason the panel can replace a draft: choosing between fourteen cards is
             // only a choice if each one says what it would buy.
-            GUI.Label(new Rect(x, y, w, 18f),
+            GUI.Label(new Rect(x, y, w, Line),
                       rank > 0 ? card.Describe(rank) : "Not yet taken",
                       rank > 0 ? _effect : _muted);
-            y += 19f;
+            y += Line;
 
-            GUI.Label(new Rect(x, y, w, 18f),
+            GUI.Label(new Rect(x, y, w, Line),
                       maxed ? "Rank " + rank + " · nothing further"
                             : "→ " + card.Describe(rank + 1) + " at rank " + (rank + 1),
                       maxed ? _muted : _upgrade);
-            y += 19f;
+            y += Line;
 
             // The capstone, on its own line and in its own colour so it never reads as part of
             // the running total. Shown whether or not it is earned yet - what a card is worth
@@ -298,7 +300,7 @@ namespace Boon
                 var times = Card.BonusTimes(rank);
                 var at = Mathf.Max(1, BoonConfig.BonusEvery.Value) * (times + 1);
 
-                GUI.Label(new Rect(x, y, w, 18f),
+                GUI.Label(new Rect(x, y, w, Line),
                           times > 0
                               ? "★ " + card.DescribeBonus(times)
                               : "★ " + card.DescribeBonus(1) + " at rank " + at,
