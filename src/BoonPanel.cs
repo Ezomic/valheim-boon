@@ -40,7 +40,7 @@ namespace Boon
         // Marks around the rim, spread evenly and starting at the top. The same set on every
         // stone: what differs between boons is the sigil in the middle, not the ranks cut
         // around it.
-        private const float MarkRadius = 35f;
+        private const float MarkRadius = 33f;
         private const float MarkSize = 22f;
         // Latin letters, not runic code points. The game's "rune" face is a Latin-mapped
         // decorative font - type F, get the rune - and U+16A0-range characters render as

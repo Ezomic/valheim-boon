@@ -80,9 +80,12 @@ namespace Boon
             // - y counted from the top - because that is how the result is drawn.
             var origin = new Vector2(Size * 0.34f, Size * 0.28f);
 
-            // CSS ends a radial gradient at the farthest corner by default, which from that
-            // origin is the bottom right one.
-            var far = Vector2.Distance(origin, new Vector2(Size, Size));
+            // The far end of the gradient is the far edge of the *stone*, not of the texture
+            // it is drawn into. Measuring to the texture corner was why the first build came
+            // out pale: the disc only reaches about three quarters of that distance, so the
+            // two darkest stops fell outside the circle and were never drawn, and the stone
+            // topped out near #46433D instead of #322F2A.
+            var far = Vector2.Distance(origin, centre) + radius;
 
             for (var y = 0; y < Size; y++)
             {
