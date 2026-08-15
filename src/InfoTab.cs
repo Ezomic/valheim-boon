@@ -137,33 +137,33 @@ namespace Boon
         /// </summary>
         private static void Icon(GameObject tab)
         {
-            // Any one of the stones does for an icon, and the first card's is stable across
-            // sessions because every stone is seeded off its card's id.
             if (_icon == null)
             {
-                if (Cards.All.Count == 0) return;
-
-                var tex = Stones.For(Cards.All[0]);
+                var tex = Stones.Silhouette();
                 if (tex == null) return;
 
                 _icon = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f));
                 _icon.name = "BoonStone";
             }
 
-            // The glyph is a child Image, not the button's own background - swapping the wrong
-            // one replaces the frame and the tab disappears. The child is the one that is not
-            // on the object carrying the Button.
+            // The *last* child Image, not the first. A tab is a background blob with its glyph
+            // drawn over the top, and taking the first one turned the blob into a stone and
+            // left the donor's trophy sitting on it. Later in the hierarchy is drawn on top,
+            // which is the glyph by definition.
             var button = tab.GetComponent<Button>();
+            Image glyph = null;
 
             foreach (var image in tab.GetComponentsInChildren<Image>(true))
             {
                 if (image == null) continue;
                 if (button != null && image.gameObject == button.gameObject) continue;
 
-                image.sprite = _icon;
-                image.color = new Color(0.83f, 0.75f, 0.6f, 1f);
-                break;
+                glyph = image;
             }
+
+            // Colour is left alone on purpose: the donor's gold is what makes this match the
+            // raven and the trophy, and the silhouette is white so it takes that tint.
+            if (glyph != null) glyph.sprite = _icon;
         }
 
         private static void Open()
