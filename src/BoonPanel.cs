@@ -264,8 +264,8 @@ namespace Boon
                                   : "★ " + card.DescribeBonus(1) + " at rank " + at, _dcap);
             }
 
-            GUI.Label(new Rect(rect.x, y, w, 14f), "CARVED AT", _label);
-            y += 17f;
+            GUI.Label(new Rect(rect.x, y, w, 18f), "CARVED AT", _label);
+            y += 21f;
 
             var levels = ClientState.LevelsOf(card.Id);
             for (var i = 0; i < maxRank; i++)
@@ -291,11 +291,19 @@ namespace Boon
                                                   : "No boon to spend", _take);
         }
 
+        /// <summary>
+        /// A labelled line in the detail column.
+        ///
+        /// The boxes are 18 and 22 rather than 14 and 20 because the borrowed serif sits
+        /// taller than the Arial these were first cut for - at the smaller numbers every
+        /// label lost its bottom half and the capstone line lost its descenders. Third time
+        /// this exact mistake has been made in this file; the fix is always the same one.
+        /// </summary>
         private static float Row(float x, float y, float w, string label, string value, GUIStyle style)
         {
-            GUI.Label(new Rect(x, y, w, 14f), label, _label);
-            GUI.Label(new Rect(x, y + 15f, w, 20f), value, style);
-            return y + 41f;
+            GUI.Label(new Rect(x, y, w, 18f), label, _label);
+            GUI.Label(new Rect(x, y + 19f, w, 22f), value, style);
+            return y + 45f;
         }
 
         /// <summary>
