@@ -1,11 +1,13 @@
 using BepInEx;
 using BepInEx.Logging;
+using Ezomic.Core;
 using HarmonyLib;
 using UnityEngine;
 
 namespace Boon
 {
     [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
+    [BepInDependency("ezomic.valheim.core", BepInDependency.DependencyFlags.HardDependency)]
     // No BepInProcess. It used to say valheim.exe, which is a whitelist - and a dedicated
     // server runs valheim_server.exe, so the entire server half of this mod would never have
     // loaded there. The ledger, the gate and every authority decision live on the server; on a
@@ -30,6 +32,11 @@ namespace Boon
         {
             Log = Logger;
             BoonConfig.Bind(Config);
+            // Everyone, not HostOnly. Both ends have to agree about this mod, and the
+            // disagreement is silent when they do not: a client that cannot resolve a prefab
+            // hash discards the ZDO rather than erroring - destroying what is already standing
+            // in the world - and item data that differs desyncs inventories.
+            Suite.Register(PluginGuid, PluginName, PluginVersion, Config);
             Cards.Load();
 
             _harmony = new Harmony(PluginGuid);
