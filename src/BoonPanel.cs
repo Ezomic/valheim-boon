@@ -238,8 +238,11 @@ namespace Boon
             GUI.Label(new Rect(cell.x, y, cell.width, NameLine), card.Name, rank > 0 ? _name : _nameDim);
 
             y += NameLine;
+            // No "at rank 1" suffix on an untaken stone: the cell is a fifth of the field and
+            // the suffix pushed every line past its edge, so they read "...stamina at ranl".
+            // What a stone is worth unarved is its first rank by definition.
             GUI.Label(new Rect(cell.x, y, cell.width, NowLine),
-                      rank > 0 ? card.Describe(rank) : card.Describe(1) + " at rank 1",
+                      card.Describe(Mathf.Max(1, rank)),
                       rank > 0 ? _now : _nowDim);
         }
 
@@ -303,7 +306,11 @@ namespace Boon
                 }
                 else
                 {
-                    GUI.Label(slot, (i + 1).ToString(), _slotOff);
+                    // Deliberately empty. It used to show the rank number, which put a level
+                    // and a rank side by side in one row with nothing to tell them apart -
+                    // "11 12 3 4 5" reads as one sequence and is two. Every number in this row
+                    // is a level now, and how many are left is the count of empty slots.
+                    GUI.Label(slot, "", _slotOff);
                 }
             }
 
