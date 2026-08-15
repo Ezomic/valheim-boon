@@ -15,6 +15,10 @@
 #   *attackspeed:tools      swings faster with a pickaxe, hammer, hoe or cultivator
 #   *attackspeed:ranged     draws faster with a bow or crossbow
 #
+# A row of inventory is deliberately only ever a capstone, never a card of its own. As its
+# own card it was the strongest pick in the catalogue and taken first every time, which is
+# not a choice; at the bottom of a track it is the reward for having gone the whole way.
+#
 # Value is per rank and accumulates: rank 3 of a 15-per-rank card gives 45.
 # Cards stop being offered once they reach MaxRank in the config.
 #
@@ -36,8 +40,7 @@
 # Four fields count from 1 rather than 0 and the code adds that 1 for you - the three
 # regen multipliers and m_damageModifier. Write the plain fraction here.
 
-oxback      | Ox-backed      | The load sits easy on you.        | m_addMaxCarryWeight      | 50    | m_speedModifier           | 0.05 | U
-deeppack    | Deep pack      | Room for one thing more.          | *inventoryrow            | 1     | m_addMaxCarryWeight       | 25 | B
+oxback      | Ox-backed      | The load sits easy on you.        | m_addMaxCarryWeight      | 50    | *inventoryrow             | 1 | U
 
 lightfoot   | Light of foot  | The ground gives less.            | m_runStaminaUseModifier  | -0.05 | m_speedModifier           | 0.04 | A
 surefooted  | Sure-footed    | You have fallen further than this.| m_fallDamageModifier     | -0.10 | m_staggerModifier         | -0.08 | S
@@ -62,7 +65,7 @@ quickstudy  | Quick study    | Lessons stick the first time.     | m_raiseSkillM
 # An axe is one item with one animation, so felling trees rides the melee card. A staff is
 # ElementalMagic or BloodMagic and no card covers it; casting stays at vanilla speed.
 keenhand    | Keen hand      | The swing comes back sooner.      | *attackspeed:melee       | 0.03  | m_damageModifier          | 0.05 | Z
-surehand    | Sure hand      | The tool bites without waiting.   | *attackspeed:tools       | 0.03  | m_addMaxCarryWeight       | 25 | J
+surehand    | Sure hand      | The tool bites without waiting.   | *attackspeed:tools       | 0.03  | *inventoryrow             | 1 | J
 quickdraw   | Quick draw     | The string is back before you are.| *attackspeed:ranged      | 0.03  | m_damageModifier          | 0.05 | Y
 
 keenedge    | Keen edge      | The blow goes deeper.             | m_damageModifier         | 0.03  | m_attackStaminaUseModifier| -0.08 | K

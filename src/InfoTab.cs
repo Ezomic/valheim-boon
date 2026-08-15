@@ -70,13 +70,7 @@ namespace Boon
 
             Icon(go);
 
-            // Placed after the last tab by hand, because the bar is laid out by hand: the four
-            // tabs sit at fixed positions rather than in a layout group, so a clone would
-            // otherwise land exactly on top of its donor.
-            var rect = go.GetComponent<RectTransform>();
-            var donorRect = donor.GetComponent<RectTransform>();
-            if (rect != null && donorRect != null)
-                rect.anchoredPosition = donorRect.anchoredPosition + new Vector2(Spacing(gui), 0f);
+            Place(gui, go, donor);
 
             _tab = go;
             BoonPlugin.Log.LogInfo("Boons tab added to the compendium bar.");
@@ -109,9 +103,37 @@ namespace Boon
         }
 
         /// <summary>
-        /// The gap between two existing tabs, so the fifth one is spaced like the other four
-        /// rather than by a number invented here.
+        /// Put the new tab after the last one.
+        ///
+        /// The first attempt always offset by hand and landed the rune on top of the swords.
+        /// A bar laid out by a LayoutGroup gives every child the same anchoredPosition - the
+        /// group decides where they go - so the measured gap between two tabs came out at
+        /// zero and the clone sat exactly on its donor. When a group is present the right
+        /// answer is to set nothing and let it place the fifth child itself.
         /// </summary>
+        private static void Place(InventoryGui gui, GameObject tab, Button donor)
+        {
+            if (gui.m_infoPanel.GetComponent<LayoutGroup>() != null)
+            {
+                BoonPlugin.Log.LogInfo("Boons tab placed by the bar's own layout group.");
+                return;
+            }
+
+            var rect = tab.GetComponent<RectTransform>();
+            var donorRect = donor.GetComponent<RectTransform>();
+            if (rect == null || donorRect == null) return;
+
+            var gap = Spacing(gui);
+
+            // Distinct positions, not just two of them: if every tab reports the same x then
+            // nothing here is placing them and a measured gap is meaningless. The donor's own
+            // width is the honest fallback.
+            if (gap < 1f) gap = donorRect.rect.width * 1.15f;
+
+            rect.anchoredPosition = donorRect.anchoredPosition + new Vector2(gap, 0f);
+            BoonPlugin.Log.LogInfo("Boons tab placed " + (int)gap + "px after the last one.");
+        }
+
         private static float Spacing(InventoryGui gui)
         {
             var xs = new System.Collections.Generic.List<float>();
@@ -121,10 +143,13 @@ namespace Boon
                 if (button == null || button.name == "BoonTab") continue;
 
                 var rect = button.GetComponent<RectTransform>();
-                if (rect != null) xs.Add(rect.anchoredPosition.x);
+                if (rect == null) continue;
+
+                var x = rect.anchoredPosition.x;
+                if (!xs.Contains(x)) xs.Add(x);
             }
 
-            if (xs.Count < 2) return 64f;
+            if (xs.Count < 2) return 0f;
 
             xs.Sort();
             return xs[xs.Count - 1] - xs[xs.Count - 2];
