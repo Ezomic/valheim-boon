@@ -60,19 +60,29 @@ namespace Boon
 
             Remember(gui.m_player);
 
-            // The wood is a child Image rather than the root, and it is not always the same
-            // child, so it is found by the sprite it draws. Anything else in there - the
-            // grid, the weight readout - must not be stretched with it.
+            // The wood is a child Image rather than the root, and not always the same child,
+            // so it is found by the sprite it draws - but the sprite alone is not enough. The
+            // armour and weight tabs down the right are cut from the same woodpanel art, and
+            // growing those turned two small readouts into tall bars. Width tells them apart:
+            // the backdrop spans the window, the tabs are a fraction of it.
+            var full = gui.m_player.rect.width;
+
             foreach (var image in gui.m_player.GetComponentsInChildren<Image>(true))
             {
                 if (image == null || image.sprite == null) continue;
                 if (image.sprite.name.IndexOf("woodpanel", System.StringComparison.OrdinalIgnoreCase) < 0) continue;
+                if (image.rectTransform.rect.width < full * 0.6f) continue;
 
                 Remember(image.rectTransform);
             }
 
-            if (BoonConfig.Verbose.Value)
-                BoonPlugin.Log.LogInfo("Inventory backdrop: " + _panels.Count + " piece(s) to grow.");
+            if (!BoonConfig.Verbose.Value) return;
+
+            var names = new List<string>();
+            foreach (var rect in _panels) names.Add(rect.name + " " + (int)rect.rect.width + "px");
+
+            BoonPlugin.Log.LogInfo("Inventory backdrop: " + _panels.Count + " piece(s) to grow - " +
+                                   string.Join(", ", names.ToArray()));
         }
 
         private static void Remember(RectTransform rect)
