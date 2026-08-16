@@ -17,7 +17,7 @@ namespace Boon
     {
         public const string PluginGuid = "ezomic.valheim.boon";
         public const string PluginName = "Boon";
-        public const string PluginVersion = "0.1.0";
+        public const string PluginVersion = "1.0.0";
         public const string PluginAuthor = "Robbin Thijssen";
 
         internal static ManualLogSource Log;

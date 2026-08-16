@@ -3,9 +3,11 @@
 Notable changes to Boon. Format follows [Keep a Changelog](https://keepachangelog.com),
 and the mod uses [semantic versioning](https://semver.org).
 
-## [0.1.0] — 2026-08-16
+## [1.0.0] — 2026-08-16
 
-Written and building. **Never run in game.**
+First release. There is no 0.1.0 entry below it because 0.1.0 was never published — it was
+this same work under a version that had not yet been judged ready, and folding it in beats
+inventing a release nobody could have installed.
 
 ### The line this sits on
 
@@ -19,7 +21,9 @@ skills are read and never written.
 - Every character level earns one **pick**, spent on any runestone in the catalogue to raise it a
   rank, up to five.
 - **Picks bank.** Nothing expires and the panel waits.
-- **No drawbacks.** A runestone is a reward or it is nothing.
+- **No drawbacks.** A runestone is a reward or it is nothing. A cost attached to a reward makes
+  a pick something you can regret, and regretting a permanent choice is a reason to stop
+  playing rather than a reason to think harder.
 
 ### Free choice, not a dealt hand
 
@@ -32,24 +36,77 @@ offer to store in the ledger or on the wire, no second window with its own visib
 What it costs is the tension of a hand you are dealt. A free choice means the strongest runestone
 is always available, so balance now lives in the runestones themselves and in `MaxRank`.
 
-The panel carries the weight for this: choosing between fourteen runestones is only a real choice
-if each tile says both what it is worth now and what the pick would make it.
+The panel carries the weight for this: choosing between nineteen runestones is only a real choice
+if each stone says both what it is worth now and what the pick would make it.
 
-### Capacity is a runestone, not a setting
+### Every fifth rank is a capstone
+
+Taking a runestone the whole way grants something the earlier ranks did not hint at, rather
+than one more slice of the same number. It is what makes depth a decision against breadth
+instead of a rounding error — five ranks of the same small bonus is the same reward as five
+different small bonuses, so without this there was no reason to ever finish anything.
+
+### Capacity is a capstone, not a runestone of its own
 
 This began as an inventory problem — late-biome kit eats the grid and leaves nothing for what
 you went out to fetch. The cheap fix is more rows, and that is exactly what
-[Hoard](../hoard) argues against. So capacity is **Deep pack**, taken like anything else and
-competing with armour and the rest.
+[Hoard](../hoard) argues against.
+
+It was a runestone once, called **Deep pack**, and it was the strongest thing in the catalogue:
+taken first, every time, which is not a choice. A row now sits at the bottom of Ox-backed and
+of Sure hand, so capacity is the reward for taking a hauling runestone all the way rather than a
+purchase anyone makes on their first pick.
+
+### The panel
+
+A fifth tab on the compendium bar, beside the raven and the trophy, opens a full screen of
+runestones — one per boon, each with its own outline, rock and marks, all seeded off the card
+id so a boon looks the same in every session and on every machine. A rank cuts one more mark
+into the rim, and the mark holds **the level that bought it**.
+
+Three designs came before it: a draft window dealing three at random, a board of tiles, and
+that same board dressed in the game's own wooden sprites. The last is why this one exists.
+Borrowing a window frame is imitation, and it read as a different game no matter how close the
+sprites got. A runestone imitates nothing.
+
+### The bar
+
+A fifth bar under stamina, in bone rather than a fifth hue, cloned from one of the game's own
+so it carries the same frame, fill and trailing fill. It follows the stamina bar rather than
+sitting at fixed pixels, so "below stamina" stays true at any resolution and HUD scale, and it
+flashes while a pick is waiting.
+
+### What the server decides
+
+The ledger is held by the server and keyed to the platform identity plus the character, never
+to the character file — a character file sits on the player's own disk, so nothing that decides
+rewards may live there. The client reports only that a skill went up; every number is derived
+server-side.
+
+Three ceilings bound what a report can be worth, because skills live on the client and a report
+is therefore a claim that cannot be verified, only bounded:
+
+- **Reports per minute**, which caps how many claims are accepted.
+- **A one-level step**, which caps how much a single claim may say. Skills level one at a time
+  and fire one callback each, so a report naming a level far above the baseline this server
+  watched that skill reach did not come from playing. This also protects the baseline, which
+  would otherwise adopt the forged level and give every later claim an alibi.
+- **XP per minute of connected time**, which is the only cap that does not depend on believing
+  the client at all. It banks three minutes so an honest burst — clearing a crypt levels four
+  skills at once — is paid in full.
+
+A character whose skills sit above what this world watched them reach earns nothing until they
+line up, and is told so on screen. Nobody is disconnected and nothing already earned is taken
+away: Boon used to refuse the connection, and a levelling mod deciding who may play means a bug
+in an XP system locks people out. Refusing at the door moved to [Threshold](../threshold),
+where it is the whole job and is done openly.
 
 ### Known limits
 
-- **Never played.** The free-pick path has been exercised only against a deliberately
-  cheapened curve, not a real one.
-- **The play profile still carries the test curve.** `LevelBaseXp = 5` and
-  `LevelExponent = 1` were set for testing so the pick path could be reached without
-  grinding; the server profile is untouched at `60` / `1.5`. This must be restored before
-  release, and because BepInEx's saved value beats any default in code, the fix is to edit
-  the `.cfg` rather than the C#.
-- Runestone balance is untested by definition: with free choice, the strongest runestone is always
-  available, and nothing has yet been played hard enough to find out which one that is.
+- **Never played at the shipping curve.** The pick path was exercised against a deliberately
+  cheapened one so it could be reached without grinding. `LevelBaseXp` and `LevelExponent` are
+  back at `60` and `1.5`, and how often a stone lights up at those numbers is still a guess.
+- **Runestone balance is untested by definition.** With free choice the strongest runestone is
+  always available, and nothing has been played hard enough to find out which one that is.
+- **Multiplayer has never had a second player.** The version gate, config sync and catalogue
+  hash all work host-side and against a dev server, but no remote client has connected.

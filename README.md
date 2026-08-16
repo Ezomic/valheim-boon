@@ -27,11 +27,11 @@ visibility rules. What it costs is the tension of a hand you are dealt: a free c
 strongest runestone is always available, so balance now has to live in the runestones themselves and in
 `MaxRank` rather than in whether one happened to come up.
 
-The panel earns its keep here. Choosing between fourteen runestones is only a real choice if each
+The panel earns its keep here. Choosing between nineteen runestones is only a real choice if each
 one says what it is worth now **and** what the pick would make it, which is why every tile
 carries both lines.
 
-## Why boons, and why capacity is one of them
+## Why boons, and why capacity is the bottom of one
 
 This started as an inventory problem. Late-biome kit eats the grid - armour, a weapon, a bow,
 ammo, five tools, a torch, food, mead - and there is very little left for what you went out to
@@ -133,17 +133,23 @@ actually hurts. Boon skips the method, which removes all three together.
 
 ## Where progress lives, and why it is not on your character
 
-**On the server, keyed by the platform identity of the connection.**
+**On the server, keyed by the platform identity of the connection and the character being played.**
 
 This is the load-bearing decision. Valheim keeps characters entirely client-side — even
 `ZNet.SaveOtherPlayerProfiles` only sends each client an RPC telling it to save its own
 profile locally, so the server never holds a character file. Anything stored on the character
 is therefore editable by its owner, which rules it out for anything that decides rewards.
 
-The ledger is keyed on `ISocket.GetHostName()`, read server-side from the peer's own socket.
-That identity is established by the platform before any of this code runs, so a client cannot
-claim someone else's record. `Player.GetPlayerID()` was the obvious alternative and is wrong:
-it arrives from the client.
+Half the key is `ISocket.GetHostName()`, read server-side from the peer's own socket. That
+identity is established by the platform before any of this code runs, so a client cannot claim
+someone else's record. `Player.GetPlayerID()` was the obvious alternative and is wrong on its
+own: it arrives from the client and could name anyone.
+
+It takes both halves, and each one alone was tried. The platform identity is per *account*, so
+every character on one machine shared a record and a remade character inherited the last one's
+level and runestones - which is exactly what happened the first time a character was remade.
+The character id alone is client-supplied. Together, the platform half fences a player into
+their own account's records and the character half separates their characters within it.
 
 The client's half of the protocol is deliberately thin. It reports **that a skill went up**
 and **which runestone it wants**. It never sends a level, an XP total or a rank, because the server
@@ -160,7 +166,7 @@ if (targetPeerID == m_id || targetPeerID == 0L) HandleRoutedRPC(data);
 
 Since `GetServerPeerID()` returns your own id when you are the server, skill reports, picks and
 state pushes all loop straight back and resolve against the local ledger. Progress is stored
-under the owner `localhost`.
+under the owner `localhost@<character id>`.
 
 The only gap is that the host has no peer entry for itself, so nothing greets it on spawn —
 hence a one-shot seed of the opening state. Everything after arrives by the same path a
@@ -169,65 +175,76 @@ client's would.
 The gate is pointless here and effectively inert: on your own machine you are the one it would
 be protecting you from.
 
-## The fresh-character gate
+## The gate, and how small a claim it makes
 
-The real defence is not rate limiting, it is refusing characters that could have been levelled
-elsewhere. `PlayerProfile.m_worldData` is a dictionary keyed by **world UID** with one entry
-per world a character has spawned in, and `m_usedCheats` is a flag the game maintains itself.
-A character that has only ever been on this world cannot have been levelled anywhere else, and
-there is then nothing to verify.
+Boon used to refuse the connection. A character that had ever spawned in another world was
+sent `ConnectionStatus.ErrorKicked` and dropped, on the reasoning that a character which has
+only been here cannot have been levelled elsewhere.
 
-Checked on **every login**, not only the first, so a character taken away to a creative world
-and brought back is caught on return rather than waved through because it was clean once.
+That was the wrong power for this mod to hold. A levelling mod deciding who may play means a
+bug in an XP system locks people out of the server, and it did: the player got Valheim's
+generic kick screen with the reason only in the server's log, so a refusal and a crash looked
+identical from their side. The check itself was also stricter than it sounded — "has this
+character been anywhere else" refuses a character on every world but its first, permanently,
+because `m_worldData` entries are never removed. Visiting a friend's world once cost you this
+server for good.
 
-**Enforcement is on.** A refused player is sent `ConnectionStatus.ErrorKicked` and dropped.
-Set `GateEnforce = false` to fall back to logging what would have been refused without
-turning anyone away.
+That whole judgement now lives in [Threshold](../threshold), where turning people away is the
+entire job and is done openly with its own message. What is left here is strictly about
+payment, and it is a much smaller claim: **this server decides what it is willing to pay for,
+not who may play.**
 
-### What this costs
+### What the server remembers
 
-The rule is stricter than it sounds, in three ways:
+Every accepted skill-up raises a per-character baseline — the highest level this world has
+itself watched each skill reach. That baseline is the one fact in the whole system a client
+cannot touch. Character files sit on the player's own disk and are unencrypted ZPackages, so
+anything read out of one is self-reported; the baseline is the server's own memory.
 
-- **It is symmetric.** "Has this character been on any world other than this one" refuses a
-  character on *every* world but its first. A character bound to this server is refused by any
-  other modded world, and vice versa. In practice that means **one character per modded world**.
-- **It is permanent.** `m_worldData` entries are created as soon as a character explores or
-  logs out, and nothing ever removes them. Visiting a friend's world once locks that character
-  out of this server for good, with no way to clear the record.
-- **It does not protect Boon levels** — the ledger already does that completely. Levels come
-  only from skill-ups reported while connected here, and nothing is backfilled, so a character
-  that grinds skills elsewhere returns with **zero** extra Boon levels. What the gate actually
-  stops is a maxed-out *vanilla* character walking in: skills at 100, map explored. That is a
-  real concern about server balance, but it is a different one.
+A character that comes back with skills above it gained them somewhere else, whatever its file
+says about where it has been. It plays completely normally and simply earns nothing until the
+numbers line up, and it is told so on screen — withholding is invisible by nature, and a
+player who cannot tell they have stopped earning is the same complaint that killed the kick.
 
-A refused player is sent `ConnectionStatus.ErrorKicked` before being dropped, the same way
-ZNet turns away a wrong-version client, so they see a message rather than an unexplained
-disconnect.
+Nothing already earned is ever taken away. `SkillDriftAllowance` gives a level of slack,
+because the ledger is flushed on a timer and a server that stops unexpectedly can lose the last
+few seconds of baseline updates; one level absorbs that and is worth nothing to a cheat.
 
-### A character backup is the way back in — and is not a hole
+### Three ceilings, because a report cannot be verified
 
-Character files live client-side in
-`%USERPROFILE%\AppData\LocalLow\IronGate\Valheim\characters`, and `m_worldData` is serialised
-into them. **Restoring a backup taken before the trip clears the travel record and the gate
-passes again.** That is the escape hatch for the permanent lockout above: back a character up
-before taking it anywhere else.
+Skills live on the client. `Player.OnSkillLevelup` fires there, so a skill-up report is a claim
+about something the server never saw, and no amount of checking makes it otherwise. What is
+possible is bounding what a claim can be worth, and there are exactly three levers:
 
-It is not a way to smuggle progress in, because a restore rolls back *everything* — the
-skills gained on the other world go with the travel record, which is exactly the thing anyone
-would have gone there to get. Backing up, levelling elsewhere and restoring nets nothing.
+| Ceiling | Bounds |
+| --- | --- |
+| `MaxSkillUpsPerMinute` | how many claims are accepted |
+| `MaxSkillLevelJump` | how much one claim may say |
+| `MaxXpPerMinute` + `XpBurst` | how much anything can be worth over time |
 
-What it does not defend against is a **hand-edited** character file, stripping the world
-entries while keeping the skills. The file is an unencrypted ZPackage, so that is possible for
-someone willing to write a parser. Combined with the fact that these facts are self-reported
-in the first place, the gate stops the ordinary case and not a determined one.
+The first alone was not enough, and the gap is arithmetic: XP is the skill level reached, so
+thirty reports a minute each naming a level-100 skill was worth 3,000 XP — a character level
+every ten seconds — and each of those forged levels was adopted into the baseline, giving the
+next claim an alibi.
+
+`MaxSkillLevelJump` closes that by refusing anything more than one level above the baseline,
+which is what the game itself does: `Skills.Skill.Raise` levels one at a time and fires one
+callback each. It needs a complete login baseline to mean anything, so it is enforced only for
+characters this world has fully seen — an absent baseline entry is otherwise indistinguishable
+from a skill that has genuinely never been used.
+
+`MaxXpPerMinute` is the only cap that does not depend on believing the client at all. However
+convincing a report is, time connected is a quantity the server measures for itself. It is a
+token bucket rather than a tripwire, banking three minutes by default, so an honest burst —
+clearing a crypt levels four skills at once — is still paid in full.
 
 ### What this does not do
 
-The gate reads a client-side file, so the facts are self-reported and a purpose-built modified
-client can forge them. What it reliably catches is the ordinary case — an unmodified player
-who levelled elsewhere or used `devcommands` — because the game records both and has no reason
-to lie. The rate limit behind it bounds the damage of a forged report rather than detecting
-one. Nothing here is airtight, and it is not presented as such.
+None of it detects a cheat; it bounds one. A purpose-built client can still claim a plausible
+level-up it did not earn, at the honest rate, forever. What the ceilings guarantee is that
+doing so is no faster than playing, which is the only property worth having here — and it is
+the reason the whole thing withholds rather than punishes. A false positive costs a player
+some XP and says so on screen, not their seat on the server.
 
 ## Runestones
 
@@ -259,53 +276,65 @@ prefab name that does not resolve. A typo costs one runestone, not the catalogue
 | `LevelBaseXp` | `60` | Cumulative XP for level 1 |
 | `LevelExponent` | `1.5` | Cumulative XP for level N is base × N^exponent |
 | `MaxRank` | `5` | How deep one runestone goes, and how many slots its track shows |
+| `BonusEvery` | `5` | Ranks between capstones |
+| `ShowInfoTab` | `true` | Add the boons tab to the compendium bar |
 | `RemoveDeathSkillLoss` | `true` | Skip `Skills.OnDeath` |
-| `RequireFreshCharacter` | `true` | Run the gate check |
-| `GateEnforce` | `true` | Disconnect a refused player; off logs only |
-| `MaxSkillUpsPerMinute` | `30` | Server-side ceiling on accepted reports |
+| `CheckSkillBaseline` | `true` | Compare a joining character against what this world watched it reach |
+| `WithholdUntrustedXp` | `true` | Pay nothing while it sits above that; off logs only |
+| `SkillDriftAllowance` | `1` | Levels of slack before a returning character counts as imported |
+| `MaxSkillUpsPerMinute` | `30` | Server-side ceiling on accepted reports per player |
+| `MaxSkillLevelJump` | `1` | Levels above the baseline one report may claim |
+| `MaxXpPerMinute` | `600` | XP paid per minute of connected time; `0` is off |
+| `XpBurst` | `1800` | How much unspent allowance banks, so honest bursts still pay |
 | `Verbose` | `false` | Log every grant, rejection and runestone applied |
 | `ShowXpBar` | `true` | Show the experience bar at all |
 | `VanillaBar` | `true` | Clone one of the game's own bars; off draws the plain fallback |
-| `BarPosX` / `BarPosY` | `172` / `105` | Screen pixels to the **centre** of the cloned bar |
-| `BarSize` | `64` | Length in canvas units — 64 is a starting stamina bar |
+| `BarFollowStamina` | `true` | Anchor to the stamina bar; off falls back to `BarPosX`/`BarPosY` |
+| `BarOffsetX` / `BarOffsetY` | `0` / `70` | Pixels right of and below the stamina bar's centre |
+| `BarPosX` / `BarPosY` | `172` / `105` | Screen pixels to the **centre**, when not following |
+| `BarSize` | `240` | Length in canvas units — 64 is a starting stamina bar |
 | `BarBuildRaise` | `155` | Pixels to lift the bar while the build or ship panel is open |
-| `BarColour` | `D4A94A` | `RRGGBB`; the trailing fill is the same hue held back |
+| `BarColour` | `E4DCC4` | `RRGGBB`; the trailing fill is the same hue held back |
 | `BarFlashSeconds` | `4` | How often the bar flashes while a runestone is waiting |
 | `BarX` / `BarBottom` / `BarThickness` / `BarLength` | `168` / `75` / `10` / `60` | Place the **fallback** bar only |
 
 A value already written to the `.cfg` beats a new default in code — change the `.cfg`.
 
-## Status: v0.1 - played, not finished
+## Status: v1.0
 
 Runs on a listen host and on a dedicated server, and both halves have been exercised: the
-ledger, the gate, the pick path, the level curve, the panel and the bar. Nineteen runestones, all
-of them verified to name a field the game actually reads.
+ledger, the gate, the pick path, the level curve, the panel, the bar and the compendium tab.
+Nineteen runestones, all of them verified to name a field the game actually reads.
 
 What is not done is the part that only play settles. The shipping curve of 60 * N^1.5 has
 never been played - testing ran on a cheapened one - so the pacing of the whole mod is
-unknown, and no value in the catalogue has been tuned against anything but reasoning.
+unknown, and no value in the catalogue has been tuned against anything but reasoning. The
+version says the code is finished, not that the numbers are right.
 
 ## Known gaps
 
-- **The cloned bar has never been seen.** Everything about it follows from decompiled code,
-  but the HUD hierarchy it clones is scene data: whether the eitr bar's text child comes
-  along, whether its animator fades the whole root, and where `BarPosX`/`BarPosY` actually
-  land are all first-look questions. Expect one nudge.
-- **The runestone icon from the mockup is not drawn.** It would need a sprite asset, and this mod
-  is deliberately a DLL and two text files.
-- **Ranks taken before v3 have no level.** The old ledger recorded a rank and nothing else,
-  and picks were not stored in order, so there is no way to tell which level bought which
-  rank. Those slots read `—` permanently. Everything taken from now on is exact.
-- **Balance now rests entirely on the runestones.** With a free choice the strongest runestone is always
-  available, so the ordering of `MaxRank` and the per-rank values are doing the work the
-  random offer used to do. That has not been played yet.
-- **`SE_Stats` has no max health, stamina or eitr field** — those come from food in Valheim —
+- **The shipping curve has never been played.** Everything below it works; how often a stone
+  lights up at 60 * N^1.5 is a guess, and it is the single number the whole feel rests on.
+- **Balance rests entirely on the runestones.** With a free choice the strongest runestone is
+  always available, so the ordering of `MaxRank` and the per-rank values are doing the work
+  the random offer used to do. That has not been played hard enough to find out which one
+  wins.
+- **Multiplayer has never had a second player.** The ledger, the version gate, the config sync
+  and the catalogue hash all work host-side and against a dev server, but no remote client has
+  connected, so the join path is exercised only in the shape where the server is also the
+  client.
+- **A character judged untrusted may not recover on its own.** XP is withheld and the baseline
+  stops advancing with it, so "until they line up again" has no path back within a session
+  short of the skills being re-seen at login. Not yet hit in practice; if a player reports
+  earning nothing forever, that is where to look.
+- **Ranks taken before ledger v3 have no level.** The old format recorded a rank and nothing
+  else, and picks were not stored in order, so there is no way to tell which level bought
+  which rank. Those slots read a dash permanently. Everything taken since is exact.
+- **`SE_Stats` has no max health, stamina or eitr field** - those come from food in Valheim -
   so no max-pool runestone is possible without a different vehicle.
-- **A permanent status effect may show in the HUD status bar** with no icon. Not yet seen in
-  game; if it looks wrong, that is where to look.
 - **Nobody is backfilled.** With only server-observed gains counting, a character arriving at
-  skill 50 still starts at Boon level 0. That follows from the anti-cheat choice and is worth
-  confirming you want.
+  skill 50 still starts at Boon level 0. That follows from the anti-cheat choice rather than
+  being an oversight.
 
 ## Author
 
