@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Ezomic.Core;
 using UnityEngine;
 
@@ -199,7 +200,11 @@ namespace Boon
             // over different catalogues is a real and silent disagreement: this file names
             // what every rank is worth, effects are applied client-side from it, and the
             // server only ever checks the rank - so an edited line here is simply believed.
-            Suite.Data(File.ReadAllText(path));
+            //
+            // Without Core there is nothing to declare it to, and that check is simply gone.
+            // Not a fallback worth inventing: a hash Boon computes and compares against itself
+            // proves nothing, since the disagreement being looked for is between two machines.
+            if (BoonPlugin.CorePresent) DeclareCatalogue(File.ReadAllText(path));
 
             var lineNo = 0;
             foreach (var raw in File.ReadAllLines(path))
@@ -309,5 +314,18 @@ namespace Boon
             field = null;
             return false;
         }
+
+        /// <summary>
+        /// Never inlined, for the same reason as BoonPlugin.RegisterWithCore: the JIT resolves
+        /// a method's assemblies when it first compiles that method, so this call sitting
+        /// inline in Load would drag Ezomic.Core in on a machine that has no Core - and the
+        /// exception would land while the catalogue was being read, taking every card with it.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void DeclareCatalogue(string contents)
+        {
+            Suite.Data(contents);
+        }
+
     }
 }

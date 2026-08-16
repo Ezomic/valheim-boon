@@ -1,11 +1,10 @@
 {
   "name": "Boon",
   "author": "Robbin Thijssen",
-  "version_number": "1.0.0",
+  "version_number": "1.1.0",
   "website_url": "https://github.com/Ezomic/valheim-boon",
   "description": "A character level beside the skills, carved into runestones you choose and deepen.",
   "dependencies": [
-    "denikson-BepInExPack_Valheim-5.4.2333",
-    "Ezomic-Longhouse_Core-0.2.0"
+    "denikson-BepInExPack_Valheim-5.4.2333"
   ]
 }

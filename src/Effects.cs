@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Ezomic.Core;
 using UnityEngine;
 
@@ -232,7 +233,23 @@ namespace Boon
             Totals(ranks).TryGetValue("*inventoryrow", out var rows);
 
             ExtraRows = Mathf.Max(0, Mathf.RoundToInt(rows));
-            InventoryRows.Claim(BoonPlugin.PluginGuid, ExtraRows);
+
+            // Through Core when it is here, through Boon's own owner when it is not. The two
+            // never both run: OwnInventoryRows is only patched in when Core is absent.
+            if (BoonPlugin.CorePresent) ClaimThroughCore(ExtraRows);
+            else OwnInventoryRows.Claimed = ExtraRows;
+        }
+
+        /// <summary>
+        /// Never inlined, for the same reason as BoonPlugin.RegisterWithCore: the JIT resolves
+        /// a method's assemblies when it first compiles that method, so this call sitting
+        /// inline above would drag Ezomic.Core in on a machine that has no Core - and it sits
+        /// on the path that runs whenever a rank changes.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ClaimThroughCore(int rows)
+        {
+            InventoryRows.Claim(BoonPlugin.PluginGuid, rows);
         }
 
         private static string Signature(Dictionary<string, int> ranks)

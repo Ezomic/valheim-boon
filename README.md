@@ -296,6 +296,43 @@ no code change and no rebuild.
 An unknown field name is **logged and skipped**, not thrown, matching how the game treats a
 prefab name that does not resolve. A typo costs one runestone, not the catalogue.
 
+## Core is optional, and here is exactly what that costs
+
+Boon installs and runs on its own. Core is a **soft** dependency: install Boon by itself and
+it works, including the extra inventory rows. **Solo, you need nothing else and give up
+nothing.**
+
+On a server it is a different question, and Boon gives up more without Core than the rest of
+this suite does. Three things, all of which matter only in multiplayer:
+
+**The catalogue is no longer checked.** `cards.txt` names what every rank is worth, effects are
+applied client-side from it, and the server only ever verifies the *rank* — so an edited line
+is simply believed. With Core, a hash of the file travels in the version handshake and two ends
+running the same build over different catalogues get reported. Without it, a client that edits
+`cards.txt` gets whatever it wrote.
+
+**The host's curve is no longer forced.** `LevelBaseXp` and the rest are synced from the host
+with Core. Without it, a client with different settings reads a different level out of the same
+XP, and every number on its screen disagrees with the server deciding them. The `.cfg` files
+have to be matched by hand.
+
+**Extra inventory rows are claimed without an arbiter.** This is the one worth reading twice.
+`Inventory.m_height` is a single private int with no owner. Two mods that both want extra rows
+each write it, the last writer wins, and a mod that only writes when its own state changes
+loses silently to one that writes every frame. Core exists to add every claim up and write
+once, so mods stack instead of fighting. Standalone Boon owns that write alone — correct on its
+own, and **in conflict with any other mod that grants inventory rows**, with the winner decided
+by frame ordering rather than by anything either mod can control. If you run another row-adding
+mod, install Core.
+
+What is *not* given up is correctness of the rows themselves. The standalone owner carries the
+`Player.Load` widening in full, which is not a nicety: without it every item sitting in a
+granted row is destroyed by loading the game, silently, because `AddItem` drops any saved
+position outside the current grid and the row is not applied until after the load. That bug
+cost a real heartwood to find, and the fallback would not have shipped without the fix.
+
+Boon logs a warning at startup when it starts without Core, naming all three.
+
 ## Config
 
 `BepInEx\config\ezomic.valheim.boon.cfg`

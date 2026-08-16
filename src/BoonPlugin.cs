@@ -1,4 +1,6 @@
+using System.Runtime.CompilerServices;
 using BepInEx;
+using BepInEx.Bootstrap;
 using BepInEx.Logging;
 using Ezomic.Core;
 using HarmonyLib;
@@ -7,7 +9,11 @@ using UnityEngine;
 namespace Boon
 {
     [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
-    [BepInDependency("ezomic.valheim.core", BepInDependency.DependencyFlags.HardDependency)]
+    // Soft, not hard. Boon installs and runs on its own; a hard dependency that is absent does
+    // not degrade, the plugin simply never loads. Soft still buys the load-order guarantee when
+    // Core is present, which is what registering needs. What standalone costs is set out in
+    // TryRegisterWithCore, and it is more here than for most of the suite.
+    [BepInDependency(CoreGuid, BepInDependency.DependencyFlags.SoftDependency)]
     // No BepInProcess. It used to say valheim.exe, which is a whitelist - and a dedicated
     // server runs valheim_server.exe, so the entire server half of this mod would never have
     // loaded there. The ledger, the gate and every authority decision live on the server; on a
@@ -17,8 +23,18 @@ namespace Boon
     {
         public const string PluginGuid = "ezomic.valheim.boon";
         public const string PluginName = "Boon";
-        public const string PluginVersion = "1.0.0";
+        public const string PluginVersion = "1.1.0";
         public const string PluginAuthor = "Robbin Thijssen";
+
+        /// <summary>Core's plugin GUID. Optional - see TryRegisterWithCore.</summary>
+        internal const string CoreGuid = "ezomic.valheim.core";
+
+        /// <summary>
+        /// Whether Core answered at load. Read by Effects, which claims rows through Core when
+        /// it is here and through Boon's own owner when it is not, and by Cards, which can only
+        /// declare the catalogue to a gate that exists.
+        /// </summary>
+        internal static bool CorePresent;
 
         internal static ManualLogSource Log;
 
@@ -30,6 +46,77 @@ namespace Boon
         {
             Log = Logger;
             BoonConfig.Bind(Config);
+            TryRegisterWithCore();
+
+            Cards.Load();
+
+            _harmony = new Harmony(PluginGuid);
+            _harmony.PatchAll(typeof(SkillWatch));
+            _harmony.PatchAll(typeof(DeathPenalty));
+            _harmony.PatchAll(typeof(UiInput));
+            _harmony.PatchAll(typeof(AttackSpeed));
+
+            // Patched in only when Core is absent, so the two row owners can never both write
+            // Inventory.m_height. Applying it unconditionally would mean two Player.Load
+            // prefixes each widening the grid and each capturing the other's widened value as
+            // the vanilla baseline, which is precisely the compounding both guard against.
+            if (!CorePresent) _harmony.PatchAll(typeof(OwnInventoryRows));
+
+            Log.LogInfo(PluginName + " " + PluginVersion + " by " + PluginAuthor + " - ready.");
+        }
+
+        /// <summary>
+        /// Joins Core's version gate when Core is installed, and does without it when not.
+        ///
+        /// Boon gives up more than the rest of the suite does standing alone, so it is worth
+        /// being exact about what.
+        ///
+        /// **The catalogue is no longer checked.** cards.txt names what every rank is worth,
+        /// effects are applied client-side from it, and the server only ever checks the rank -
+        /// so an edited line is simply believed. Suite.Data hands Core a hash of the file so
+        /// the gate can report two ends running the same build over different catalogues.
+        /// Without Core there is nothing to compare it against, and a client with an edited
+        /// catalogue gets whatever it wrote. **Singleplayer is unaffected; on a server this is
+        /// the difference between a curve the host decides and one a client can claim.**
+        ///
+        /// **The host's curve is no longer forced.** Suite.Sync is what stops a client with a
+        /// different LevelBaseXp reading a different level out of the same xp. Standalone, the
+        /// cfg files have to be matched by hand.
+        ///
+        /// **Extra inventory rows are claimed without an arbiter.** See OwnInventoryRows: it
+        /// does the whole job correctly for Boon alone, and cannot know about a second mod
+        /// wanting rows from the same private int.
+        ///
+        /// None of that is a reason to refuse to run - a solo player needs none of it, and
+        /// someone who wants only Boon should be able to have only Boon. It is a reason to say
+        /// so plainly, here and in the README.
+        /// </summary>
+        private void TryRegisterWithCore()
+        {
+            CorePresent = Chainloader.PluginInfos.ContainsKey(CoreGuid);
+
+            if (!CorePresent)
+            {
+                Log.LogWarning("Core not installed - running standalone. The version gate, the "
+                    + "cards.txt check and the host-authoritative curve are all unavailable, and "
+                    + "extra inventory rows are claimed without an arbiter. Fine solo; on a "
+                    + "server, install Core.");
+                return;
+            }
+
+            RegisterWithCore();
+        }
+
+        /// <summary>
+        /// Kept separate and never inlined on purpose. The JIT resolves the assemblies a method
+        /// needs when it first compiles that method, so a Suite call sitting directly in Awake
+        /// would drag Ezomic.Core in before the check above could prevent it - and the
+        /// missing-assembly exception would land during plugin load, which is the failure this
+        /// whole arrangement exists to avoid.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void RegisterWithCore()
+        {
             // Everyone, not HostOnly. Both ends have to agree about this mod, and the
             // disagreement is silent when they do not: a client that cannot resolve a prefab
             // hash discards the ZDO rather than erroring - destroying what is already standing
@@ -42,15 +129,6 @@ namespace Boon
             // test curve on one machine made a dedicated server refuse every pick.
             Suite.Sync(BoonConfig.XpPerSkillLevel, BoonConfig.LevelBaseXp, BoonConfig.LevelExponent,
                        BoonConfig.MaxRank, BoonConfig.BonusEvery);
-            Cards.Load();
-
-            _harmony = new Harmony(PluginGuid);
-            _harmony.PatchAll(typeof(SkillWatch));
-            _harmony.PatchAll(typeof(DeathPenalty));
-            _harmony.PatchAll(typeof(UiInput));
-            _harmony.PatchAll(typeof(AttackSpeed));
-
-            Log.LogInfo(PluginName + " " + PluginVersion + " by " + PluginAuthor + " - ready.");
         }
 
         private void OnDestroy()
@@ -64,6 +142,15 @@ namespace Boon
             // ZRoutedRpc does not exist at load and comes and goes with each session, so
             // registration is retried from here and is cheap once it has taken.
             Net.EnsureRegistered();
+
+            // Core drives its own from CorePlugin.Update, so this is only ever the standalone
+            // path. Both ticks are early-outs once settled, and the backdrop has to be driven
+            // separately because it follows the GUI's lifetime rather than the player's.
+            if (!CorePresent)
+            {
+                OwnInventoryRows.Tick();
+                OwnInventoryRows.Backdrop.Tick();
+            }
 
             if (!BoonConfig.Enabled.Value) return;
 
