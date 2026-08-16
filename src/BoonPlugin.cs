@@ -25,7 +25,6 @@ namespace Boon
         private Harmony _harmony;
 
         private bool _saidHello;
-        private bool _bound;
         private bool _keyHeld;
 
         private void Awake()
@@ -43,7 +42,6 @@ namespace Boon
             _harmony.PatchAll(typeof(SkillWatch));
             _harmony.PatchAll(typeof(DeathPenalty));
             _harmony.PatchAll(typeof(UiInput));
-            _harmony.PatchAll(typeof(MenuGuard));
             _harmony.PatchAll(typeof(AttackSpeed));
 
             Log.LogInfo(PluginName + " " + PluginVersion + " by " + PluginAuthor + " - ready.");
@@ -70,12 +68,10 @@ namespace Boon
             {
                 // Left the world; the next one starts the introductions again.
                 _saidHello = false;
-                _bound = false;
                 return;
             }
 
             SayHello();
-            BindHome();
             ReadKey();
 
             if (ClientState.Known) Effects.Apply(player, ClientState.Ranks);
@@ -111,7 +107,7 @@ namespace Boon
             var profile = Game.instance.GetPlayerProfile();
             if (profile == null) return;
 
-            var id = Home.IdOf(profile);
+            var id = PlayerIdOf(profile);
             if (id == 0L) return;
 
             _saidHello = true;
@@ -119,24 +115,31 @@ namespace Boon
         }
 
         /// <summary>
-        /// Remember which world this character belongs to, the first time it is seen in one.
-        /// After this the menu refuses to start it anywhere else, which is the only point at
-        /// which that can still be prevented.
+        /// The character's unique id, which is half of the ledger key.
+        ///
+        /// Kept here rather than shared, now that the character-protection code this used to
+        /// sit beside has moved to Threshold. It is four lines of reflection; a dependency
+        /// between two unrelated mods would cost more than the duplication does.
+        ///
+        /// m_playerID rather than the profile's filename: the filename is the character's
+        /// name, which is reused the moment a character is deleted and another made with the
+        /// same name, and keying on it once gave a brand new character an older one's record.
         /// </summary>
-        private void BindHome()
+        private static long PlayerIdOf(PlayerProfile profile)
         {
-            if (_bound || !BoonConfig.ProtectCharacter.Value) return;
-            if (ZNet.instance == null || Game.instance == null) return;
+            if (profile == null) return 0L;
 
-            var uid = ZNet.instance.GetWorldUID();
-            if (uid == 0L) return;
+            if (_playerId == null) _playerId = AccessTools.Field(typeof(PlayerProfile), "m_playerID");
+            if (_playerId == null)
+            {
+                Log.LogError("PlayerProfile.m_playerID not found - Boon cannot identify characters.");
+                return 0L;
+            }
 
-            var profile = Game.instance.GetPlayerProfile();
-            if (profile == null) return;
-
-            _bound = true;
-            Home.Bind(Home.IdOf(profile), profile.GetName(), uid);
+            return _playerId.GetValue(profile) is long id ? id : 0L;
         }
+
+        private static System.Reflection.FieldInfo _playerId;
 
         /// <summary>
         /// Edge-triggered by hand, the same way Tether does it: a held key would otherwise

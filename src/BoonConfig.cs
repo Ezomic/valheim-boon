@@ -28,7 +28,6 @@ namespace Boon
 
         internal static ConfigEntry<bool> RemoveDeathSkillLoss;
 
-        internal static ConfigEntry<bool> ProtectCharacter;
         internal static ConfigEntry<bool> CheckSkillBaseline;
         internal static ConfigEntry<bool> WithholdUntrustedXp;
         internal static ConfigEntry<string> UntrustedMessage;
@@ -224,14 +223,11 @@ namespace Boon
                 "pickable, and is also how many slots its track shows.");
 
 
-            ProtectCharacter = cfg.Bind("Gate", "ProtectCharacter", true,
-                "Refuse to start a local world with a character that belongs to a different " +
-                "one.\n" +
-                "This is protection rather than enforcement, and it is the only defence that " +
-                "actually works: loading a world writes it into the character's own " +
-                "m_worldData, nothing ever removes that entry, and the gate then refuses the " +
-                "character on its own server forever. The bindings are in boon-home.txt beside " +
-                "this file and can be edited or deleted by hand.");
+            // ProtectCharacter used to be bound here. It refused to start a local world with a
+            // character belonging to another one, which is protection against being locked out
+            // by a door Boon no longer owns - so it moved to Threshold along with the door,
+            // and the bindings moved from boon-home.txt to threshold-home.txt. The old key may
+            // still be sitting in existing config files doing nothing.
 
             RemoveDeathSkillLoss = cfg.Bind("Death", "RemoveDeathSkillLoss", true,
                 "Skip Skills.OnDeath entirely. The vanilla world modifier is not enough on " +
