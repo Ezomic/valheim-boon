@@ -7,14 +7,13 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "Ezomic"
 name = "Boon"
-versionNumber = "1.0.0"
+versionNumber = "1.1.0"
 description = "A character level beside the skills, carved into runestones you choose and deepen."
 websiteUrl = "https://github.com/Ezomic/valheim-boon"
 containsNsfwContent = false
 
 [package.dependencies]
 denikson-BepInExPack_Valheim = "5.4.2333"
-Ezomic-Longhouse_Core = "0.2.0"
 
 [build]
 icon = "./icon.png"
