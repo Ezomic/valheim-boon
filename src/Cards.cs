@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
+using Ezomic.Core;
 using UnityEngine;
 
 namespace Boon
@@ -193,6 +194,12 @@ namespace Boon
                                         " - no cards can be taken.");
                 return;
             }
+
+            // Declared to Core so the gate can compare it. Two ends running the same build
+            // over different catalogues is a real and silent disagreement: this file names
+            // what every rank is worth, effects are applied client-side from it, and the
+            // server only ever checks the rank - so an edited line here is simply believed.
+            Suite.Data(File.ReadAllText(path));
 
             var lineNo = 0;
             foreach (var raw in File.ReadAllLines(path))
