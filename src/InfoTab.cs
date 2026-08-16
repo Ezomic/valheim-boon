@@ -68,7 +68,7 @@ namespace Boon
             // Otherwise the next language change puts the donor's label back on our tab.
             foreach (var localize in go.GetComponentsInChildren<Localize>(true)) Object.Destroy(localize);
 
-            Icon(go);
+            Icon(go, donor);
 
             Place(gui, go, donor);
 
@@ -171,7 +171,7 @@ namespace Boon
         /// - so the tab shows the thing it opens rather than a borrowed glyph that means
         /// something else.
         /// </summary>
-        private static void Icon(GameObject tab)
+        private static void Icon(GameObject tab, Button donor)
         {
             if (_icon == null)
             {
@@ -187,25 +187,31 @@ namespace Boon
             // last, the one not named Background - and every time something else was still
             // drawing underneath. Whatever those extra layers are, they are off now, because
             // nothing here has to know what they were.
+            // Measured off the donor, which is untouched, rather than off our own clone whose
+            // layers are about to be turned off. Taking the largest of ours gave the dot its
+            // colour instead of the glyph's, which is why the rune came out dark.
             var button = tab.GetComponent<Button>();
             RectTransform sample = null;
             var colour = new Color(0.85f, 0.72f, 0.42f, 1f);
             var silenced = 0;
 
+            foreach (var image in donor.GetComponentsInChildren<Image>(true))
+            {
+                if (image == null || image.gameObject == donor.gameObject) continue;
+                if (!image.enabled) continue;
+
+                var donorRect = image.rectTransform;
+                if (sample == null || donorRect.rect.width > sample.rect.width)
+                {
+                    sample = donorRect;
+                    colour = image.color;
+                }
+            }
+
             foreach (var image in tab.GetComponentsInChildren<Image>(true))
             {
                 if (image == null) continue;
                 if (button != null && image.gameObject == button.gameObject) continue;
-
-                // The biggest one is the glyph, and its rect and colour are what ours copies -
-                // that is how it ends up the same size and the same gold as the raven without
-                // either being written here.
-                var rect = image.rectTransform;
-                if (sample == null || rect.rect.width > sample.rect.width)
-                {
-                    sample = rect;
-                    colour = image.color;
-                }
 
                 image.enabled = false;
                 silenced++;
@@ -233,8 +239,16 @@ namespace Boon
             var glyph = holder.GetComponent<Image>();
             glyph.sprite = _icon;
             glyph.color = colour;
-            glyph.raycastTarget = false;
             glyph.preserveAspect = true;
+
+            // It has to take the pointer, and it has to be what the button tints.
+            //
+            // Turning off every inherited image took the button's target graphic with them,
+            // and ours was set not to receive raycasts - so the tab drew correctly and could
+            // not be clicked at all. Handing the button our image gives it both the hit area
+            // and the hover and press states the other tabs have.
+            glyph.raycastTarget = true;
+            if (button != null) button.targetGraphic = glyph;
 
             BoonPlugin.Log.LogInfo("Boons tab: " + silenced + " inherited image(s) off, one rune added.");
         }
