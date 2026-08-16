@@ -119,6 +119,8 @@ namespace Boon
                 return;
             }
 
+            Describe(gui);
+
             var rect = tab.GetComponent<RectTransform>();
             var donorRect = donor.GetComponent<RectTransform>();
             if (rect == null || donorRect == null) return;
@@ -132,6 +134,44 @@ namespace Boon
 
             rect.anchoredPosition = donorRect.anchoredPosition + new Vector2(gap, 0f);
             BoonPlugin.Log.LogInfo("Boons tab placed " + (int)gap + "px after the last one.");
+        }
+
+        /// <summary>
+        /// What the bar actually positions its children with.
+        ///
+        /// Twice now a fifth tab has landed on top of the fourth: once because the measured
+        /// gap between two tabs was zero, and again after falling back to a tab width. Both
+        /// assumed anchoredPosition places them. This prints anchors, offsets and sizes for
+        /// every tab so the third attempt is written against what is there rather than
+        /// against another guess.
+        /// </summary>
+        private static void Describe(InventoryGui gui)
+        {
+            if (!BoonConfig.Verbose.Value) return;
+
+            var panel = gui.m_infoPanel as RectTransform;
+            var lines = new System.Collections.Generic.List<string>();
+
+            if (panel != null)
+                lines.Add("panel " + panel.name + " w=" + (int)panel.rect.width +
+                          " layout=" + (panel.GetComponent<LayoutGroup>() != null));
+
+            foreach (var button in gui.m_infoPanel.GetComponentsInChildren<Button>(true))
+            {
+                if (button == null) continue;
+
+                var r = button.GetComponent<RectTransform>();
+                if (r == null) continue;
+
+                lines.Add(button.name +
+                          " anchoredPos=" + r.anchoredPosition +
+                          " anchorMin=" + r.anchorMin + " anchorMax=" + r.anchorMax +
+                          " size=" + r.rect.width + "x" + r.rect.height +
+                          " parent=" + (r.parent != null ? r.parent.name : "none") +
+                          " layoutElement=" + (button.GetComponent<LayoutElement>() != null));
+            }
+
+            BoonPlugin.Log.LogInfo("Compendium bar:\n  " + string.Join("\n  ", lines.ToArray()));
         }
 
         private static float Spacing(InventoryGui gui)

@@ -41,6 +41,7 @@ namespace Boon
         private static int _shownPercent = -1;
 
         private static float _sizedAt;
+        private static bool _uprightAt;
         private static string _tintedAt;
 
         /// <summary>True while the cloned bar exists, which is what XpBar stands down for.</summary>
@@ -91,6 +92,7 @@ namespace Boon
             // that get nudged, and a bar you have to restart the game to re-measure is a bar
             // that stays slightly wrong.
             if (!Mathf.Approximately(_sizedAt, BoonConfig.BarSize.Value)) Size();
+            if (_uprightAt != BoonConfig.BarUpright.Value) Lay();
             if (_tintedAt != BoonConfig.BarColour.Value) Colour();
 
             // Both bars get the same number, exactly as Hud.UpdateEitr does. The slow one
@@ -199,6 +201,7 @@ namespace Boon
 
             Size();
             Colour();
+            Lay();
 
             // The donor's own hide animation may have left it transparent at the moment it
             // was copied - the eitr bar in particular sits faded out for anyone who has no
@@ -274,6 +277,26 @@ namespace Boon
             _rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, length + BorderBuffer);
             _slow.SetWidth(length);
             _fast.SetWidth(length);
+        }
+
+        /// <summary>
+        /// Upright or flat.
+        ///
+        /// Vanilla builds its upright bars by rotating a horizontal one - GuiBar only ever
+        /// resizes on RectTransform.Axis.Horizontal, so there is no other way to make one
+        /// stand up. Undoing that rotation is all it takes to lay ours flat, and a flat bar is
+        /// what length is useful on: stood on end, every pixel added runs further down the
+        /// screen and off the bottom.
+        ///
+        /// Set in world terms rather than local, because the rotation may live on the donor's
+        /// parent rather than on the donor - this way it does not matter which.
+        /// </summary>
+        private static void Lay()
+        {
+            _uprightAt = BoonConfig.BarUpright.Value;
+            if (_rect == null) return;
+
+            _rect.rotation = _uprightAt ? Quaternion.Euler(0f, 0f, 90f) : Quaternion.identity;
         }
 
         private static void Colour()

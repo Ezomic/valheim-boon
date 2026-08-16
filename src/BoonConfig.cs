@@ -41,6 +41,7 @@ namespace Boon
         internal static ConfigEntry<bool> ShowInfoTab;
         internal static ConfigEntry<bool> ShowXpBar;
         internal static ConfigEntry<bool> VanillaBar;
+        internal static ConfigEntry<bool> BarUpright;
         internal static ConfigEntry<bool> BarFollowStamina;
         internal static ConfigEntry<float> BarOffsetX;
         internal static ConfigEntry<float> BarOffsetY;
@@ -109,6 +110,14 @@ namespace Boon
                 "the clone fails, since the HUD hierarchy is scene data rather than API and " +
                 "can change under a game update.");
 
+            // The donor is a rotated bar - GuiBar only ever resizes on the horizontal axis, so
+            // vanilla builds its upright bars by turning a horizontal one on its side. Laying
+            // ours flat again is one line, and it is what a long bar wants: upright, length
+            // runs down the screen and off the bottom.
+            BarUpright = cfg.Bind("Bar", "BarUpright", false,
+                "Stand the bar on end like stamina and eitr. Off lays it flat, which is what a " +
+                "long bar needs - upright, extra length runs off the bottom of the screen.");
+
             // Anchored to the stamina bar rather than to the screen, so "below the stamina
             // bar" stays true at any resolution and HUD scale instead of being two numbers
             // that happen to be right on one machine. It also follows vanilla's own shove
@@ -137,9 +146,10 @@ namespace Boon
 
             // Vanilla sizes these bars from max stamina or max eitr, which means nothing for a
             // bar that is always 0..1. 64 is what a starting stamina bar measures (50/25*32).
-            BarSize = cfg.Bind("Bar", "BarSize", 64f,
+            BarSize = cfg.Bind("Bar", "BarSize", 240f,
                 "Length of the cloned bar in canvas units, the same units vanilla sizes the " +
-                "stamina and eitr bars in. 64 matches a starting stamina bar. Thickness comes " +
+                "stamina and eitr bars in. 64 is what a starting stamina bar measures; 240 is a " +
+                "bar you can read a percentage off at a glance. Thickness comes " +
                 "from the borrowed sprite and is not settable.");
 
             BarBuildRaise = cfg.Bind("Bar", "BarBuildRaise", 155f,
@@ -147,11 +157,12 @@ namespace Boon
                 "moves its own bars up by the same amount to clear that panel; ours is pinned " +
                 "in screen space, so it has to make the move by hand.");
 
-            BarColour = cfg.Bind("Bar", "BarColour", "9E86D9",
+            BarColour = cfg.Bind("Bar", "BarColour", "E4DCC4",
                 "Bar colour as RRGGBB hex. The trailing fill is the same hue held back, the " +
                 "way vanilla tells its bar pairs apart. Unparseable values fall back to gold.\n" +
-                "Violet by default because the four vanilla bars have red, yellow, blue and " +
-                "orange between them, and a fifth in any of those reads as one of them.");
+                "Bone by default. The four vanilla bars have red, yellow, blue and orange " +
+                "between them, so a fifth in any of those reads as one of them, and pale " +
+                "stone is what the boons themselves are cut from.");
 
             BarFlashSeconds = cfg.Bind("Bar", "BarFlashSeconds", 4f,
                 "How often the bar flashes while a pick is waiting to be spent, in seconds. " +
