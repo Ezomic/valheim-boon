@@ -3,31 +3,6 @@
 Notable changes to Boon. Format follows [Keep a Changelog](https://keepachangelog.com),
 and the mod uses [semantic versioning](https://semver.org).
 
-## [Unreleased]
-
-### Core is now optional
-
-Boon installs and runs on its own. Core is a **soft** dependency; installing Boon no longer
-installs Core with it, and `manifest.json` no longer lists it.
-
-Solo, nothing is given up — including the extra inventory rows, which now have a Boon-owned
-implementation used only when Core is absent. On a server, three things are lost, and the
-README section "Core is optional, and here is exactly what that costs" sets them out: the
-`cards.txt` hash check, the host-authoritative curve, and the arbitration of
-`Inventory.m_height` between mods. Boon logs a warning at startup naming all three.
-
-The row fallback deliberately copies Core's `Player.Load` widening rather than simplifying it.
-That is not a nicety: without it every item in a granted row is destroyed by loading the game,
-silently, because `AddItem` drops any saved position outside the current grid and the rows are
-not applied until after the load. It is patched in only when Core is absent, so the two owners
-can never both write the field or both widen the grid.
-
-Mechanically, as elsewhere in the suite: every `Ezomic.Core` call now sits in its own
-`[MethodImpl(MethodImplOptions.NoInlining)]` method behind a `Chainloader.PluginInfos` check,
-because the JIT resolves a method's assemblies when it first compiles that method — an inline
-call would drag Core in before the check could prevent it. Verified by decompiling the built
-DLL: `Suite.*` and `InventoryRows.*` appear only inside those isolated methods.
-
 ## [1.0.0] — 2026-08-16
 
 First release. There is no 0.1.0 entry below it because 0.1.0 was never published — it was
@@ -145,6 +120,29 @@ or any `Image.color` but in the Button's `normalColor`, applied to whichever gra
 graphic already being tinted inherits size, shadow, gold, hover and press at once.
 
 The rule both arrive at: **clone for geometry and sprites, drive the state yourself.**
+
+### Core is optional
+
+Boon installs and runs on its own. Core is a **soft** dependency; installing Boon no longer
+installs Core with it, and `manifest.json` no longer lists it.
+
+Solo, nothing is given up — including the extra inventory rows, which now have a Boon-owned
+implementation used only when Core is absent. On a server, three things are lost, and the
+README section "Core is optional, and here is exactly what that costs" sets them out: the
+`cards.txt` hash check, the host-authoritative curve, and the arbitration of
+`Inventory.m_height` between mods. Boon logs a warning at startup naming all three.
+
+The row fallback deliberately copies Core's `Player.Load` widening rather than simplifying it.
+That is not a nicety: without it every item in a granted row is destroyed by loading the game,
+silently, because `AddItem` drops any saved position outside the current grid and the rows are
+not applied until after the load. It is patched in only when Core is absent, so the two owners
+can never both write the field or both widen the grid.
+
+Mechanically, as elsewhere in the suite: every `Ezomic.Core` call now sits in its own
+`[MethodImpl(MethodImplOptions.NoInlining)]` method behind a `Chainloader.PluginInfos` check,
+because the JIT resolves a method's assemblies when it first compiles that method — an inline
+call would drag Core in before the check could prevent it. Verified by decompiling the built
+DLL: `Suite.*` and `InventoryRows.*` appear only inside those isolated methods.
 
 ### Known limits
 
