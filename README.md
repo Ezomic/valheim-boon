@@ -1,6 +1,6 @@
 # Boon
 
-A character level beside the skills, paid out in cards you choose and deepen.
+A character level beside the skills, carved into runestones you choose and deepen.
 
 Built against the installed game (0.221.12, Unity 6000.0.61, BepInEx 5.4.23.3, Harmony 2.9).
 Single DLL plus a text file, no asset bundle.
@@ -31,36 +31,41 @@ The panel earns its keep here. Choosing between fourteen cards is only a real ch
 one says what it is worth now **and** what the pick would make it, which is why every tile
 carries both lines.
 
-## Why cards, and why capacity is one of them
+## Why boons, and why capacity is one of them
 
-This started as an inventory problem. Late-biome kit eats the grid — armour, a weapon, a
-bow, ammo, five tools, a torch, food, mead — and there is very little left for what you went
-out to fetch.
+This started as an inventory problem. Late-biome kit eats the grid - armour, a weapon, a bow,
+ammo, five tools, a torch, food, mead - and there is very little left for what you went out to
+fetch.
 
-The cheap fix is to add rows. `Inventory.m_width/m_height` are two ints and `InventoryGrid`
-rebuilds itself when they change, so more space is a twenty-line mod. That is also exactly
-the answer [Hoard](../hoard) argues against: the mid game is a logistics problem, and the
-tedium and the difficulty are the same mechanic seen from two sides.
+The cheap fix is to add rows. `Inventory.m_height` is one int and `InventoryGrid` rebuilds
+itself when it changes, so more space is a twenty-line mod. That is also exactly the answer
+[Hoard](../hoard) argues against: the mid game is a logistics problem, and the tedium and the
+difficulty are the same mechanic seen from two sides.
 
-So capacity is a card. **Deep pack** is taken like anything else, competing with armour and
-stamina for the same pick. The space is earned rather than granted, which is the only version
-that leaves the system it belongs to intact.
+So capacity is earned, and it is a **capstone** rather than a boon of its own. It was a boon
+once, called Deep pack, and it was the strongest thing in the catalogue - taken first every
+time, which is not a choice. A row now sits at the bottom of Ox-backed and of Sure hand: the
+reward for taking a hauling boon the whole way.
 
 ## The panel
 
-`F7` opens every card in the catalogue at once: what each one is worth at the rank you hold,
-what the next rank would make it, and a five-slot track with **the level that bought each rank
-sitting in the slot it bought**. A card can be taken five times, so the honest answer to "when
-did I get this" is five answers, not one.
+A fifth tab on the compendium bar, beside the raven and the trophy, opens a full screen of
+runestones - one per boon. Each carries its own outline, its own rock and its own runes, all
+seeded off the card id, so a boon looks the same in every session and on every machine: the
+stone is part of how you recognise it.
 
-Held cards are lit, untaken ones are hollow and show what they would give at rank 1. When a
-pick is owed every card below `MaxRank` becomes a button; when none is, they are boxes, so the
-panel does not offer a hover it cannot honour. A pick is applied locally the instant it is
-clicked and the server's reply overwrites it either way — accepted or refused, state is pushed
-back, so a wrong guess corrects itself in a frame.
+A rank cuts one more mark into the rim, and the mark holds **the level that bought it**. Five
+ranks, five marks, five answers to "when did I get this". The column beside the field follows
+the cursor and says what a stone is worth now, what the next rank would make it, and what
+waits at the bottom of its track.
 
-The theme groupings from the mockup are not built: they would need a sixth field in
-`cards.txt`, and at fourteen cards they buy nothing. Past twenty they are worth revisiting.
+Three designs came before it: a draft window dealing three at random, a board of tiles, and
+that same board dressed in the game's own wooden sprites. The last is why this one exists.
+Borrowing a window frame is imitation, and it read as a different game no matter how close the
+sprites got - IMGUI cannot draw with the game's shaders, so every copied sprite had to survive
+a colour space round trip that was guessed wrong three times. A runestone imitates nothing: it
+is Valheim's own subject matter, it is a shape rather than a material, and the marks cut into
+it are text in the game's own rune face.
 
 ## XP
 
@@ -71,7 +76,7 @@ table of what counts.
 XP is **weighted by the skill level reached**, not flat per level-up. Vanilla's own skill cost
 curve is `pow(level+1, 1.5)`, so early levels are nearly free. A flat rate would rain cards in
 the first hours and dry up exactly when the deep ranks start to matter — and would make
-grinding a fresh cheap skill from zero the fastest way to farm drafts.
+grinding a fresh cheap skill from zero the fastest way to farm picks.
 
 ## The bar
 
@@ -270,30 +275,15 @@ prefab name that does not resolve. A typo costs one card, not the catalogue.
 
 A value already written to the `.cfg` beats a new default in code — change the `.cfg`.
 
-## Status: v0.1 — barely run
+## Status: v0.1 - played, not finished
 
-Builds and deploys, and has been run once in singleplayer: the log shows 14 cards loaded, the
-gate passing, four skill-ups scored, and one card applied. The ledger stands at level 1, 19
-XP, Ox-backed at rank 1. **Everything past that first level is still unobserved**, and the
-cloned bar has not been seen at all.
+Runs on a listen host and on a dedicated server, and both halves have been exercised: the
+ledger, the gate, the pick path, the level curve, the panel and the bar. Nineteen cards, all
+of them verified to name a field the game actually reads.
 
-## What to check first
-
-0. Look at the bar. It should read as one of the vanilla ones, upright, gold, with a level
-   number under it. If it is in the wrong place, `BarPosX`/`BarPosY` are screen pixels to its
-   centre; if it is missing entirely, the log says whether the clone failed and fell back.
-1. Raise any skill and watch the log for an XP grant on the server side.
-2. Open `F7` with a pick owed and confirm every card below `MaxRank` is clickable, that the
-   **mouse works** — that is what the four input patches are for, and it is the usual thing to
-   get wrong — and that the tile updates the instant it is clicked rather than after a pause.
-3. Take **Deep pack** and confirm the inventory gains a row, and that it does *not* gain
-   another on reload. The base height is captured once for exactly that reason.
-4. Take a stat card and confirm the number moves — carry weight is the easiest to read.
-5. Die, and confirm no skills dropped and no "skills lowered" message appeared.
-6. Look at Ox-backed. Its first slot should read `—`, because it was taken before levels were
-   recorded; anything taken from now on should carry the level that bought it.
-7. Read the log for `Gate (not enforcing): would have refused …` and see whether it is
-   flagging characters you expected.
+What is not done is the part that only play settles. The shipping curve of 60 * N^1.5 has
+never been played - testing ran on a cheapened one - so the pacing of the whole mod is
+unknown, and no value in the catalogue has been tuned against anything but reasoning.
 
 ## Known gaps
 

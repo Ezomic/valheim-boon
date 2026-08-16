@@ -1,106 +1,42 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Boon
 {
     /// <summary>
-    /// Borrowed UI art, so the panel is made of the game's own wood rather than of flat
-    /// rectangles.
+    /// The game's own typefaces, borrowed.
     ///
-    /// The first version drew everything with 1x1 solid textures in Unity's default Arial and
-    /// read as exactly what it was. Valheim's windows are nine-sliced carved panels in a Norse
-    /// serif; no arrangement of coloured rectangles gets close to that. This is the same
-    /// argument as borrowing a material instead of authoring a texture, and the same argument
-    /// HudBar makes for cloning a bar rather than drawing one.
+    /// This was once a whole borrowed skin - wood panel, slot, selection frame, separator,
+    /// bar track - baked out of the game's atlases so an IMGUI window could pretend to be one
+    /// of Valheim's. It never convinced anyone: IMGUI cannot draw with the game's shaders, so
+    /// every copied sprite had to survive a colour space round trip that was guessed wrong
+    /// three times, and even correct it read as an imitation of a window rather than a window.
     ///
-    /// Nothing is loaded from disk. Every sprite and font the game has built is already in
-    /// memory, and Resources.FindObjectsOfTypeAll reaches them whether or not anything is
-    /// currently showing them - which matters, because the inventory window is inactive most
-    /// of the time and its art would otherwise be unreachable.
-    ///
-    /// Everything here is best-effort. A missing donor leaves the old flat look in place
-    /// rather than throwing, the same way an unresolved prefab name is logged and skipped.
+    /// The panel is runestones now, which imitate nothing, and all that borrowing went with
+    /// it. What is left is the part that always worked: the fonts. Nothing is loaded from
+    /// disk - every font the game built is already in memory, and Resources.FindObjectsOfTypeAll
+    /// reaches them whether or not anything is showing them.
     /// </summary>
     internal static class Skin
     {
-        internal static Texture2D Panel;
-        internal static RectOffset PanelBorder;
-
-        internal static Texture2D Tile;
-        internal static RectOffset TileBorder;
-
-        internal static Texture2D Interior;
-        internal static RectOffset InteriorBorder;
-
-        internal static Texture2D Select;
-        internal static RectOffset SelectBorder;
-
-        internal static Texture2D Separator;
-        internal static RectOffset SeparatorBorder;
-
-        internal static Texture2D BarTrack;
-        internal static RectOffset BarTrackBorder;
-
+        /// <summary>Body text. AveriaSerifLibre is what the game sets nearly everything in.</summary>
         internal static Font Face;
+
+        /// <summary>Headings and names, in the same family a weight heavier.</summary>
         internal static Font HeadFace;
-        internal static Font RuneFace;
 
         /// <summary>
-        /// Left at white, deliberately, after measuring.
+        /// The rune face, which is what makes a carved mark free: an inscription is text.
         ///
-        /// These were briefly read off whatever Image in the scene already used the sprite,
-        /// on the theory that Valheim tints near-white UI art. That measured white for the
-        /// panel, the interior and the selection frame - they are not tinted at all - and for
-        /// item_background it found a *highlighted* slot at RGBA(1, 0.683, 0), which then
-        /// painted all twenty-five tiles amber.
-        ///
-        /// The brightness was never a tint. It was the bake converting colour space twice.
-        /// One arbitrary donor Image is not a measurement, and the honest answer is that there
-        /// is nothing here to measure.
+        /// It is Latin-mapped - type F, get the rune - so the marks and sigils are written as
+        /// Latin letters. Runic code points come out of it as empty boxes, which is a whole
+        /// screen of tofu squares learned the hard way.
         /// </summary>
-        internal static Color PanelTint = Color.white;
-        internal static Color InteriorTint = Color.white;
-        internal static Color TileTint = Color.white;
-        internal static Color SelectTint = Color.white;
-        internal static Color SeparatorTint = Color.white;
-        internal static Color BarTrackTint = Color.white;
+        internal static Font RuneFace;
 
         private static bool _tried;
 
-        /// <summary>Whether anything at all was borrowed, for the panel to decide with.</summary>
-        internal static bool HasPanel => Panel != null;
-        internal static bool HasTile => Tile != null;
-        internal static bool HasInterior => Interior != null;
-        internal static bool HasSelect => Select != null;
-        internal static bool HasSeparator => Separator != null;
-        internal static bool HasBarTrack => BarTrack != null;
-
-        // Ordered by preference, then a keyword sweep behind them. These names come from other
-        // people's mods and from the game's own conventions rather than from anything verified
-        // here, which is exactly why Dump exists: the first run says what is really loaded and
-        // the list gets corrected from that rather than from guesswork.
-        // Read off the first run's dump rather than guessed. woodpanel_large is the generic
-        // big window; woodpanel_trophys was the first guess and works, but it is a specific
-        // window's frame at 562x329 and stretches less honestly across 1100px.
-        private static readonly string[] PanelNames =
-        {
-            "woodpanel_large", "woodpanel_highres", "woodpanel_512x512", "woodpanel_trophys",
-        };
-
-        private static readonly string[] InteriorNames = { "panel_interior_bkg_128", "panel_bkg_128", "panel_bkg" };
-        private static readonly string[] TileNames = { "item_background", "chest_bkg", "panel_bkg" };
-        private static readonly string[] SelectNames = { "selection_frame" };
-        private static readonly string[] SeparatorNames = { "panel_separator" };
-        private static readonly string[] BarNames = { "skill_bkg", "health_border" };
-
-        // Valheim's own UI face, in the weights it uses them. Bold carries the headings and
-        // card names; Regular is easier to read for the four stat lines on every tile.
         private static readonly string[] FaceNames = { "AveriaSerifLibre-Regular", "AveriaSerifLibre-Light" };
         private static readonly string[] HeadFaceNames = { "AveriaSerifLibre-Bold", "Norsebold", "Norse" };
-
-        // The game ships a face called exactly "rune", which is what makes an inscription
-        // free: a mark is text, not art. Norse and Norsebold behind it in case that one
-        // turns out to be something else.
         private static readonly string[] RuneFaceNames = { "rune", "Norsebold", "Norse" };
 
         internal static void Ensure()
@@ -108,211 +44,22 @@ namespace Boon
             if (_tried) return;
             _tried = true;
 
-            Dump();
-            UiProbe.Run();
-
-            Panel = Find(PanelNames, "woodpanel", out PanelBorder, out PanelTint);
-            Interior = Find(InteriorNames, "interior", out InteriorBorder, out InteriorTint);
-            Tile = Find(TileNames, "item_back", out TileBorder, out TileTint);
-            Select = Find(SelectNames, "selection", out SelectBorder, out SelectTint);
-            Separator = Find(SeparatorNames, "separator", out SeparatorBorder, out SeparatorTint);
-            BarTrack = Find(BarNames, "skill_bkg", out BarTrackBorder, out BarTrackTint);
-
             Face = FindFace(FaceNames);
             HeadFace = FindFace(HeadFaceNames) ?? Face;
             RuneFace = FindFace(RuneFaceNames) ?? HeadFace;
 
-            BoonPlugin.Log.LogInfo("Skin: panel=" + Name(Panel) + ", interior=" + Name(Interior) +
-                                   ", tile=" + Name(Tile) + ", select=" + Name(Select) +
-                                   ", separator=" + Name(Separator) + ", bar=" + Name(BarTrack) +
-                                   ", font=" + (Face != null ? Face.name : "default") +
-                                   ", heading=" + (HeadFace != null ? HeadFace.name : "default") +
-                                   ", rune=" + (RuneFace != null ? RuneFace.name : "default"));
+            BoonPlugin.Log.LogInfo("Fonts: body=" + Name(Face) + ", heading=" + Name(HeadFace) +
+                                   ", rune=" + Name(RuneFace) + ".");
         }
 
-        private static string Name(Texture2D tex)
+        private static string Name(Font font)
         {
-            return tex != null ? tex.name : "none";
+            return font != null ? font.name : "default";
         }
 
         /// <summary>
-        /// Name every font and every plausibly useful sprite, once, so the lists above can be
-        /// replaced with real names instead of guesses. Behind Verbose because it is a page of
-        /// log and is only interesting while the skin is being fitted.
-        /// </summary>
-        private static void Dump()
-        {
-            if (!BoonConfig.Verbose.Value) return;
-
-            var fontNames = new List<string>();
-            foreach (var f in Resources.FindObjectsOfTypeAll<Font>()) if (f != null) fontNames.Add(f.name);
-            BoonPlugin.Log.LogInfo("Skin: " + fontNames.Count + " fonts loaded: " +
-                                   string.Join(", ", fontNames.ToArray()));
-
-            // Sprites run to thousands - every item icon is one - so this is filtered to the
-            // words a window is likely to be built from, and capped.
-            var wanted = new[] { "panel", "wood", "slot", "frame", "border", "button", "darken", "bkg", "background",
-                                 "stone", "rune", "circle", "round", "vegvisir", "seal", "sigil" };
-            var hits = new List<string>();
-
-            foreach (var sprite in Resources.FindObjectsOfTypeAll<Sprite>())
-            {
-                if (sprite == null || sprite.name == null) continue;
-
-                var lower = sprite.name.ToLowerInvariant();
-                var match = false;
-                foreach (var word in wanted) if (lower.Contains(word)) { match = true; break; }
-                if (!match) continue;
-
-                hits.Add(sprite.name + " " + (int)sprite.rect.width + "x" + (int)sprite.rect.height +
-                         (sprite.border == Vector4.zero ? "" : " 9slice") + (sprite.packed ? " packed" : ""));
-
-                if (hits.Count >= 120) break;
-            }
-
-            BoonPlugin.Log.LogInfo("Skin: candidate sprites (" + hits.Count + "):\n  " +
-                                   string.Join("\n  ", hits.ToArray()));
-        }
-
-        private static Texture2D Find(string[] preferred, string keyword, out RectOffset border, out Color tint)
-        {
-            border = new RectOffset(0, 0, 0, 0);
-            tint = Color.white;
-
-            var all = Resources.FindObjectsOfTypeAll<Sprite>();
-
-            foreach (var name in preferred)
-            {
-                foreach (var sprite in all)
-                {
-                    if (sprite == null || sprite.name != name) continue;
-
-                    var tex = Bake(sprite);
-                    if (tex == null) continue;
-
-                    border = BorderOf(sprite);
-                    return tex;
-                }
-            }
-
-            // Nothing named; take the largest nine-sliced sprite whose name carries the
-            // keyword. Largest because a window frame is the big one and the small ones with
-            // the same word in their name are its pieces.
-            Sprite best = null;
-            foreach (var sprite in all)
-            {
-                if (sprite == null || sprite.name == null) continue;
-                if (!sprite.name.ToLowerInvariant().Contains(keyword)) continue;
-                if (sprite.border == Vector4.zero) continue;
-
-                if (best == null || sprite.rect.width * sprite.rect.height > best.rect.width * best.rect.height)
-                    best = sprite;
-            }
-
-            if (best == null) return null;
-
-            var baked = Bake(best);
-            if (baked == null) return null;
-
-            border = BorderOf(best);
-            return baked;
-        }
-
-        private static RectOffset BorderOf(Sprite sprite)
-        {
-            // Sprite.border is (left, bottom, right, top); RectOffset is (left, right, top,
-            // bottom). Getting this pair the wrong way round stretches the carved edge across
-            // the middle of the panel, which looks like a corrupted texture rather than like a
-            // swapped argument.
-            var b = sprite.border;
-            return new RectOffset((int)b.x, (int)b.z, (int)b.w, (int)b.y);
-        }
-
-        /// <summary>
-        /// Copy a sprite's own rectangle out of whatever atlas it lives in, into a standalone
-        /// texture IMGUI can use.
-        ///
-        /// Through a RenderTexture rather than GetPixels, because Valheim's UI textures are not
-        /// Read/Write enabled and GetPixels would throw on them. A blit with a scale and offset
-        /// selects the sprite's region of the sheet, and ReadPixels off the RenderTexture works
-        /// regardless of the source's import settings - the same readback devkit uses to rip
-        /// textures, and the reason textures are never the part of a rip that fails.
-        /// </summary>
-        private static Texture2D Bake(Sprite sprite)
-        {
-            var source = sprite.texture;
-            if (source == null) return null;
-
-            // Every one of these is atlas-packed, and Unity may rotate a sprite when it packs
-            // it. textureRect gives the region but says nothing about rotation, so a rotated
-            // donor would come out sideways - refused rather than drawn wrong, because a
-            // sideways window frame looks like a corrupt texture and would send the next hour
-            // in the wrong direction.
-            if (sprite.packed && sprite.packingRotation != SpritePackingRotation.None)
-            {
-                BoonPlugin.Log.LogWarning("Skin: '" + sprite.name + "' is packed rotated (" +
-                                          sprite.packingRotation + ") - skipped.");
-                return null;
-            }
-
-            var rect = sprite.textureRect;
-            var w = Mathf.RoundToInt(rect.width);
-            var h = Mathf.RoundToInt(rect.height);
-            if (w <= 0 || h <= 0) return null;
-
-            // Linear at every step, and the reason the first attempt came out bright orange.
-            //
-            // Valheim renders in linear colour space. Blitting through an sRGB RenderTexture
-            // and reading into a gamma Texture2D converts twice, which lifts and saturates
-            // everything - a dark brown panel arrives as bright orange, and a slot arrives as
-            // cream. Keeping both ends linear passes the bytes through untouched, which is
-            // what copying art is supposed to do.
-            //
-            // This is also why the measured tints came back white and it still looked wrong:
-            // the sprites were never tinted, the copy was.
-            var previous = RenderTexture.active;
-            var rt = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
-
-            try
-            {
-                var scale = new Vector2(rect.width / source.width, rect.height / source.height);
-                var offset = new Vector2(rect.x / source.width, rect.y / source.height);
-
-                Graphics.Blit(source, rt, scale, offset);
-
-                RenderTexture.active = rt;
-
-                var baked = new Texture2D(w, h, TextureFormat.RGBA32, false, true);
-                baked.ReadPixels(new Rect(0f, 0f, w, h), 0, 0);
-                baked.Apply();
-                baked.name = sprite.name;
-
-                // Point filtering, because the source is a pixel-art panel and the whole point
-                // of borrowing it is that it matches. Bilinear would soften the carved edge
-                // against everything vanilla draws beside it.
-                baked.filterMode = FilterMode.Point;
-                baked.wrapMode = TextureWrapMode.Clamp;
-                baked.hideFlags = HideFlags.HideAndDontSave;
-
-                return baked;
-            }
-            catch (System.Exception e)
-            {
-                BoonPlugin.Log.LogWarning("Skin: could not bake '" + sprite.name + "': " + e.Message);
-                return null;
-            }
-            finally
-            {
-                RenderTexture.active = previous;
-                RenderTexture.ReleaseTemporary(rt);
-            }
-        }
-
-        /// <summary>
-        /// A real Font, not a TMP_FontAsset - IMGUI cannot use the latter. The game may only
-        /// ship the TMP versions, in which case this finds nothing and the panel keeps Arial.
-        /// That is the single biggest remaining tell, and there is no way around it without
-        /// either shipping a font file or rebuilding the panel in Unity UI.
+        /// A real Font, not a TMP_FontAsset - IMGUI cannot use the latter. The game ships both,
+        /// which is the only reason any of this works without shipping a font file.
         /// </summary>
         private static Font FindFace(string[] preferred)
         {

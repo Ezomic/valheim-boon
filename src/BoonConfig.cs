@@ -23,7 +23,6 @@ namespace Boon
         internal static ConfigEntry<int> MaxRank;
         internal static ConfigEntry<int> BonusEvery;
         internal static ConfigEntry<float> AttackSpeedMax;
-        internal static ConfigEntry<float> PanelWidth;
         internal static ConfigEntry<int> PanelColumns;
 
         internal static ConfigEntry<bool> RemoveDeathSkillLoss;
@@ -210,9 +209,6 @@ namespace Boon
 
             // Twenty-four cards no longer fit three across without scrolling, and both of
             // these are the kind of number that wants nudging rather than rebuilding.
-            PanelWidth = cfg.Bind("Cards", "PanelWidth", 1100f,
-                "Width of the F7 panel in pixels. It never scrolls sideways, so this and " +
-                "PanelColumns together set how wide a tile is.");
 
             PanelColumns = cfg.Bind("Cards", "PanelColumns", 4,
                 "Tiles across the F7 panel. Fewer means wider tiles and a taller panel; the " +

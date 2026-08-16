@@ -76,7 +76,7 @@ namespace Boon
         /// own record, which no client can reach, so it survives an edited file - but it only
         /// notices a trip that actually produced levels. Together they cover both.
         ///
-        /// With GateEnforce off this only writes to the log.
+        /// With WithholdUntrustedXp off this only writes to the log.
         /// </summary>
         internal static void Judge(long sender, string owner, string facts, string skills)
         {

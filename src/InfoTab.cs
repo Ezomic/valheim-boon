@@ -119,8 +119,6 @@ namespace Boon
                 return;
             }
 
-            Describe(gui);
-
             var rect = tab.GetComponent<RectTransform>();
             var donorRect = donor.GetComponent<RectTransform>();
             if (rect == null || donorRect == null) return;
@@ -134,44 +132,6 @@ namespace Boon
 
             rect.anchoredPosition = donorRect.anchoredPosition + new Vector2(gap, 0f);
             BoonPlugin.Log.LogInfo("Boons tab placed " + (int)gap + "px after the last one.");
-        }
-
-        /// <summary>
-        /// What the bar actually positions its children with.
-        ///
-        /// Twice now a fifth tab has landed on top of the fourth: once because the measured
-        /// gap between two tabs was zero, and again after falling back to a tab width. Both
-        /// assumed anchoredPosition places them. This prints anchors, offsets and sizes for
-        /// every tab so the third attempt is written against what is there rather than
-        /// against another guess.
-        /// </summary>
-        private static void Describe(InventoryGui gui)
-        {
-            if (!BoonConfig.Verbose.Value) return;
-
-            var panel = gui.m_infoPanel as RectTransform;
-            var lines = new System.Collections.Generic.List<string>();
-
-            if (panel != null)
-                lines.Add("panel " + panel.name + " w=" + (int)panel.rect.width +
-                          " layout=" + (panel.GetComponent<LayoutGroup>() != null));
-
-            foreach (var button in gui.m_infoPanel.GetComponentsInChildren<Button>(true))
-            {
-                if (button == null) continue;
-
-                var r = button.GetComponent<RectTransform>();
-                if (r == null) continue;
-
-                lines.Add(button.name +
-                          " anchoredPos=" + r.anchoredPosition +
-                          " anchorMin=" + r.anchorMin + " anchorMax=" + r.anchorMax +
-                          " size=" + r.rect.width + "x" + r.rect.height +
-                          " parent=" + (r.parent != null ? r.parent.name : "none") +
-                          " layoutElement=" + (button.GetComponent<LayoutElement>() != null));
-            }
-
-            BoonPlugin.Log.LogInfo("Compendium bar:\n  " + string.Join("\n  ", lines.ToArray()));
         }
 
         private static float Spacing(InventoryGui gui)
@@ -209,39 +169,63 @@ namespace Boon
                 _icon.name = "BoonAlgiz";
             }
 
-            // Every image under the button gets the rune, and the reason is three wrong
-            // guesses at which one is the glyph. First attempt took layer 0 and turned a
-            // background into a stone with the donor's icon still above it; second took the
-            // last and left an earlier layer drawing; third assumed 0 was background and 1 the
-            // glyph, which the log then showed was backwards.
+            // Every image the clone brought is turned off, and one of ours is added.
             //
-            // Setting all of them cannot be wrong: whichever layer is the glyph now carries
-            // the rune, and any other layer carries the same rune directly behind it, which
-            // looks identical to one. The button's own image is left alone - that is the
-            // frame, and replacing it makes the tab disappear.
+            // This is the tenth attempt at this icon and the first that does not depend on
+            // guessing the donor's hierarchy. The others each picked a layer - the first, the
+            // last, the one not named Background - and every time something else was still
+            // drawing underneath. Whatever those extra layers are, they are off now, because
+            // nothing here has to know what they were.
             var button = tab.GetComponent<Button>();
-            var described = new System.Collections.Generic.List<string>();
+            RectTransform sample = null;
+            var colour = new Color(0.85f, 0.72f, 0.42f, 1f);
+            var silenced = 0;
 
             foreach (var image in tab.GetComponentsInChildren<Image>(true))
             {
                 if (image == null) continue;
                 if (button != null && image.gameObject == button.gameObject) continue;
 
-                // The tab carries two: "Background", a small dot, and "Image", the glyph. The
-                // log named them after three wrong guesses at which was which, and painting
-                // both put a rune on the dot as well - the extra strokes flanking it.
-                if (image.name == "Background") continue;
+                // The biggest one is the glyph, and its rect and colour are what ours copies -
+                // that is how it ends up the same size and the same gold as the raven without
+                // either being written here.
+                var rect = image.rectTransform;
+                if (sample == null || rect.rect.width > sample.rect.width)
+                {
+                    sample = rect;
+                    colour = image.color;
+                }
 
-                described.Add(image.name + "=" + (image.sprite != null ? image.sprite.name : "none") +
-                              (image.enabled ? "" : " (off)"));
-
-                // Colour is left alone: the donor's gold is what makes this match the raven
-                // and the trophy, and the rune is white so it takes that tint.
-                image.sprite = _icon;
+                image.enabled = false;
+                silenced++;
             }
 
-            if (BoonConfig.Verbose.Value)
-                BoonPlugin.Log.LogInfo("Boons tab layers: " + string.Join(", ", described.ToArray()));
+            var holder = new GameObject("BoonGlyph", typeof(RectTransform), typeof(Image));
+            var holderRect = holder.GetComponent<RectTransform>();
+            holderRect.SetParent(tab.transform, false);
+
+            if (sample != null)
+            {
+                holderRect.anchorMin = sample.anchorMin;
+                holderRect.anchorMax = sample.anchorMax;
+                holderRect.pivot = sample.pivot;
+                holderRect.anchoredPosition = sample.anchoredPosition;
+                holderRect.sizeDelta = sample.sizeDelta;
+            }
+            else
+            {
+                holderRect.anchorMin = new Vector2(0.5f, 0.5f);
+                holderRect.anchorMax = new Vector2(0.5f, 0.5f);
+                holderRect.sizeDelta = new Vector2(48f, 48f);
+            }
+
+            var glyph = holder.GetComponent<Image>();
+            glyph.sprite = _icon;
+            glyph.color = colour;
+            glyph.raycastTarget = false;
+            glyph.preserveAspect = true;
+
+            BoonPlugin.Log.LogInfo("Boons tab: " + silenced + " inherited image(s) off, one rune added.");
         }
 
         /// <summary>
