@@ -153,15 +153,18 @@ namespace Boon
                 "moves its own bars up by the same amount to clear that panel; ours is pinned " +
                 "in screen space, so it has to make the move by hand.");
 
-            BarColour = cfg.Bind("Bar", "BarColour", "7BC96F",
+            BarColour = cfg.Bind("Bar", "BarColour", "4FB3A5",
                 "Bar colour as RRGGBB hex. The trailing fill is the same hue held back, the " +
                 "way vanilla tells its bar pairs apart. Unparseable values fall back to gold.\n" +
-                "Green by default, because it is the one hue the HUD does not already spend: " +
-                "health is red, stamina yellow, eitr blue and the guardian power orange, so a " +
-                "fifth bar in any of those reads as one of them.\n" +
-                "It was bone until the tint turned out never to be reaching the fill at all - " +
-                "the bar was showing the eitr donor's own purple and no value here changed " +
-                "that. Bone is E4DCC4, if you want it back now that setting it does something.");
+                "Verdigris - aged bronze. Picked from a five-way comparison against the bars " +
+                "already on the HUD, which spend red, yellow, blue and orange between them, so " +
+                "a fifth in any of those reads as one of them.\n" +
+                "It is cool like eitr but far enough round the wheel never to be taken for it, " +
+                "and it suits a Norse metal palette in a way the green it replaced did not: a " +
+                "green bar reads as health or poison from habit, whatever it is measuring.\n" +
+                "Bone is E4DCC4 if you would rather have pale stone. That was the original " +
+                "choice and it was never actually seen - for a long time no value here reached " +
+                "the fill at all, and the bar simply showed the eitr donor's own purple.");
 
             BarFlashSeconds = cfg.Bind("Bar", "BarFlashSeconds", 4f,
                 "How often the bar flashes while a pick is waiting to be spent, in seconds. " +
