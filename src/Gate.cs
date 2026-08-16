@@ -35,10 +35,40 @@ namespace Boon
         /// </summary>
         private static readonly HashSet<string> Untrusted = new HashSet<string>(StringComparer.Ordinal);
 
+        /// <summary>
+        /// Owners this server holds a complete skill list for, learned from the login exchange.
+        ///
+        /// Kept because an absent snapshot entry is ambiguous on its own: it means either "this
+        /// skill has never been used" or "we have never looked". Anything comparing a report
+        /// against the baseline has to know which, and only the login exchange can say - it is
+        /// the one moment every skill is reported at once. <see cref="Throttle.Step"/> is the
+        /// caller.
+        /// </summary>
+        private static readonly HashSet<string> Baselined = new HashSet<string>(StringComparer.Ordinal);
+
         /// <summary>Whether XP should be withheld from this owner right now.</summary>
         internal static bool IsUntrusted(string owner)
         {
             return owner != null && BoonConfig.WithholdUntrustedXp.Value && Untrusted.Contains(owner);
+        }
+
+        /// <summary>Whether this server has seen this owner's whole skill list this session.</summary>
+        internal static bool HasBaseline(string owner)
+        {
+            return owner != null && Baselined.Contains(owner);
+        }
+
+        /// <summary>
+        /// Drop every judgement, for a new connection.
+        ///
+        /// Both sets are per-session by design - they describe a login, not a character - so
+        /// carrying them across a disconnect would let a verdict about one world follow a
+        /// player into the next.
+        /// </summary>
+        internal static void Forget()
+        {
+            Untrusted.Clear();
+            Baselined.Clear();
         }
 
         /// <summary>
@@ -131,6 +161,12 @@ namespace Boon
 
             var rec = Ledger.For(owner);
             if (rec == null) return;
+
+            // From here we hold this owner's whole skill list, whichever branch runs below.
+            // That is what makes a per-report comparison meaningful, so it is recorded before
+            // the verdict rather than after: even a character judged untrusted has been fully
+            // seen, and if the withholding is later turned off its reports still need bounding.
+            Baselined.Add(owner);
 
             if (!rec.HasSnapshot)
             {

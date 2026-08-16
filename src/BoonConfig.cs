@@ -32,6 +32,10 @@ namespace Boon
         internal static ConfigEntry<string> UntrustedMessage;
         internal static ConfigEntry<float> MaxSkillUpsPerMinute;
         internal static ConfigEntry<float> SkillDriftAllowance;
+        internal static ConfigEntry<float> MaxSkillLevelJump;
+        internal static ConfigEntry<float> MaxXpPerMinute;
+        internal static ConfigEntry<float> XpBurst;
+        internal static ConfigEntry<string> CappedMessage;
 
 
         internal static ConfigEntry<bool> Verbose;
@@ -272,6 +276,42 @@ namespace Boon
                 "Server-side ceiling on accepted skill-up reports per player. A backstop " +
                 "only: skills live on the client, so reports are self-reported and this " +
                 "caps the damage rather than verifying anything.");
+
+            // MaxSkillUpsPerMinute caps how many reports are accepted, which is a different
+            // question from what a report is worth. XP is the level reached, so thirty reports
+            // a minute each claiming a level-100 skill used to be worth 3000 XP - a character
+            // level every ten seconds. These two bound the worth rather than the count.
+            MaxSkillLevelJump = cfg.Bind("Gate", "MaxSkillLevelJump", 1f,
+                "How far above the highest level this server has watched a skill reach a " +
+                "single skill-up report may claim.\n" +
+                "One, because that is what the game does: skills level one at a time and fire " +
+                "one callback each, so a report of 87 from a server that last saw 12 did not " +
+                "come from playing. Raise it only if you run a mod that grants skill levels " +
+                "in bulk, which would otherwise trip this on every grant.\n" +
+                "Needs CheckSkillBaseline on, since without a login baseline an unseen skill " +
+                "cannot be told from an unused one and every first report would look forged.");
+
+            MaxXpPerMinute = cfg.Bind("Gate", "MaxXpPerMinute", 600f,
+                "Ceiling on XP paid per player per minute of connected time. Zero or less " +
+                "turns it off.\n" +
+                "This is the only cap that does not depend on believing the client: however " +
+                "convincing a report is, time connected is a quantity the server measures for " +
+                "itself. 600 is far above honest play - it is thirty level-ups a minute, the " +
+                "report limit, on a skill at level 20 - and is meant to bound a flood rather " +
+                "than to shape progression. Use LevelBaseXp for that.");
+
+            XpBurst = cfg.Bind("Gate", "XpBurst", 1800f,
+                "How much unspent earning allowance may bank, in XP. Three minutes' worth by " +
+                "default, and the allowance starts full so joining is never a wait.\n" +
+                "Without a bank the cap would be a per-minute tripwire that an honest burst of " +
+                "level-ups trips - clearing a crypt levels four skills at once - and the " +
+                "player would silently stop earning mid-fight.");
+
+            CappedMessage = cfg.Bind("Gate", "CappedMessage",
+                "You are earning faster than this world will pay for. Boons will resume shortly.",
+                "Shown once per session, centre-screen, when the earning cap withholds XP. " +
+                "Same reasoning as UntrustedMessage: a cap that simply stops paying is " +
+                "invisible, and an honest player who hits one deserves to know why.");
         }
 
         private static readonly Color Gold = new Color(0.83f, 0.663f, 0.29f, 1f);

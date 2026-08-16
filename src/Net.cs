@@ -186,6 +186,8 @@ namespace Boon
             _registeredOn = rpc;
             _reports.Clear();
             _characters.Clear();
+            Gate.Forget();
+            Throttle.Forget();
 
             rpc.Register<long>(RpcHello, OnHello);
             rpc.Register<int, float>(RpcSkillUp, OnSkillUp);
@@ -295,19 +297,45 @@ namespace Boon
             var rec = Ledger.For(owner);
             if (rec == null) return;
 
-            var before = rec.Level;
-            rec.Xp += Levels.XpForSkillUp(skillLevel);
+            // A level far above the baseline did not come from the game, and must not be paid
+            // for or written into the baseline - a forged claim adopted as "seen" is a
+            // permanent alibi for every claim after it.
+            if (!Throttle.Step(rec, owner, skillType, skillLevel, out var why))
+            {
+                BoonPlugin.Log.LogWarning("Rejected skill-up from " + owner + " - " + why + ".");
+                return;
+            }
 
             // Keep the baseline current. Without this every level earned here would look
             // imported at the next join, and the gate would refuse the very players it just
             // watched earn it.
+            //
+            // Done before the earning cap rather than after: the level is real whether or not
+            // there is allowance left to pay for it, and a baseline that stalled while the
+            // character kept climbing would make the next honest report look like a jump.
             if (!rec.Snapshot.TryGetValue(skillType, out var seen) || skillLevel > seen)
+            {
                 rec.Snapshot[skillType] = skillLevel;
+                Ledger.Touch();
+            }
+
+            var amount = Levels.XpForSkillUp(skillLevel);
+
+            // The cap that does not care how convincing the claim is. Time connected is the
+            // one quantity this server measures for itself, so it is the one honest ceiling.
+            if (!Throttle.Afford(sender, owner, amount))
+            {
+                PushState(sender, rec);
+                return;
+            }
+
+            var before = rec.Level;
+            rec.Xp += amount;
 
             Ledger.Touch();
 
             if (BoonConfig.Verbose.Value)
-                BoonPlugin.Log.LogInfo(owner + " +" + Levels.XpForSkillUp(skillLevel).ToString("0.#") +
+                BoonPlugin.Log.LogInfo(owner + " +" + amount.ToString("0.#") +
                                        " xp (skill " + (Skills.SkillType)skillType + " " + skillLevel +
                                        ") -> " + rec.Xp.ToString("0.#"));
 
