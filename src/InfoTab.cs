@@ -187,26 +187,52 @@ namespace Boon
             // last, the one not named Background - and every time something else was still
             // drawing underneath. Whatever those extra layers are, they are off now, because
             // nothing here has to know what they were.
-            // Measured off the donor, which is untouched, rather than off our own clone whose
-            // layers are about to be turned off. Taking the largest of ours gave the dot its
-            // colour instead of the glyph's, which is why the rune came out dark.
+            // The colour is STATED, not sampled off the donor, and that is the whole fix.
+            //
+            // Every attempt before this one copied it from some layer of the donor - the
+            // largest child, the first, the one not named Background - and each picked a
+            // different one, because a vanilla tab is a stack whose shape is scene data rather
+            // than API. There was never a colour there to copy: the gold the raven and the
+            // trophy are drawn in lives inside their sprites, and every Image.color on that
+            // bar is white or the wood behind it. Copying the largest child got the backing
+            // plate, which is exactly why the rune came out the colour of the wood.
+            //
+            // One config line, and it cannot pick the wrong layer.
             var button = tab.GetComponent<Button>();
             RectTransform sample = null;
-            var colour = new Color(0.85f, 0.72f, 0.42f, 1f);
+            var colour = BoonConfig.TabTint();
             var silenced = 0;
 
+            // The rect is still measured, because a size has no equivalent of a stated colour
+            // and the donor is the only thing that knows how big a tab icon is here.
             foreach (var image in donor.GetComponentsInChildren<Image>(true))
             {
                 if (image == null || image.gameObject == donor.gameObject) continue;
                 if (!image.enabled) continue;
 
                 var donorRect = image.rectTransform;
-                if (sample == null || donorRect.rect.width > sample.rect.width)
-                {
-                    sample = donorRect;
-                    colour = image.color;
-                }
+                if (sample == null || donorRect.rect.width > sample.rect.width) sample = donorRect;
             }
+
+            // Read out so the next question about this bar is answered from the log rather
+            // than from another guess. Ten attempts went by without anyone knowing what the
+            // layers actually were.
+            // Not gated on Verbose. It is a handful of lines once per world, and it is exactly
+            // the thing nobody had through ten attempts at this icon - each one guessed at a
+            // hierarchy that was readable all along.
+            foreach (var image in donor.GetComponentsInChildren<Image>(true))
+            {
+                if (image == null) continue;
+                BoonPlugin.Log.LogInfo("  donor layer '" + image.name + "' " +
+                                       (image.enabled ? "on" : "off") + " " +
+                                       image.rectTransform.rect.size + " colour " + image.color +
+                                       " sprite " + (image.sprite != null ? image.sprite.name : "none"));
+            }
+
+            BoonPlugin.Log.LogInfo("  donor '" + donor.name + "' normal " + donor.colors.normalColor +
+                                   ", highlighted " + donor.colors.highlightedColor +
+                                   ", target graphic " +
+                                   (donor.targetGraphic != null ? donor.targetGraphic.name : "none"));
 
             foreach (var image in tab.GetComponentsInChildren<Image>(true))
             {
@@ -248,7 +274,24 @@ namespace Boon
             // not be clicked at all. Handing the button our image gives it both the hit area
             // and the hover and press states the other tabs have.
             glyph.raycastTarget = true;
-            if (button != null) button.targetGraphic = glyph;
+
+            if (button != null)
+            {
+                button.targetGraphic = glyph;
+
+                // ...and that is the second half of why it looked greyed out. A target graphic
+                // is multiplied by the button's colour for its current state, and the resting
+                // state of a tab on this bar is not white - it is dimmed, which is how an
+                // unselected tab reads as unselected. Vanilla can afford that because it tints
+                // its backing plate and leaves the glyph alone; ours had become the glyph AND
+                // the tinted graphic, so the rune wore the dimming meant for the plate.
+                //
+                // Normal forced to white, the other states left as the donor set them, so the
+                // rune sits at full gold and still lights on hover and press.
+                var colours = button.colors;
+                colours.normalColor = Color.white;
+                button.colors = colours;
+            }
 
             BoonPlugin.Log.LogInfo("Boons tab: " + silenced + " inherited image(s) off, one rune added.");
         }

@@ -42,6 +42,7 @@ namespace Boon
         internal static ConfigEntry<KeyboardShortcut> KeyBoon;
 
         internal static ConfigEntry<bool> ShowInfoTab;
+        internal static ConfigEntry<string> TabColour;
         internal static ConfigEntry<bool> ShowXpBar;
         internal static ConfigEntry<bool> VanillaBar;
         internal static ConfigEntry<bool> BarUpright;
@@ -104,6 +105,18 @@ namespace Boon
                 "Add a fifth tab to the compendium bar, beside the raven and the trophy, that " +
                 "opens your boons. Cloned from a tab already there, so it carries the game's " +
                 "own frame, hover and click sound.");
+
+            // Stated rather than sampled off the tab it sits beside, after ten attempts at
+            // sampling picked a different layer each time. There is nothing to sample: the
+            // gold on that bar lives inside the vanilla sprites, and every Image.color on it
+            // is white or the wood behind it, so copying one got the backing plate and the
+            // rune came out the colour of the wood.
+            TabColour = cfg.Bind("General", "TabColour", "D4A94A",
+                "Colour of the rune on the compendium tab, as RRGGBB hex. Unparseable values " +
+                "fall back to the same gold.\n" +
+                "The default is the gold this mod already measured once for its own bar. If it " +
+                "reads a shade off against the raven and the trophy beside it, this is the one " +
+                "line to change - the rune is drawn white and tinted by this.");
 
             ShowXpBar = cfg.Bind("Bar", "ShowXpBar", true,
                 "Show the experience bar beside the health bar. It hides itself with the rest " +
@@ -336,6 +349,19 @@ namespace Boon
 
             if (ColorUtility.TryParseHtmlString(text, out var parsed)) _tint = parsed;
             return _tint;
+        }
+
+        /// <summary>
+        /// TabColour parsed. Not cached like BarTint, because the tab is built once per world
+        /// rather than read every frame, so there is nothing to save.
+        /// </summary>
+        internal static Color TabTint()
+        {
+            var text = TabColour != null ? TabColour.Value : null;
+            if (string.IsNullOrEmpty(text)) return Gold;
+            if (text[0] != '#') text = "#" + text;
+
+            return ColorUtility.TryParseHtmlString(text, out var parsed) ? parsed : Gold;
         }
     }
 }
