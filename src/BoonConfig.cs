@@ -66,10 +66,16 @@ namespace Boon
 
             // A window needs a way back to it. Closing it with Escape used to hide it
             // until the game restarted, which made "decide later" a lie.
-            KeyBoon = cfg.Bind("General", "KeyBoon", new KeyboardShortcut(KeyCode.F7),
-                "Opens your boons: the cards you hold and how far you are through the current " +
-                "level, and where an earned pick is spent. F6 is devkit's, " +
-                "and Numpad 0-7 are taken by Thralls and Tether.");
+            // Unbound. The compendium tab is the way in, which is the standing preference
+            // here - a thing on screen rather than a key, the same call Stow made when it took
+            // a buildable post and left both its keys in config with nothing on them.
+            //
+            // The entry stays so it can be given a key again in one line, and that is the way
+            // back if the tab ever fails to build: it logs a warning saying so.
+            KeyBoon = cfg.Bind("General", "KeyBoon", new KeyboardShortcut(KeyCode.None),
+                "Opens your boons. Unbound by default - the tab on the compendium bar is the " +
+                "way in. Set a key here if you would rather have one; F6 is devkit's, and " +
+                "Numpad 0-7 are taken by Thralls and Tether.");
 
             // The character level is its own number with its own curve. It is fed by skill
             // level-ups but is deliberately not a restatement of total skill level - the

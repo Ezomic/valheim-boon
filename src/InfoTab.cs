@@ -209,45 +209,34 @@ namespace Boon
                 _icon.name = "BoonAlgiz";
             }
 
-            // Every image the tab carries, in hierarchy order, minus the one on the button
-            // itself - that is the frame, and replacing it makes the tab vanish.
+            // Every image under the button gets the rune, and the reason is three wrong
+            // guesses at which one is the glyph. First attempt took layer 0 and turned a
+            // background into a stone with the donor's icon still above it; second took the
+            // last and left an earlier layer drawing; third assumed 0 was background and 1 the
+            // glyph, which the log then showed was backwards.
             //
-            // Guessing an index has now been wrong twice. The first attempt took the first of
-            // them and turned the background blob into a stone while the donor's trophy stayed
-            // on top; the second took the last and left an earlier glyph still drawing, so the
-            // tab showed two icons at once. There is more than one glyph layer, so the only
-            // reliable answer is to claim one and silence the rest.
+            // Setting all of them cannot be wrong: whichever layer is the glyph now carries
+            // the rune, and any other layer carries the same rune directly behind it, which
+            // looks identical to one. The button's own image is left alone - that is the
+            // frame, and replacing it makes the tab disappear.
             var button = tab.GetComponent<Button>();
-            var layers = new System.Collections.Generic.List<Image>();
+            var described = new System.Collections.Generic.List<string>();
 
             foreach (var image in tab.GetComponentsInChildren<Image>(true))
             {
                 if (image == null) continue;
                 if (button != null && image.gameObject == button.gameObject) continue;
 
-                layers.Add(image);
+                described.Add(image.name + "=" + (image.sprite != null ? image.sprite.name : "none") +
+                              (image.enabled ? "" : " (off)"));
+
+                // Colour is left alone: the donor's gold is what makes this match the raven
+                // and the trophy, and the rune is white so it takes that tint.
+                image.sprite = _icon;
             }
 
             if (BoonConfig.Verbose.Value)
-                BoonPlugin.Log.LogInfo("Boons tab has " + layers.Count + " image layer(s) under the button.");
-
-            for (var i = 0; i < layers.Count; i++)
-            {
-                // The first is the background the glyph sits on and keeps its own art. The
-                // second carries ours. Anything beyond that is another glyph layer and is
-                // turned off rather than left drawing under the rune.
-                if (i == 0) continue;
-
-                if (i == 1)
-                {
-                    // Colour is left alone: the donor's gold is what makes this match the
-                    // raven and the trophy, and the rune is white so it takes that tint.
-                    layers[i].sprite = _icon;
-                    continue;
-                }
-
-                layers[i].enabled = false;
-            }
+                BoonPlugin.Log.LogInfo("Boons tab layers: " + string.Join(", ", described.ToArray()));
         }
 
         /// <summary>
