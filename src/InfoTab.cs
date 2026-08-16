@@ -103,56 +103,67 @@ namespace Boon
         }
 
         /// <summary>
-        /// Put the new tab after the last one.
+        /// Make room for a fifth icon rather than dropping it on top of a fourth.
         ///
-        /// The first attempt always offset by hand and landed the rune on top of the swords.
-        /// A bar laid out by a LayoutGroup gives every child the same anchoredPosition - the
-        /// group decides where they go - so the measured gap between two tabs came out at
-        /// zero and the clone sat exactly on its donor. When a group is present the right
-        /// answer is to set nothing and let it place the fifth child itself.
+        /// This went wrong for ten attempts because the bar was read through Buttons, and the
+        /// PvP control is a Toggle. Three buttons - Texts, Skills, Trophies - at -162, -52 and
+        /// 58, so 168 looked like the empty place after the last one. It is where PvP sits.
+        ///
+        /// Everything clickable is collected now, Button and Toggle alike, both being
+        /// Selectable. The five are then spread evenly about the centre at the pitch the
+        /// existing four already use, which is what actually makes space: at 110 apart, five
+        /// span 440 of the panel's 570 and the outermost sits well inside its edge, so the
+        /// wooden bar itself needs no stretching.
         /// </summary>
         private static void Place(InventoryGui gui, GameObject tab, Button donor)
         {
-            if (gui.m_infoPanel.GetComponent<LayoutGroup>() != null)
+            var ours = tab.GetComponent<RectTransform>();
+            if (ours == null) return;
+
+            var icons = new System.Collections.Generic.List<RectTransform>();
+
+            foreach (var selectable in gui.m_infoPanel.GetComponentsInChildren<Selectable>(true))
             {
-                BoonPlugin.Log.LogInfo("Boons tab placed by the bar's own layout group.");
-                return;
+                if (selectable == null) continue;
+
+                var rect = selectable.GetComponent<RectTransform>();
+                if (rect == null || rect == ours) continue;
+                if (icons.Contains(rect)) continue;
+
+                icons.Add(rect);
             }
 
-            var rect = tab.GetComponent<RectTransform>();
-            var donorRect = donor.GetComponent<RectTransform>();
-            if (rect == null || donorRect == null) return;
+            if (icons.Count == 0) return;
 
-            var gap = Spacing(gui);
+            icons.Sort((a, b) => a.anchoredPosition.x.CompareTo(b.anchoredPosition.x));
 
-            // Distinct positions, not just two of them: if every tab reports the same x then
-            // nothing here is placing them and a measured gap is meaningless. The donor's own
-            // width is the honest fallback.
-            if (gap < 1f) gap = donorRect.rect.width * 1.15f;
+            // Ours goes on the end rather than into a row that has an order to it.
+            icons.Add(ours);
 
-            rect.anchoredPosition = donorRect.anchoredPosition + new Vector2(gap, 0f);
-            BoonPlugin.Log.LogInfo("Boons tab placed " + (int)gap + "px after the last one.");
+            var pitch = Pitch(icons);
+            var y = icons[0].anchoredPosition.y;
+            var first = -pitch * (icons.Count - 1) * 0.5f;
+
+            for (var i = 0; i < icons.Count; i++)
+                icons[i].anchoredPosition = new Vector2(first + i * pitch, y);
+
+            BoonPlugin.Log.LogInfo("Compendium bar re-spaced: " + icons.Count +
+                                   " icons at " + (int)pitch + "px.");
         }
 
-        private static float Spacing(InventoryGui gui)
+        /// <summary>
+        /// The gap the bar already uses, measured between two of its own icons rather than
+        /// invented. Falls back to a tab width and a bit when there is only one to measure.
+        /// </summary>
+        private static float Pitch(System.Collections.Generic.List<RectTransform> icons)
         {
-            var xs = new System.Collections.Generic.List<float>();
-
-            foreach (var button in gui.m_infoPanel.GetComponentsInChildren<Button>(true))
+            for (var i = 1; i < icons.Count; i++)
             {
-                if (button == null || button.name == "BoonTab") continue;
-
-                var rect = button.GetComponent<RectTransform>();
-                if (rect == null) continue;
-
-                var x = rect.anchoredPosition.x;
-                if (!xs.Contains(x)) xs.Add(x);
+                var gap = icons[i].anchoredPosition.x - icons[i - 1].anchoredPosition.x;
+                if (gap > 1f) return gap;
             }
 
-            if (xs.Count < 2) return 0f;
-
-            xs.Sort();
-            return xs[xs.Count - 1] - xs[xs.Count - 2];
+            return icons[0].rect.width * 1.15f;
         }
 
         /// <summary>
