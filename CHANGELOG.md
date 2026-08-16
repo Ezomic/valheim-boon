@@ -103,6 +103,24 @@ away: Boon used to refuse the connection, and a levelling mod deciding who may p
 in an XP system locks people out. Refusing at the door moved to [Threshold](../threshold),
 where it is the whole job and is done openly.
 
+### Cloning vanilla UI, and what it does not hand over
+
+Both the bar and the compendium tab are clones of things the game already draws, which is what
+makes them match. What a clone does **not** bring is its own lifecycle: it has never run
+`Awake`, `OnEnable` or `LateUpdate`, because the donors sit inactive.
+
+`GuiBar` puts something essential in each of those, so the bar failed three times over - the
+tint reached nothing, the width was discarded and re-derived from the donor's, and setting a
+value stored a number without drawing it. All three are ways of not reaching one line. The
+fill is written directly now, and the trailing bar lagged by hand.
+
+The tab had the same shape of problem read from the other end: its gold is not in any sprite
+or any `Image.color` but in the Button's `normalColor`, applied to whichever graphic is its
+`targetGraphic`. Building a layer alongside it could never match; swapping the sprite on the
+graphic already being tinted inherits size, shadow, gold, hover and press at once.
+
+The rule both arrive at: **clone for geometry and sprites, drive the state yourself.**
+
 ### Known limits
 
 - **Never played at the shipping curve.** The pick path was exercised against a deliberately

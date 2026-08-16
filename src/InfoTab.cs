@@ -235,9 +235,12 @@ namespace Boon
             glyph.enabled = true;
             glyph.raycastTarget = true;
 
-            // Not gated on Verbose. A handful of lines once per world, and it is the thing
-            // nobody had through ten attempts at this icon - every one of them guessing at a
-            // hierarchy that was readable the whole time.
+            // Behind Verbose now. It ran ungated while the icon was being got right, because
+            // ten attempts had gone by with nobody knowing what the layers were - and it is
+            // what finally ended that, so it stays rather than being deleted. Turn Verbose on
+            // and the next question about this bar is answered in numbers.
+            if (!BoonConfig.Verbose.Value) return;
+
             foreach (var image in donor.GetComponentsInChildren<Image>(true))
             {
                 if (image == null) continue;

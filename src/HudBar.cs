@@ -288,7 +288,7 @@ namespace Boon
             _rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, length + BorderBuffer);
 
             // No SetWidth. The length is held here and applied by Fill, for the reasons below.
-            BoonPlugin.Log.LogInfo("Bar sized to " + length + ".");
+            if (BoonConfig.Verbose.Value) BoonPlugin.Log.LogInfo("Bar sized to " + length + ".");
         }
 
         /// <summary>
@@ -399,7 +399,11 @@ namespace Boon
             var image = bar.m_bar.GetComponent<Image>();
             if (image == null) return;
 
-            if (image.color != colour)
+            // Worth keeping behind Verbose: the first time this ran it printed
+            // RGBA(1.000, 0.294, 0.939) - the donor's own magenta, showing through because the
+            // tint was reaching nothing. A fill wearing a colour nobody chose is what this line
+            // is for.
+            if (BoonConfig.Verbose.Value && image.color != colour)
                 BoonPlugin.Log.LogInfo("Bar fill '" + image.name + "' was " + image.color +
                                        " (sprite " + (image.sprite != null ? image.sprite.name : "none") +
                                        "); set to " + colour + ".");

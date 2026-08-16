@@ -114,6 +114,37 @@ The old IMGUI bar is kept as the **automatic fallback**. A HUD hierarchy is scen
 than API, so this can break under a game update in a way ilspy cannot warn about, and falling
 back to a bar that certainly draws beats falling back to an empty corner.
 
+### What the clone does not give: its own lifecycle
+
+The bar took four rounds to get right, and every fault had one cause. A cloned component has
+**never run its own `Awake`, `OnEnable` or `LateUpdate`** - the eitr donor sits inactive for a
+character with no eitr - and `GuiBar` puts something essential in each of them:
+
+| Where | What it does | What went wrong |
+| --- | --- | --- |
+| `Awake` | caches `m_barImage` | `SetColor` returns silently, so the bar wore the donor's own colour |
+| first `SetValue` | re-reads `m_width` off the fill's current size | `SetWidth(240)` was discarded, so 43% drew as 43% of the donor's 64 |
+| `LateUpdate` | the only caller of `SetBar` | later `SetValue`s stored a number and drew nothing |
+
+Each is a different way of not reaching `SetBar`, which is one line:
+
+```csharp
+m_bar.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, m_width * i);
+```
+
+So the fill is written directly and the trailing bar lagged by hand. Nothing is cached and
+nothing waits on a callback that is not coming.
+
+The lesson generalises past this bar, and it is not "do not clone": **clone a HUD object for
+its geometry and its sprites, then drive its state yourself.** The frame, the bevelled track,
+the softened ends and the rotation are all worth inheriting and none are worth rebuilding. It
+is only the value machinery that assumes it is running on a live scene object.
+
+The middle fault is also a small lesson in reading a symptom. The fill was authored **magenta**
+(`1, 0.294, 0.939`) under a greyscale sprite, so a tint that reached nothing did not look
+untinted - it looked deliberately pink, which reads as a shader or colour-space fault and sends
+you looking in entirely the wrong place.
+
 ## Dying no longer costs skill progress
 
 Valheim already has a world modifier for this and it is **not enough**. `Skills.OnDeath` calls
@@ -315,6 +346,8 @@ version says the code is finished, not that the numbers are right.
 
 - **The shipping curve has never been played.** Everything below it works; how often a stone
   lights up at 60 * N^1.5 is a guess, and it is the single number the whole feel rests on.
+  The panel, the bar and the tab have all been seen in game and are correct; this is about
+  pacing, not about whether anything draws.
 - **Balance rests entirely on the runestones.** With a free choice the strongest runestone is
   always available, so the ordering of `MaxRank` and the per-rank values are doing the work
   the random offer used to do. That has not been played hard enough to find out which one

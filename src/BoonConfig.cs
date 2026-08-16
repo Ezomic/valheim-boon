@@ -64,7 +64,11 @@ namespace Boon
                 "Off leaves levels and cards recorded but stops granting or applying them.");
 
             Verbose = cfg.Bind("General", "Verbose", false,
-                "Log every XP grant, every rejected report and every card applied.");
+                "Log every XP grant, every rejected report and every runestone applied.\n" +
+                "Also dumps what the game's own UI is made of where this mod clones it - the " +
+                "compendium tab's layers and button colours, and the bar's fill colour and " +
+                "length. Both were written while chasing a cloned widget that drew the wrong " +
+                "thing, and they are the fastest way back to an answer if one ever does again.");
 
             // The character level is its own number with its own curve. It is fed by skill
             // level-ups but is deliberately not a restatement of total skill level - the
