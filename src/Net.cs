@@ -433,8 +433,7 @@ namespace Boon
             {
                 var player = Player.m_localPlayer;
                 if (player != null)
-                    player.Message(MessageHud.MessageType.Center,
-                                   "A boon to spend — press " + BoonPanel.KeyName());
+                    player.Message(MessageHud.MessageType.Center, BoonPanel.OpenHint());
             }
 
             if (BoonConfig.Verbose.Value)

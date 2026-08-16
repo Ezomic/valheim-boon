@@ -39,6 +39,7 @@ namespace Boon
         private static float _nextFlash;
         private static int _shownLevel = -1;
         private static int _shownPercent = -1;
+        private static bool _shownOwed;
 
         private static float _sizedAt;
         private static bool _uprightAt;
@@ -107,11 +108,17 @@ namespace Boon
             // upright sliver - a number is the only thing that answers "how far" exactly.
             var percent = Mathf.Clamp(Mathf.RoundToInt(progress * 100f), 0, 100);
 
-            if (_text != null && (_shownLevel != ClientState.Level || _shownPercent != percent))
+            var owed = ClientState.HasPick;
+
+            if (_text != null && (_shownLevel != ClientState.Level || _shownPercent != percent || _shownOwed != owed))
             {
                 _shownLevel = ClientState.Level;
                 _shownPercent = percent;
-                _text.text = _shownLevel + " · " + percent + "%";
+                _shownOwed = owed;
+                // A star when a pick is waiting, on the bar itself rather than beside it. The
+                // note that used to sit alongside was drawn at a fixed screen position and
+                // ended up over the guardian power once the bar started following stamina.
+                _text.text = _shownLevel + " · " + percent + "%" + (ClientState.HasPick ? " ★" : "");
             }
 
             Announce();

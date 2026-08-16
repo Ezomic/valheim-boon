@@ -375,6 +375,17 @@ namespace Boon
             return new Rect(r.x - by, r.y - by, r.width + by * 2f, r.height + by * 2f);
         }
 
+        /// <summary>
+        /// How to open this, said in terms of whatever way in actually exists. The key is
+        /// unbound by default now, so naming it would send people to a key that does nothing.
+        /// </summary>
+        internal static string OpenHint()
+        {
+            return BoonConfig.KeyBoon.Value.MainKey == KeyCode.None
+                ? "A boon to spend — see your boons in the inventory"
+                : "A boon to spend — press " + KeyName();
+        }
+
         internal static string KeyName()
         {
             var key = BoonConfig.KeyBoon.Value.MainKey;
