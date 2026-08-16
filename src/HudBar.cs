@@ -282,8 +282,31 @@ namespace Boon
             var length = Mathf.Max(16f, _sizedAt);
 
             _rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, length + BorderBuffer);
+
+            // Spend the first SetValue before setting the width, and throw the result away.
+            //
+            // GuiBar.SetWidth stores the width it is given, but the FIRST SetValue afterwards
+            // takes it straight back:
+            //
+            //     if (m_firstSet) { m_firstSet = false; m_width = m_bar.sizeDelta.x; ... }
+            //
+            // It re-derives its own width from the fill's current size, which is the donor's
+            // 64 and not the 240 we asked for - and every fill after that is drawn as a
+            // fraction of 64 on a 240-wide track. That is why a bar reading 43% filled about a
+            // ninth of its length: 43% of 64 is 27px, and 27 of 240 is 11%.
+            //
+            // Vanilla never meets this because its bars are authored at the width they are
+            // drawn at, so re-reading it is a no-op. Consuming the first call here, while the
+            // bar is still the donor's size and nothing is looking at it, leaves m_width owned
+            // by SetWidth alone from then on.
+            _fast.SetValue(0f);
+            _slow.SetValue(0f);
+
             _slow.SetWidth(length);
             _fast.SetWidth(length);
+
+            BoonPlugin.Log.LogInfo("Bar sized to " + length + "; fill rect now " +
+                                   (_fast.m_bar != null ? _fast.m_bar.rect.width.ToString("0") : "?") + ".");
         }
 
         /// <summary>
