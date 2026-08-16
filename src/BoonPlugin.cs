@@ -25,7 +25,6 @@ namespace Boon
         private Harmony _harmony;
 
         private bool _saidHello;
-        private bool _keyHeld;
 
         private void Awake()
         {
@@ -79,7 +78,6 @@ namespace Boon
             }
 
             SayHello();
-            ReadKey();
 
             if (ClientState.Known) Effects.Apply(player, ClientState.Ranks);
 
@@ -148,22 +146,5 @@ namespace Boon
 
         private static System.Reflection.FieldInfo _playerId;
 
-        /// <summary>
-        /// Edge-triggered by hand, the same way Tether does it: a held key would otherwise
-        /// open and close the window several times a second.
-        /// </summary>
-        private void ReadKey()
-        {
-            var down = BoonConfig.KeyBoon.Value.IsDown();
-            if (!down) { _keyHeld = false; return; }
-            if (_keyHeld) return;
-            _keyHeld = true;
-
-            // The chest window and the game menu both own the cursor already; opening over
-            // them would fight for it.
-            if (InventoryGui.IsVisible() || Menu.IsVisible()) return;
-
-            BoonPanel.Toggle();
-        }
     }
 }

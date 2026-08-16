@@ -8,9 +8,9 @@ namespace Boon
     /// swords, that opens the boons.
     ///
     /// A thing on screen rather than a key, which is the standing preference here - Stow was
-    /// given a buildable post for the same reason and both its keys still exist in config,
-    /// unbound. F7 stays bound and keeps working; this is simply where anyone would look for
-    /// it first, next to the skills it sits alongside conceptually.
+    /// given a buildable post for the same reason. There was a keybind once and it is gone
+    /// rather than merely unbound, so this tab is the only way in; the failure path below says
+    /// so out loud, because a tab that will not clone would otherwise strand the panel.
     ///
     /// Cloned from a tab that is already there rather than built, so it arrives with the
     /// game's own button frame, hover tint and click sound. Two things have to be taken off a
@@ -49,8 +49,9 @@ namespace Boon
             if (donor == null)
             {
                 _failed = true;
-                BoonPlugin.Log.LogWarning("No compendium tab to clone - the boons tab is off. " +
-                                          KeyHint() + " still opens them.");
+                BoonPlugin.Log.LogWarning("No compendium tab to clone, and there is no keybind " +
+                                          "any more - the boons panel has no way in. That is a " +
+                                          "bug rather than a setting; please report it.");
                 return;
             }
 
@@ -334,11 +335,6 @@ namespace Boon
             // inventory has to go first or the click would appear to do nothing.
             if (InventoryGui.instance != null) InventoryGui.instance.Hide();
             BoonPanel.Open();
-        }
-
-        private static string KeyHint()
-        {
-            return BoonPanel.KeyName();
         }
     }
 }

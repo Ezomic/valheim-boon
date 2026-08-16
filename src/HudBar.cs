@@ -311,13 +311,51 @@ namespace Boon
             _tintedAt = BoonConfig.BarColour.Value;
             var tint = BoonConfig.BarTint();
 
-            // GuiBar.SetColor writes the fill image only, so the borrowed frame and track
-            // keep their own colours. The trailing bar is the same hue held back, which is
-            // how vanilla distinguishes the pair.
-            _fast.SetColor(tint);
-            _slow.SetColor(new Color(tint.r * 0.55f, tint.g * 0.55f, tint.b * 0.55f, tint.a));
+            // Only the fill is tinted, so the borrowed frame and track keep their own colours.
+            // The trailing bar is the same hue held back, which is how vanilla distinguishes
+            // the pair.
+            Tint(_fast, tint);
+            Tint(_slow, new Color(tint.r * 0.55f, tint.g * 0.55f, tint.b * 0.55f, tint.a));
 
             if (_text != null) _text.color = tint;
+        }
+
+        /// <summary>
+        /// Colour one bar's fill, without going through GuiBar.SetColor.
+        ///
+        /// SetColor writes m_barImage, and m_barImage is cached in Awake:
+        ///
+        ///     private void Awake() { m_barImage = m_bar.GetComponent&lt;Image&gt;(); ... }
+        ///     public void SetColor(Color c) { if ((bool)m_barImage) m_barImage.color = c; }
+        ///
+        /// The bars are collected with GetComponentsInChildren(true), which reaches inactive
+        /// ones on purpose - and the eitr bar sits hidden for a character with no eitr, so
+        /// Awake has never run on its parts. m_barImage is null, SetColor returns having done
+        /// nothing, and it does so silently. The fill then keeps the donor's own colour, which
+        /// is the whole reason an experience bar cloned from the eitr bar came out purple no
+        /// matter what BarColour said.
+        ///
+        /// m_bar is a public field, so its Image is reachable without waiting for Awake.
+        /// SetColor is still called first: once Awake has run it is the same write, and doing
+        /// both keeps this correct if the caching ever moves.
+        /// </summary>
+        private static void Tint(GuiBar bar, Color colour)
+        {
+            if (bar == null) return;
+
+            bar.SetColor(colour);
+
+            if (bar.m_bar == null) return;
+
+            var image = bar.m_bar.GetComponent<Image>();
+            if (image == null) return;
+
+            if (image.color != colour)
+                BoonPlugin.Log.LogInfo("Bar fill '" + image.name + "' was " + image.color +
+                                       " (sprite " + (image.sprite != null ? image.sprite.name : "none") +
+                                       "); set to " + colour + ".");
+
+            image.color = colour;
         }
 
         /// <summary>

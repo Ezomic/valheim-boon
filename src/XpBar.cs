@@ -61,7 +61,7 @@ namespace Boon
                 {
                     _waiting.alignment = TextAnchor.MiddleLeft;
                     GUI.Label(new Rect(centreX + 16f, centreY - 24f, 200f, 48f),
-                              "boon\nwaiting\n(" + BoonPanel.KeyName() + ")", _waiting);
+                              "boon\nwaiting", _waiting);
                 }
 
                 return;
@@ -87,7 +87,7 @@ namespace Boon
                 GUI.DrawTexture(new Rect(x, bottom - filled, thickness, filled), _fill);
             }
 
-            // Just the level. The exact numbers live on the F7 panel, which is what that panel
+            // Just the level. The exact numbers live on the boons panel, which is what it
             // is for - a permanent "24 / 60" is noise you stop reading by the second hour.
             _label.alignment = TextAnchor.UpperCenter;
             GUI.Label(new Rect(x - 14f, bottom + 3f, thickness + 28f, 18f),
@@ -100,7 +100,7 @@ namespace Boon
 
             _waiting.alignment = TextAnchor.MiddleLeft;
             GUI.Label(new Rect(x + thickness + 6f, top, 200f, length),
-                      "boon\nwaiting\n(" + BoonPanel.KeyName() + ")", _waiting);
+                      "boon\nwaiting", _waiting);
         }
 
         private static void Build()

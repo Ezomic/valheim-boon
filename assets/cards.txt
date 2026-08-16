@@ -30,7 +30,7 @@
 # Cards stop being offered once they reach MaxRank in the config.
 #
 # The last field is the SIGIL: the rune cut into the middle of this boon's stone in the
-# F7 panel. Optional; a card without one falls back to the first letter of its id.
+# boons panel. Optional; a card without one falls back to the first letter of its id.
 #
 # Written as a Latin letter, not as a runic Unicode character. The game font called "rune"
 # is a Latin-mapped decorative face - type F, get the rune - and runic code points come out

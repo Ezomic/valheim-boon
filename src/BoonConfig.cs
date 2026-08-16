@@ -39,7 +39,6 @@ namespace Boon
 
 
         internal static ConfigEntry<bool> Verbose;
-        internal static ConfigEntry<KeyboardShortcut> KeyBoon;
 
         internal static ConfigEntry<bool> ShowInfoTab;
         internal static ConfigEntry<bool> ShowXpBar;
@@ -67,19 +66,6 @@ namespace Boon
             Verbose = cfg.Bind("General", "Verbose", false,
                 "Log every XP grant, every rejected report and every card applied.");
 
-            // A window needs a way back to it. Closing it with Escape used to hide it
-            // until the game restarted, which made "decide later" a lie.
-            // Unbound. The compendium tab is the way in, which is the standing preference
-            // here - a thing on screen rather than a key, the same call Stow made when it took
-            // a buildable post and left both its keys in config with nothing on them.
-            //
-            // The entry stays so it can be given a key again in one line, and that is the way
-            // back if the tab ever fails to build: it logs a warning saying so.
-            KeyBoon = cfg.Bind("General", "KeyBoon", new KeyboardShortcut(KeyCode.None),
-                "Opens your boons. Unbound by default - the tab on the compendium bar is the " +
-                "way in. Set a key here if you would rather have one; F6 is devkit's, and " +
-                "Numpad 0-7 are taken by Thralls and Tether.");
-
             // The character level is its own number with its own curve. It is fed by skill
             // level-ups but is deliberately not a restatement of total skill level - the
             // weighting below is what makes it a separate track rather than a second view
@@ -98,8 +84,8 @@ namespace Boon
                 "each level costs more than the last. Vanilla's own skill curve is already " +
                 "front-loaded, so this counteracts a flood of early cards.");
 
-            // A thing on screen rather than a key, which is the standing preference here.
-            // KeyBoon stays bound and keeps working either way.
+            // A thing on screen rather than a key, which is the standing preference here,
+            // and now the only way in - the keybind is gone rather than merely unbound.
             ShowInfoTab = cfg.Bind("General", "ShowInfoTab", true,
                 "Add a fifth tab to the compendium bar, beside the raven and the trophy, that " +
                 "opens your boons. Cloned from a tab already there, so it carries the game's " +
@@ -167,12 +153,15 @@ namespace Boon
                 "moves its own bars up by the same amount to clear that panel; ours is pinned " +
                 "in screen space, so it has to make the move by hand.");
 
-            BarColour = cfg.Bind("Bar", "BarColour", "E4DCC4",
+            BarColour = cfg.Bind("Bar", "BarColour", "7BC96F",
                 "Bar colour as RRGGBB hex. The trailing fill is the same hue held back, the " +
                 "way vanilla tells its bar pairs apart. Unparseable values fall back to gold.\n" +
-                "Bone by default. The four vanilla bars have red, yellow, blue and orange " +
-                "between them, so a fifth in any of those reads as one of them, and pale " +
-                "stone is what the boons themselves are cut from.");
+                "Green by default, because it is the one hue the HUD does not already spend: " +
+                "health is red, stamina yellow, eitr blue and the guardian power orange, so a " +
+                "fifth bar in any of those reads as one of them.\n" +
+                "It was bone until the tint turned out never to be reaching the fill at all - " +
+                "the bar was showing the eitr donor's own purple and no value here changed " +
+                "that. Bone is E4DCC4, if you want it back now that setting it does something.");
 
             BarFlashSeconds = cfg.Bind("Bar", "BarFlashSeconds", 4f,
                 "How often the bar flashes while a pick is waiting to be spent, in seconds. " +
@@ -216,7 +205,7 @@ namespace Boon
             // these are the kind of number that wants nudging rather than rebuilding.
 
             PanelColumns = cfg.Bind("Cards", "PanelColumns", 4,
-                "Tiles across the F7 panel. Fewer means wider tiles and a taller panel; the " +
+                "Tiles across the boons panel. Fewer means wider tiles and a taller panel; the " +
                 "panel scrolls vertically once it would pass 88% of the screen height.");
 
             MaxRank = cfg.Bind("Cards", "MaxRank", 5,

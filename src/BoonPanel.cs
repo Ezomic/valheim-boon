@@ -80,16 +80,15 @@ namespace Boon
         }
 
         /// <summary>
-        /// Never opens by itself. It used to appear the moment a level landed, which put a
-        /// modal over the screen and took the mouse mid-fight - a good way to be killed by
-        /// your own reward.
+        /// Opened by the compendium tab, and by nothing else.
+        ///
+        /// There was a Toggle beside this, for the keybind, and it went with it: a tab is a
+        /// click rather than a switch, so a toggle has no caller and no meaning here.
+        ///
+        /// Never opens by itself either. It used to appear the moment a level landed, which
+        /// put a modal over the screen and took the mouse mid-fight - a good way to be killed
+        /// by your own reward.
         /// </summary>
-        internal static void Toggle()
-        {
-            _open = !_open;
-        }
-
-        /// <summary>Opened by the compendium tab, which is a click rather than a toggle.</summary>
         internal static void Open()
         {
             _open = true;
@@ -133,7 +132,7 @@ namespace Boon
             DrawDetail(new Rect(x + fieldW + DetailPad, fieldTop, DetailWidth, boardH));
 
             GUI.Label(new Rect(x, fieldTop + boardH + 8f, Board - PadX * 2f, 18f),
-                      KeyName() + " or Escape to close · each mark holds the level that cut it", _foot);
+                      "Escape to close · each mark holds the level that cut it", _foot);
         }
 
         private static void DrawHead(float x, ref float y, float width)
@@ -376,20 +375,13 @@ namespace Boon
         }
 
         /// <summary>
-        /// How to open this, said in terms of whatever way in actually exists. The key is
-        /// unbound by default now, so naming it would send people to a key that does nothing.
+        /// How to open this, said in terms of the only way in there is. There was a keybind
+        /// once and this named it; it is gone rather than unbound, so naming a key would send
+        /// people to one that does not exist.
         /// </summary>
         internal static string OpenHint()
         {
-            return BoonConfig.KeyBoon.Value.MainKey == KeyCode.None
-                ? "A boon to spend — see your boons in the inventory"
-                : "A boon to spend — press " + KeyName();
-        }
-
-        internal static string KeyName()
-        {
-            var key = BoonConfig.KeyBoon.Value.MainKey;
-            return key == KeyCode.None ? "the Boon key" : key.ToString();
+            return "A boon to spend — see your boons in the inventory";
         }
 
         private static void Take(string id)
