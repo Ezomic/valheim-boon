@@ -2,9 +2,10 @@
   "name": "Boon",
   "author": "Robbin Thijssen",
   "version_number": "0.1.0",
-  "website_url": "",
+  "website_url": "https://github.com/Ezomic/valheim-boon",
   "description": "A character level beside the skills, paid out in cards you draft and deepen.",
   "dependencies": [
+    "Ezomic-Core-0.2.0",
     "denikson-BepInExPack_Valheim-5.4.2333"
   ]
 }
