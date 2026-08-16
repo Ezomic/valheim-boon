@@ -1,98 +1,44 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Reflection;
 using System.Text;
-using HarmonyLib;
 using UnityEngine;
 
 namespace Boon
 {
     /// <summary>
-    /// The fresh-character check.
+    /// Whether this server is willing to pay for the skill levels a character turned up with.
     ///
-    /// This, not the rate limit, is the real defence. If a character has only ever been on
-    /// this world, then every skill level it holds was necessarily earned here, and there is
-    /// nothing to verify. Rate limiting only bounds the damage of a forged report; the gate
-    /// removes the reason to forge one.
+    /// It used to refuse the connection, and that was the wrong power for this mod to hold. A
+    /// levelling mod deciding who may play means a bug in an XP system locks people out of the
+    /// server, and it did: a character that had been used on another world was kicked with
+    /// Valheim's generic screen and the reason only in the server's log, so the player could
+    /// not tell a refusal from a crash. The travel check that produced that verdict has moved
+    /// out to Threshold, where refusing a connection is the whole job and is done openly.
     ///
-    /// Checked on *every* login rather than only the first, so a character taken away to a
-    /// creative world and brought back is caught on return rather than waved through because
-    /// it was clean once.
+    /// What is left here is the part that was always Boon's own business: this server keeps a
+    /// record of how high it watched each skill go, and if a character comes back higher than
+    /// that, the gain did not happen here and is not paid for. The character plays normally.
+    /// It simply earns nothing until its levels line up with what this server saw.
     ///
-    /// The honest limit: PlayerProfile is client-side, so these facts are self-reported and a
-    /// purpose-built client can forge them. What it does catch is the ordinary case - an
-    /// unmodified player who levelled elsewhere or used devcommands - because the game itself
-    /// records both and has no reason to lie.
+    /// That is a strictly smaller claim, and it needs no profile facts to make - the baseline
+    /// is the server's own memory, which no client can reach or edit.
     /// </summary>
     internal static class Gate
     {
-        private static FieldInfo _worldData;
-
         /// <summary>
-        /// Facts about the local character, gathered on request from the server.
+        /// Owners whose reported skills this server does not vouch for, for this session.
         ///
-        ///   otherWorlds=N;cheats=0|1;commands=N;stats=F
+        /// Deliberately not persisted. It is a judgement about a login, re-made on the next
+        /// one, and writing it to the ledger would turn a recoverable state into a permanent
+        /// mark on a character that may simply have been fixed.
         /// </summary>
-        internal static string LocalFacts()
+        private static readonly HashSet<string> Untrusted = new HashSet<string>(StringComparer.Ordinal);
+
+        /// <summary>Whether XP should be withheld from this owner right now.</summary>
+        internal static bool IsUntrusted(string owner)
         {
-            var sb = new StringBuilder();
-
-            try
-            {
-                var profile = Game.instance != null ? Game.instance.GetPlayerProfile() : null;
-                if (profile == null) return "error=noprofile";
-
-                var currentWorld = ZNet.instance != null ? ZNet.instance.GetWorldUID() : 0L;
-
-                // Only what the decision actually uses. An earlier version also summed
-                // PlayerStats, which threw on the PlayerStatType.Count member that is not in
-                // the dictionary - and because that killed the whole gather, the gate received
-                // "error=exception" and checked nothing at all. A fact nothing decides on is
-                // not worth a failure mode.
-                sb.Append("otherWorlds=").Append(CountOtherWorlds(profile, currentWorld));
-                sb.Append(";cheats=").Append(profile.m_usedCheats ? 1 : 0);
-                sb.Append(";commands=").Append(profile.m_knownCommands != null ? profile.m_knownCommands.Count : 0);
-            }
-            catch (Exception e)
-            {
-                BoonPlugin.Log.LogWarning("Could not gather profile facts: " + e.Message);
-                return "error=exception";
-            }
-
-            return sb.ToString();
-        }
-
-        /// <summary>
-        /// How many worlds other than this one this character has played on.
-        ///
-        /// PlayerProfile.m_worldData is a Dictionary&lt;long, WorldPlayerData&gt; keyed by
-        /// world UID - one entry per world the character has spawned in. It is private, hence
-        /// the reflection, and it is the single most direct answer to "has this character been
-        /// used elsewhere".
-        /// </summary>
-        private static int CountOtherWorlds(PlayerProfile profile, long currentWorld)
-        {
-            if (_worldData == null)
-                _worldData = AccessTools.Field(typeof(PlayerProfile), "m_worldData");
-
-            if (_worldData == null)
-            {
-                BoonPlugin.Log.LogError("PlayerProfile.m_worldData not found - the gate cannot see other worlds.");
-                return -1;
-            }
-
-            if (!(_worldData.GetValue(profile) is IDictionary map)) return -1;
-
-            var count = 0;
-            foreach (DictionaryEntry entry in map)
-            {
-                if (!(entry.Key is long uid)) continue;
-                if (uid != currentWorld) count++;
-            }
-
-            return count;
+            return owner != null && BoonConfig.WithholdUntrustedXp.Value && Untrusted.Contains(owner);
         }
 
         /// <summary>
@@ -134,13 +80,14 @@ namespace Boon
         /// </summary>
         internal static void Judge(long sender, string owner, string facts, string skills)
         {
-            if (!BoonConfig.RequireFreshCharacter.Value) return;
+            if (!BoonConfig.CheckSkillBaseline.Value) return;
 
             var who = owner ?? ("peer " + sender);
             var reasons = new List<string>();
 
-            TravelReasons(facts, who, reasons);
             SnapshotReasons(skills, owner, who, reasons);
+
+            if (owner != null) Untrusted.Remove(owner);
 
             if (reasons.Count == 0)
             {
@@ -150,41 +97,20 @@ namespace Boon
 
             var why = string.Join(", ", reasons.ToArray());
 
-            if (!BoonConfig.GateEnforce.Value)
+            if (!BoonConfig.WithholdUntrustedXp.Value)
             {
-                BoonPlugin.Log.LogWarning("Gate (not enforcing): would have refused " + who + " - " + why + ".");
+                BoonPlugin.Log.LogWarning("Gate (not enforcing): would withhold XP from " + who + " - " + why + ".");
                 return;
             }
 
-            BoonPlugin.Log.LogWarning("Gate: refusing " + who + " - " + why + ".");
+            if (owner != null) Untrusted.Add(owner);
+            BoonPlugin.Log.LogWarning("Gate: withholding XP from " + who + " - " + why + ".");
 
-            var peer = ZNet.instance != null ? ZNet.instance.GetPeer(sender) : null;
-            if (peer == null) return;
-
-            // Send the reason before dropping, the same way ZNet turns away a wrong-version
-            // or banned client - it invokes "Error" with a ConnectionStatus and then
-            // disconnects. Without this the player is dropped with no explanation at all and
-            // has no way to tell a refusal from a crash.
-            if (peer.m_rpc != null)
-                peer.m_rpc.Invoke("Error", (int)ZNet.ConnectionStatus.ErrorKicked);
-
-            ZNet.instance.Disconnect(peer);
-        }
-
-        private static void TravelReasons(string facts, string who, List<string> reasons)
-        {
-            var parsed = ParseFacts(facts);
-            if (parsed == null)
-            {
-                BoonPlugin.Log.LogWarning("Gate: " + who + " sent unreadable profile facts ('" + facts + "').");
-                return;
-            }
-
-            if (Value(parsed, "otherWorlds") > 0)
-                reasons.Add("has played on " + Value(parsed, "otherWorlds") + " other world(s)");
-
-            if (Value(parsed, "cheats") > 0)
-                reasons.Add("character is flagged as having used cheats");
+            // Say it to the player, not only to the log. The whole failure of the old
+            // behaviour was that the person affected had no way to find out what happened, and
+            // moving from a kick to a quiet withholding makes that worse rather than better -
+            // nothing visible happens at all, you simply stop earning.
+            Net.SendNotice(sender, BoonConfig.UntrustedMessage.Value);
         }
 
         /// <summary>
@@ -259,25 +185,5 @@ namespace Boon
             return map;
         }
 
-        private static Dictionary<string, float> ParseFacts(string facts)
-        {
-            if (string.IsNullOrEmpty(facts) || facts.StartsWith("error=")) return null;
-
-            var map = new Dictionary<string, float>();
-            foreach (var pair in facts.Split(';'))
-            {
-                var bits = pair.Split('=');
-                if (bits.Length != 2) continue;
-                if (!float.TryParse(bits[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var v)) continue;
-                map[bits[0]] = v;
-            }
-
-            return map.Count == 0 ? null : map;
-        }
-
-        private static float Value(Dictionary<string, float> map, string key)
-        {
-            return map.TryGetValue(key, out var v) ? v : 0f;
-        }
     }
 }

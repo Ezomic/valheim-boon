@@ -126,6 +126,7 @@ namespace Boon
         private const string RpcState = "Boon_State";
         private const string RpcAskProfile = "Boon_AskProfile";
         private const string RpcProfile = "Boon_Profile";
+        private const string RpcNotice = "Boon_Notice";
 
         private static ZRoutedRpc _registeredOn;
 
@@ -169,6 +170,7 @@ namespace Boon
             rpc.Register<string>(RpcState, OnState);
             rpc.Register(RpcAskProfile, OnAskProfile);
             rpc.Register<string, string>(RpcProfile, OnProfile);
+            rpc.Register<string>(RpcNotice, OnNotice);
 
             ClientState.Clear();
             Effects.Reset();
@@ -230,7 +232,7 @@ namespace Boon
 
             PushState(sender, rec);
 
-            if (BoonConfig.RequireFreshCharacter.Value) AskProfile(sender);
+            if (BoonConfig.CheckSkillBaseline.Value) AskProfile(sender);
         }
 
         private static void OnSkillUp(long sender, int skillType, float skillLevel)
@@ -253,6 +255,17 @@ namespace Boon
             {
                 BoonPlugin.Log.LogWarning("Rate limit hit for " + owner +
                                           " - skill-up ignored. Either a very fast player or a forged report.");
+                return;
+            }
+
+            // Untrusted characters play normally and simply earn nothing. This is the whole
+            // of the consequence now - it used to be a kick - and it is checked here rather
+            // than at the door because "should this gain be paid for" is the only question
+            // Boon has any business answering.
+            if (Gate.IsUntrusted(owner))
+            {
+                if (BoonConfig.Verbose.Value)
+                    BoonPlugin.Log.LogInfo("Withheld XP from " + owner + " - skills not vouched for.");
                 return;
             }
 
@@ -445,7 +458,35 @@ namespace Boon
         private static void OnAskProfile(long sender)
         {
             if (ZRoutedRpc.instance == null) return;
-            ZRoutedRpc.instance.InvokeRoutedRPC(sender, RpcProfile, Gate.LocalFacts(), Gate.LocalSkills());
+
+            // The facts slot is sent empty and kept only so the wire shape does not change.
+            // It used to carry which other worlds this character had visited, which is now
+            // Threshold's question - and it was always a strange thing for a levelling mod to
+            // be asking, since it decided whether you could play rather than whether you earned.
+            ZRoutedRpc.instance.InvokeRoutedRPC(sender, RpcProfile, "", Gate.LocalSkills());
+        }
+
+        /// <summary>
+        /// Tell one player something, on their screen.
+        ///
+        /// Added because withholding XP is invisible by nature: nothing happens, you simply
+        /// stop earning, and there is no moment where the game tells you why. A kick at least
+        /// announced itself.
+        /// </summary>
+        internal static void SendNotice(long peerUid, string message)
+        {
+            if (ZRoutedRpc.instance == null || string.IsNullOrEmpty(message)) return;
+            ZRoutedRpc.instance.InvokeRoutedRPC(peerUid, RpcNotice, message);
+        }
+
+        private static void OnNotice(long sender, string message)
+        {
+            if (string.IsNullOrEmpty(message)) return;
+
+            BoonPlugin.Log.LogWarning("Boon: " + message);
+
+            var player = Player.m_localPlayer;
+            if (player != null) player.Message(MessageHud.MessageType.Center, message);
         }
     }
 }

@@ -29,8 +29,9 @@ namespace Boon
         internal static ConfigEntry<bool> RemoveDeathSkillLoss;
 
         internal static ConfigEntry<bool> ProtectCharacter;
-        internal static ConfigEntry<bool> RequireFreshCharacter;
-        internal static ConfigEntry<bool> GateEnforce;
+        internal static ConfigEntry<bool> CheckSkillBaseline;
+        internal static ConfigEntry<bool> WithholdUntrustedXp;
+        internal static ConfigEntry<string> UntrustedMessage;
         internal static ConfigEntry<float> MaxSkillUpsPerMinute;
         internal static ConfigEntry<float> SkillDriftAllowance;
 
@@ -238,21 +239,34 @@ namespace Boon
                 "the reduction factor, so zeroing it still discards partial progress toward " +
                 "the next level in every skill.");
 
-            // The gate is the real anti-cheat, not the rate limit. A character that has only
-            // ever been on this world cannot have been levelled anywhere else.
-            RequireFreshCharacter = cfg.Bind("Gate", "RequireFreshCharacter", true,
-                "Check on every login that the character has played on no world but this one, " +
-                "and has never used cheats. Checked every login rather than only the first, so " +
-                "a character taken elsewhere and brought back is caught too.");
+            // The anti-cheat is a question about XP, not about admission. Boon used to refuse
+            // the connection outright, which meant a levelling mod decided who could play -
+            // and when it did, the player got Valheim's generic kick screen with the reason
+            // only in the server's log. The "has this character been to other worlds" half of
+            // that judgement now lives in Threshold, where turning people away is the whole
+            // job and is done openly. What is left here is strictly about payment.
+            CheckSkillBaseline = cfg.Bind("Gate", "CheckSkillBaseline", true,
+                "On every login, compare the character's skills against the highest levels " +
+                "this server itself watched them reach. The baseline is the server's own " +
+                "memory, so unlike anything read off the character file it cannot be edited " +
+                "by the client.");
 
-            GateEnforce = cfg.Bind("Gate", "GateEnforce", true,
-                "On refuses the connection and tells the player why. Off logs what would " +
-                "have been blocked without disconnecting anyone.\n" +
-                "This applies to your own character too, and the rule is strict: a character " +
-                "is refused by every world but its first, and m_worldData entries are never " +
-                "removed, so one visit elsewhere locks that character out permanently. Back " +
-                "up a character file before taking it anywhere else - restoring the backup " +
-                "clears the travel record and is the only way back in.");
+            WithholdUntrustedXp = cfg.Bind("Gate", "WithholdUntrustedXp", true,
+                "When a character's skills sit above what this server saw, pay no XP for its " +
+                "skill-ups until they line up again, and tell the player once.\n" +
+                "Nobody is disconnected and nothing already earned is taken away - the " +
+                "character plays normally and simply stops earning. Off logs what would have " +
+                "been withheld and pays anyway.\n" +
+                "Note this replaces the old RequireFreshCharacter and GateEnforce pair, which " +
+                "kicked instead. Those keys may still be sitting in your config file doing " +
+                "nothing; they can be deleted.");
+
+            UntrustedMessage = cfg.Bind("Gate", "UntrustedMessage",
+                "Your skills are ahead of what this world has seen. No boons will be earned until they match.",
+                "Shown once, centre-screen, to a character whose XP is being withheld. " +
+                "Withholding is invisible by nature - nothing happens, you simply stop " +
+                "earning - so without this the player has no way to know, which is the same " +
+                "complaint that killed the old kick.");
 
             SkillDriftAllowance = cfg.Bind("Gate", "SkillDriftAllowance", 1f,
                 "How far a returning character's skill may sit above the highest level this " +
