@@ -36,6 +36,13 @@ namespace Boon
             // hash discards the ZDO rather than erroring - destroying what is already standing
             // in the world - and item data that differs desyncs inventories.
             Suite.Register(PluginGuid, PluginName, PluginVersion, Config);
+
+            // The host's curve is the one that counts. Without this a client with a different
+            // LevelBaseXp reads a different level out of the same xp, and every number on its
+            // screen disagrees with the server that decides them - which is how a cheapened
+            // test curve on one machine made a dedicated server refuse every pick.
+            Suite.Sync(BoonConfig.XpPerSkillLevel, BoonConfig.LevelBaseXp, BoonConfig.LevelExponent,
+                       BoonConfig.MaxRank, BoonConfig.BonusEvery);
             Cards.Load();
 
             _harmony = new Harmony(PluginGuid);

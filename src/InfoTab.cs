@@ -227,6 +227,11 @@ namespace Boon
                 if (image == null) continue;
                 if (button != null && image.gameObject == button.gameObject) continue;
 
+                // The tab carries two: "Background", a small dot, and "Image", the glyph. The
+                // log named them after three wrong guesses at which was which, and painting
+                // both put a rune on the dot as well - the extra strokes flanking it.
+                if (image.name == "Background") continue;
+
                 described.Add(image.name + "=" + (image.sprite != null ? image.sprite.name : "none") +
                               (image.enabled ? "" : " (off)"));
 

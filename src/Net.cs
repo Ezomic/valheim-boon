@@ -23,11 +23,22 @@ namespace Boon
 
         internal static bool Known;
 
-        internal static int Level => Levels.LevelForXp(Xp);
+        /// <summary>
+        /// What the server said, not what this client would work out.
+        ///
+        /// Both used to be derived from xp through the level curve, and that curve is config:
+        /// a client whose LevelBaseXp differs from the host's reads a different level out of
+        /// the same xp. With a cheapened test curve on the client and the shipping one on the
+        /// server, the panel offered picks the server then refused as "nothing owed", over and
+        /// over. Authority numbers come down the wire now; -1 means an older server that did
+        /// not send them, and the old derivation stands in.
+        /// </summary>
+        internal static int ServerLevel = -1;
+        internal static int ServerOwed = -1;
 
-        /// <summary>Picks earned and not yet spent. The server holds the same number and is
-        /// the one that decides; this is for the panel to know what to offer.</summary>
-        internal static int Owed => Mathf.Max(0, Level - DraftsTaken);
+        internal static int Level => ServerLevel >= 0 ? ServerLevel : Levels.LevelForXp(Xp);
+
+        internal static int Owed => ServerOwed >= 0 ? ServerOwed : Mathf.Max(0, Level - DraftsTaken);
 
         internal static bool HasPick => Owed > 0;
 
@@ -64,6 +75,10 @@ namespace Boon
             levels.Add(DraftsTaken + 1);
             Ranks[id] = levels.Count;
             DraftsTaken++;
+
+            // The predicted pick spends one of the server's, so the count it sent has to come
+            // down with it or the panel keeps offering a pick that is already gone.
+            if (ServerOwed > 0) ServerOwed--;
         }
 
         internal static void Clear()
@@ -72,6 +87,8 @@ namespace Boon
             DraftsTaken = 0;
             Taken.Clear();
             Ranks.Clear();
+            ServerLevel = -1;
+            ServerOwed = -1;
             Known = false;
         }
 
@@ -104,6 +121,12 @@ namespace Boon
 
                 Taken[bits[0]] = levels;
                 Ranks[bits[0]] = levels.Count;
+            }
+
+            if (parts.Length >= 5)
+            {
+                int.TryParse(parts[3], out ServerOwed);
+                int.TryParse(parts[4], out ServerLevel);
             }
 
             Known = true;

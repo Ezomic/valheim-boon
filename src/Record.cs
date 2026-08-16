@@ -220,13 +220,20 @@ namespace Boon
         /// client never needs the owner id, and must never be handed anything it could send
         /// back as authority.
         ///
-        ///   xp|draftsTaken|id:level;level,id:level
+        ///   xp|draftsTaken|id:level;level,id:level|owed|level
+        ///
+        /// Owed and level are sent rather than left to the client to work out. It used to
+        /// derive both from xp through the level curve, which is config - and a client whose
+        /// curve differs from the host's computes a different level from the same xp. On a
+        /// server with the shipping curve and a client still on a cheapened test one, the
+        /// client believed it had picks and every one of them came back "nothing owed".
         /// </summary>
         internal string ToWire()
         {
             var sb = new StringBuilder();
             sb.Append(Xp.ToString("R", CultureInfo.InvariantCulture)).Append('|').Append(DraftsTaken).Append('|');
             AppendTaken(sb);
+            sb.Append('|').Append(Owed).Append('|').Append(Level);
             return sb.ToString();
         }
 
