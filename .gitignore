@@ -12,6 +12,7 @@ obj/
 # Recreate by copying the BepInEx tree from any existing profile.
 testprofile/
 
-# Thunderstore packaging: staging folder and the zips tcli writes.
+# Thunderstore packaging: staging folder and the zips the packager writes.
 package/
 build/
+dist/
