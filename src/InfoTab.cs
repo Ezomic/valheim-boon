@@ -180,46 +180,63 @@ namespace Boon
                 _icon.name = "BoonAlgiz";
             }
 
-            // Every image the clone brought is turned off, and one of ours is added.
+            // Swap one sprite. Nothing else.
             //
-            // This is the tenth attempt at this icon and the first that does not depend on
-            // guessing the donor's hierarchy. The others each picked a layer - the first, the
-            // last, the one not named Background - and every time something else was still
-            // drawing underneath. Whatever those extra layers are, they are off now, because
-            // nothing here has to know what they were.
-            // The colour is STATED, not sampled off the donor, and that is the whole fix.
+            // Every attempt before this built a layer of our own and guessed at the rest. The
+            // log finally said what a tab on this bar actually is:
             //
-            // Every attempt before this one copied it from some layer of the donor - the
-            // largest child, the first, the one not named Background - and each picked a
-            // different one, because a vanilla tab is a stack whose shape is scene data rather
-            // than API. There was never a colour there to copy: the gold the raven and the
-            // trophy are drawn in lives inside their sprites, and every Image.color on that
-            // bar is white or the wood behind it. Copying the largest child got the backing
-            // plate, which is exactly why the rune came out the colour of the wood.
+            //   'Background'  104x104  black at 53%, sprite point3    the soft shadow plate
+            //   'Image'        64x64   white,        sprite trophies  the glyph, as a mask
+            //   button normal RGBA(1, 0.718, 0.36)                    the gold
             //
-            // One config line, and it cannot pick the wrong layer.
+            // Three facts that between them explain every wrong version of this icon. The gold
+            // is not inside the sprites and not on any Image.color - it is the button's
+            // normalColor, applied to whichever graphic is the targetGraphic, and that graphic
+            // is the glyph. So sampling "the donor's colour" could never find it, and stating
+            // it by hand landed close but not equal. Sizing to the largest child got the 104px
+            // shadow plate rather than the 64px glyph, which is why the rune stood taller than
+            // its neighbours. And turning every inherited image off to be safe took the shadow
+            // with it, which every other icon on that bar has.
+            //
+            // So there is nothing to build and nothing to state. Replace the sprite on the
+            // graphic the button already tints, and size, shadow, gold, hover and press are all
+            // inherited by construction - which is what "cloned from a tab already there" was
+            // supposed to mean in the first place.
             var button = tab.GetComponent<Button>();
-            RectTransform sample = null;
-            var colour = BoonConfig.TabTint();
-            var silenced = 0;
+            var glyph = button != null ? button.targetGraphic as Image : null;
 
-            // The rect is still measured, because a size has no equivalent of a stated colour
-            // and the donor is the only thing that knows how big a tab icon is here.
-            foreach (var image in donor.GetComponentsInChildren<Image>(true))
+            // The targetGraphic is the glyph on every tab here. The fallback exists for a game
+            // update that rearranges them: anything but the shadow plate, smallest first.
+            if (glyph == null)
             {
-                if (image == null || image.gameObject == donor.gameObject) continue;
-                if (!image.enabled) continue;
+                foreach (var image in tab.GetComponentsInChildren<Image>(true))
+                {
+                    if (image == null || image.gameObject == tab) continue;
+                    if (image.name == "Background") continue;
+                    if (glyph == null || image.rectTransform.rect.width < glyph.rectTransform.rect.width)
+                        glyph = image;
+                }
 
-                var donorRect = image.rectTransform;
-                if (sample == null || donorRect.rect.width > sample.rect.width) sample = donorRect;
+                BoonPlugin.Log.LogWarning("The tab's target graphic was not an Image; fell back to '" +
+                                          (glyph != null ? glyph.name : "nothing") + "'.");
             }
 
-            // Read out so the next question about this bar is answered from the log rather
-            // than from another guess. Ten attempts went by without anyone knowing what the
-            // layers actually were.
-            // Not gated on Verbose. It is a handful of lines once per world, and it is exactly
-            // the thing nobody had through ten attempts at this icon - each one guessed at a
-            // hierarchy that was readable all along.
+            if (glyph == null)
+            {
+                BoonPlugin.Log.LogWarning("No glyph layer on the cloned tab - it will still open " +
+                                          "the boons, wearing the donor's picture.");
+                return;
+            }
+
+            glyph.sprite = _icon;
+            glyph.color = Color.white;   // The gold comes from the button, exactly as vanilla's does.
+            glyph.preserveAspect = true;
+            glyph.enabled = true;
+            glyph.raycastTarget = true;
+
+            // Not gated on Verbose. A handful of lines once per world, and it is the thing
+            // nobody had through ten attempts at this icon - every one of them guessing at a
+            // hierarchy that was readable the whole time.
             foreach (var image in donor.GetComponentsInChildren<Image>(true))
             {
                 if (image == null) continue;
@@ -234,66 +251,8 @@ namespace Boon
                                    ", target graphic " +
                                    (donor.targetGraphic != null ? donor.targetGraphic.name : "none"));
 
-            foreach (var image in tab.GetComponentsInChildren<Image>(true))
-            {
-                if (image == null) continue;
-                if (button != null && image.gameObject == button.gameObject) continue;
-
-                image.enabled = false;
-                silenced++;
-            }
-
-            var holder = new GameObject("BoonGlyph", typeof(RectTransform), typeof(Image));
-            var holderRect = holder.GetComponent<RectTransform>();
-            holderRect.SetParent(tab.transform, false);
-
-            if (sample != null)
-            {
-                holderRect.anchorMin = sample.anchorMin;
-                holderRect.anchorMax = sample.anchorMax;
-                holderRect.pivot = sample.pivot;
-                holderRect.anchoredPosition = sample.anchoredPosition;
-                holderRect.sizeDelta = sample.sizeDelta;
-            }
-            else
-            {
-                holderRect.anchorMin = new Vector2(0.5f, 0.5f);
-                holderRect.anchorMax = new Vector2(0.5f, 0.5f);
-                holderRect.sizeDelta = new Vector2(48f, 48f);
-            }
-
-            var glyph = holder.GetComponent<Image>();
-            glyph.sprite = _icon;
-            glyph.color = colour;
-            glyph.preserveAspect = true;
-
-            // It has to take the pointer, and it has to be what the button tints.
-            //
-            // Turning off every inherited image took the button's target graphic with them,
-            // and ours was set not to receive raycasts - so the tab drew correctly and could
-            // not be clicked at all. Handing the button our image gives it both the hit area
-            // and the hover and press states the other tabs have.
-            glyph.raycastTarget = true;
-
-            if (button != null)
-            {
-                button.targetGraphic = glyph;
-
-                // ...and that is the second half of why it looked greyed out. A target graphic
-                // is multiplied by the button's colour for its current state, and the resting
-                // state of a tab on this bar is not white - it is dimmed, which is how an
-                // unselected tab reads as unselected. Vanilla can afford that because it tints
-                // its backing plate and leaves the glyph alone; ours had become the glyph AND
-                // the tinted graphic, so the rune wore the dimming meant for the plate.
-                //
-                // Normal forced to white, the other states left as the donor set them, so the
-                // rune sits at full gold and still lights on hover and press.
-                var colours = button.colors;
-                colours.normalColor = Color.white;
-                button.colors = colours;
-            }
-
-            BoonPlugin.Log.LogInfo("Boons tab: " + silenced + " inherited image(s) off, one rune added.");
+            BoonPlugin.Log.LogInfo("Boons tab: rune on '" + glyph.name + "' at " +
+                                   glyph.rectTransform.rect.size + ", gold from the button.");
         }
 
         /// <summary>
@@ -313,13 +272,21 @@ namespace Boon
 
             // Normalised, y counted downward the way the shape was drawn and judged. Stem,
             // then the two arms rising from its middle.
+            //
+            // Drawn to fill the box, because the glyph it sits in is 64x64 and the vanilla
+            // marks on that bar - the valknut, the swords - run very nearly edge to edge.
+            // The earlier numbers left a tenth of the box empty all round, which was invisible
+            // while the rune was wrongly being drawn at the 104px shadow plate's size and
+            // would read as a small rune now that it is not.
             var strokes = new[]
             {
-                new[] { 0.50f, 0.88f, 0.50f, 0.14f },
-                new[] { 0.50f, 0.50f, 0.18f, 0.16f },
-                new[] { 0.50f, 0.50f, 0.82f, 0.16f },
+                new[] { 0.50f, 0.94f, 0.50f, 0.08f },
+                new[] { 0.50f, 0.52f, 0.10f, 0.10f },
+                new[] { 0.50f, 0.52f, 0.90f, 0.10f },
             };
 
+            // Stroke weight matched to the valknut beside it rather than picked. Half-width,
+            // so the drawn line is 9% of the icon.
             var half = size * 0.045f;
             var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
             {
