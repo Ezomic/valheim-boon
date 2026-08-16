@@ -132,7 +132,7 @@ namespace Boon
             DrawDetail(new Rect(x + fieldW + DetailPad, fieldTop, DetailWidth, boardH));
 
             GUI.Label(new Rect(x, fieldTop + boardH + 8f, Board - PadX * 2f, 18f),
-                      "Escape to close · each mark holds the level that cut it", _foot);
+                      "Escape to close", _foot);
         }
 
         private static void DrawHead(float x, ref float y, float width)
