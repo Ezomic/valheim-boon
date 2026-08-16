@@ -42,6 +42,13 @@ namespace Boon
         private static bool _shownOwed;
 
         private static float _sizedAt;
+
+        /// <summary>Where the trailing fill currently sits, 0..1. Negative until first drawn,
+        /// so a fresh bar starts level with the real one rather than draining in from empty.</summary>
+        private static float _trail = -1f;
+
+        /// <summary>How fast the trailing fill catches up, in fractions of the bar per second.</summary>
+        private const float TrailSpeed = 0.5f;
         private static bool _uprightAt;
         private static string _tintedAt;
 
@@ -96,12 +103,8 @@ namespace Boon
             if (_uprightAt != BoonConfig.BarUpright.Value) Lay();
             if (_tintedAt != BoonConfig.BarColour.Value) Colour();
 
-            // Both bars get the same number, exactly as Hud.UpdateEitr does. The slow one
-            // lags it by its own smoothing, so a level-up reads as the fill draining away
-            // rather than snapping to empty.
             var progress = Mathf.Clamp01(Levels.Progress(ClientState.Xp));
-            _fast.SetValue(progress);
-            _slow.SetValue(progress);
+            Fill(progress);
 
             // Level and percentage together. The level alone said nothing about how close the
             // next one was, and the bar alone is hard to read at a glance when it is a thin
@@ -220,6 +223,7 @@ namespace Boon
 
             _root = go;
             _shownLevel = -1;
+            _trail = -1f;   // A rebuilt bar starts level, not draining in from empty.
 
             BoonPlugin.Log.LogInfo("Experience bar cloned from " + donor.name + ".");
             return true;
@@ -283,30 +287,52 @@ namespace Boon
 
             _rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, length + BorderBuffer);
 
-            // Spend the first SetValue before setting the width, and throw the result away.
-            //
-            // GuiBar.SetWidth stores the width it is given, but the FIRST SetValue afterwards
-            // takes it straight back:
-            //
-            //     if (m_firstSet) { m_firstSet = false; m_width = m_bar.sizeDelta.x; ... }
-            //
-            // It re-derives its own width from the fill's current size, which is the donor's
-            // 64 and not the 240 we asked for - and every fill after that is drawn as a
-            // fraction of 64 on a 240-wide track. That is why a bar reading 43% filled about a
-            // ninth of its length: 43% of 64 is 27px, and 27 of 240 is 11%.
-            //
-            // Vanilla never meets this because its bars are authored at the width they are
-            // drawn at, so re-reading it is a no-op. Consuming the first call here, while the
-            // bar is still the donor's size and nothing is looking at it, leaves m_width owned
-            // by SetWidth alone from then on.
-            _fast.SetValue(0f);
-            _slow.SetValue(0f);
+            // No SetWidth. The length is held here and applied by Fill, for the reasons below.
+            BoonPlugin.Log.LogInfo("Bar sized to " + length + ".");
+        }
 
-            _slow.SetWidth(length);
-            _fast.SetWidth(length);
+        /// <summary>
+        /// Set both fills directly, rather than through GuiBar's value machinery.
+        ///
+        /// Three separate bugs in this bar came from that machinery, all the same shape: it
+        /// caches or defers something at a moment a freshly cloned, still-inactive object is
+        /// not in.
+        ///
+        ///   - m_barImage is cached in Awake, so SetColor silently did nothing and the bar
+        ///     wore the eitr donor's purple whatever BarColour said.
+        ///   - m_width is re-read from the fill's own size on the first SetValue, discarding
+        ///     what SetWidth was told, so 43% drew as 43% of the donor's 64 on a track of 240.
+        ///   - and the one that made the last fix worse: SetValue after the first does not
+        ///     draw anything at all. It stores the value, and SetBar is reached from
+        ///     LateUpdate - which never runs, because the donor's parts are inactive for a
+        ///     character with no eitr. Spending the first SetValue on zero therefore left the
+        ///     bar permanently empty.
+        ///
+        /// SetBar is one line, and every one of those failures is a way of not reaching it:
+        ///
+        ///     m_bar.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, m_width * i);
+        ///
+        /// So the fill is written here instead. Nothing is cached, nothing waits for a
+        /// lifecycle callback, and the trailing bar is lagged by hand - which it has to be
+        /// anyway, since GuiBar's own smoothing also lives in the LateUpdate that never runs.
+        /// </summary>
+        private static void Fill(float progress)
+        {
+            var length = Mathf.Max(16f, BoonConfig.BarSize.Value);
 
-            BoonPlugin.Log.LogInfo("Bar sized to " + length + "; fill rect now " +
-                                   (_fast.m_bar != null ? _fast.m_bar.rect.width.ToString("0") : "?") + ".");
+            // The trailing fill only lags downward, which is what makes a level-up read as the
+            // old bar draining away rather than the whole thing blinking back to empty.
+            if (_trail < 0f || progress > _trail) _trail = progress;
+            else _trail = Mathf.MoveTowards(_trail, progress, Time.deltaTime * TrailSpeed);
+
+            Draw(_slow, length * Mathf.Max(_trail, progress));
+            Draw(_fast, length * progress);
+        }
+
+        private static void Draw(GuiBar bar, float width)
+        {
+            if (bar == null || bar.m_bar == null) return;
+            bar.m_bar.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, Mathf.Max(0f, width));
         }
 
         /// <summary>
@@ -444,6 +470,7 @@ namespace Boon
             _animator = null;
             _canvas = null;
             _shownLevel = -1;
+            _trail = -1f;   // A rebuilt bar starts level, not draining in from empty.
             _shownPercent = -1;
             _sizedAt = 0f;
             _tintedAt = null;
