@@ -10,24 +10,24 @@ Single DLL plus a text file, no asset bundle.
 Valheim has skills but no character level. Boon adds one that runs **alongside** the skill
 system — vanilla skills are read, never written, never rescaled, never reskinned.
 
-Every character level earns one **pick**. Spend it on any card in the catalogue and that card
+Every character level earns one **pick**. Spend it on any runestone in the catalogue and that runestone
 gains a rank, up to **five**. Picks bank: nothing expires, and the panel waits.
 
-There are no drawbacks. A card is a reward or it is nothing.
+There are no drawbacks. A runestone is a reward or it is nothing.
 
 ### It used to deal three at random
 
-The first version dealt three cards per level, seeded so that quitting on a bad offer and
+The first version dealt three runestones per level, seeded so that quitting on a bad offer and
 coming back re-offered the same three — otherwise the pick is theatre, since anyone can reroll
 until they get what they wanted.
 
 Choosing freely deletes that whole problem rather than defending against it. There is no roll
 to reroll, no offer to store in the ledger or on the wire, and no second window with its own
 visibility rules. What it costs is the tension of a hand you are dealt: a free choice means the
-strongest card is always available, so balance now has to live in the cards themselves and in
+strongest runestone is always available, so balance now has to live in the runestones themselves and in
 `MaxRank` rather than in whether one happened to come up.
 
-The panel earns its keep here. Choosing between fourteen cards is only a real choice if each
+The panel earns its keep here. Choosing between fourteen runestones is only a real choice if each
 one says what it is worth now **and** what the pick would make it, which is why every tile
 carries both lines.
 
@@ -51,7 +51,7 @@ reward for taking a hauling boon the whole way.
 
 A fifth tab on the compendium bar, beside the raven and the trophy, opens a full screen of
 runestones - one per boon. Each carries its own outline, its own rock and its own runes, all
-seeded off the card id, so a boon looks the same in every session and on every machine: the
+seeded off the runestone id, so a boon looks the same in every session and on every machine: the
 stone is part of how you recognise it.
 
 A rank cuts one more mark into the rim, and the mark holds **the level that bought it**. Five
@@ -74,7 +74,7 @@ building, sneaking, sailing, cooking and fishing all pay in without this mod mai
 table of what counts.
 
 XP is **weighted by the skill level reached**, not flat per level-up. Vanilla's own skill cost
-curve is `pow(level+1, 1.5)`, so early levels are nearly free. A flat rate would rain cards in
+curve is `pow(level+1, 1.5)`, so early levels are nearly free. A flat rate would rain runestones in
 the first hours and dry up exactly when the deep ranks start to matter — and would make
 grinding a fresh cheap skill from zero the fastest way to farm picks.
 
@@ -98,7 +98,7 @@ What the clone gives for free:
 - the frame, track and fill sprites, at whatever HUD scale is set
 - the fast/slow pair, so a level-up **drains** rather than snapping to empty
 - the fade the bar already uses to show and hide itself
-- the flash it already has, fired every few seconds while a card is waiting
+- the flash it already has, fired every few seconds while a runestone is waiting
 - a TextMeshPro number in the game's own font, reused for the level
 
 Two things are read off components rather than off child names, because names are scene data
@@ -146,7 +146,7 @@ claim someone else's record. `Player.GetPlayerID()` was the obvious alternative 
 it arrives from the client.
 
 The client's half of the protocol is deliberately thin. It reports **that a skill went up**
-and **which card it wants**. It never sends a level, an XP total or a rank, because the server
+and **which runestone it wants**. It never sends a level, an XP total or a rank, because the server
 does not store anything the client says — only re-derives from the events it claims.
 
 ### Singleplayer
@@ -229,9 +229,9 @@ who levelled elsewhere or used `devcommands` — because the game records both a
 to lie. The rate limit behind it bounds the damage of a forged report rather than detecting
 one. Nothing here is airtight, and it is not presented as such.
 
-## Cards
+## Runestones
 
-`cards.txt` sits beside the DLL. One card per line:
+`cards.txt` sits beside the DLL. One runestone per line:
 
 ```
 id | Name | flavour text | effect | value-per-rank
@@ -240,13 +240,13 @@ id | Name | flavour text | effect | value-per-rank
 `effect` is the literal name of a public float field on the game's own `SE_Stats`. That is
 what makes the catalogue a text file rather than a switch statement: Valheim already sums
 about forty-five of these across active status effects — carry weight, armour, the six stamina
-costs, stealth, fall damage, regen rates, skill gain — so naming one turns it into a card with
+costs, stealth, fall damage, regen rates, skill gain — so naming one turns it into a runestone with
 no code change and no rebuild.
 
 `*inventoryrow` is the single special, because grid height is not a stat.
 
 An unknown field name is **logged and skipped**, not thrown, matching how the game treats a
-prefab name that does not resolve. A typo costs one card, not the catalogue.
+prefab name that does not resolve. A typo costs one runestone, not the catalogue.
 
 ## Config
 
@@ -258,19 +258,19 @@ prefab name that does not resolve. A typo costs one card, not the catalogue.
 | `XpPerSkillLevel` | `1` | XP per skill-up, multiplied by the level reached |
 | `LevelBaseXp` | `60` | Cumulative XP for level 1 |
 | `LevelExponent` | `1.5` | Cumulative XP for level N is base × N^exponent |
-| `MaxRank` | `5` | How deep one card goes, and how many slots its track shows |
+| `MaxRank` | `5` | How deep one runestone goes, and how many slots its track shows |
 | `RemoveDeathSkillLoss` | `true` | Skip `Skills.OnDeath` |
 | `RequireFreshCharacter` | `true` | Run the gate check |
 | `GateEnforce` | `true` | Disconnect a refused player; off logs only |
 | `MaxSkillUpsPerMinute` | `30` | Server-side ceiling on accepted reports |
-| `Verbose` | `false` | Log every grant, rejection and card applied |
+| `Verbose` | `false` | Log every grant, rejection and runestone applied |
 | `ShowXpBar` | `true` | Show the experience bar at all |
 | `VanillaBar` | `true` | Clone one of the game's own bars; off draws the plain fallback |
 | `BarPosX` / `BarPosY` | `172` / `105` | Screen pixels to the **centre** of the cloned bar |
 | `BarSize` | `64` | Length in canvas units — 64 is a starting stamina bar |
 | `BarBuildRaise` | `155` | Pixels to lift the bar while the build or ship panel is open |
 | `BarColour` | `D4A94A` | `RRGGBB`; the trailing fill is the same hue held back |
-| `BarFlashSeconds` | `4` | How often the bar flashes while a card is waiting |
+| `BarFlashSeconds` | `4` | How often the bar flashes while a runestone is waiting |
 | `BarX` / `BarBottom` / `BarThickness` / `BarLength` | `168` / `75` / `10` / `60` | Place the **fallback** bar only |
 
 A value already written to the `.cfg` beats a new default in code — change the `.cfg`.
@@ -278,7 +278,7 @@ A value already written to the `.cfg` beats a new default in code — change the
 ## Status: v0.1 - played, not finished
 
 Runs on a listen host and on a dedicated server, and both halves have been exercised: the
-ledger, the gate, the pick path, the level curve, the panel and the bar. Nineteen cards, all
+ledger, the gate, the pick path, the level curve, the panel and the bar. Nineteen runestones, all
 of them verified to name a field the game actually reads.
 
 What is not done is the part that only play settles. The shipping curve of 60 * N^1.5 has
@@ -291,16 +291,16 @@ unknown, and no value in the catalogue has been tuned against anything but reaso
   but the HUD hierarchy it clones is scene data: whether the eitr bar's text child comes
   along, whether its animator fades the whole root, and where `BarPosX`/`BarPosY` actually
   land are all first-look questions. Expect one nudge.
-- **The card icon from the mockup is not drawn.** It would need a sprite asset, and this mod
+- **The runestone icon from the mockup is not drawn.** It would need a sprite asset, and this mod
   is deliberately a DLL and two text files.
 - **Ranks taken before v3 have no level.** The old ledger recorded a rank and nothing else,
   and picks were not stored in order, so there is no way to tell which level bought which
   rank. Those slots read `—` permanently. Everything taken from now on is exact.
-- **Balance now rests entirely on the cards.** With a free choice the strongest card is always
+- **Balance now rests entirely on the runestones.** With a free choice the strongest runestone is always
   available, so the ordering of `MaxRank` and the per-rank values are doing the work the
   random offer used to do. That has not been played yet.
 - **`SE_Stats` has no max health, stamina or eitr field** — those come from food in Valheim —
-  so no max-pool card is possible without a different vehicle.
+  so no max-pool runestone is possible without a different vehicle.
 - **A permanent status effect may show in the HUD status bar** with no icon. Not yet seen in
   game; if it looks wrong, that is where to look.
 - **Nobody is backfilled.** With only server-observed gains counting, a character arriving at

@@ -6,6 +6,6 @@
   "description": "A character level beside the skills, carved into runestones you choose and deepen.",
   "dependencies": [
     "denikson-BepInExPack_Valheim-5.4.2333",
-    "Ezomic-EzomicCore-0.2.0"
+    "Ezomic-Longhouse_Core-0.2.0"
   ]
 }
