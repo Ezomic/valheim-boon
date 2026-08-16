@@ -71,10 +71,12 @@ sprites got. A runestone imitates nothing.
 
 ### The bar
 
-A fifth bar under stamina, in bone rather than a fifth hue, cloned from one of the game's own
-so it carries the same frame, fill and trailing fill. It follows the stamina bar rather than
-sitting at fixed pixels, so "below stamina" stays true at any resolution and HUD scale, and it
-flashes while a pick is waiting.
+A fifth bar under stamina, cloned from one of the game's own so it carries the same frame, fill
+and trailing fill. It follows the stamina bar rather than sitting at fixed pixels, so "below
+stamina" stays true at any resolution and HUD scale, and it flashes while a pick is waiting.
+
+Verdigris, because the HUD already spends red, yellow, blue and orange between its four bars
+and a fifth in any of those reads as one of them.
 
 ### What the server decides
 

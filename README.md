@@ -294,7 +294,7 @@ prefab name that does not resolve. A typo costs one runestone, not the catalogue
 | `BarPosX` / `BarPosY` | `172` / `105` | Screen pixels to the **centre**, when not following |
 | `BarSize` | `240` | Length in canvas units — 64 is a starting stamina bar |
 | `BarBuildRaise` | `155` | Pixels to lift the bar while the build or ship panel is open |
-| `BarColour` | `E4DCC4` | `RRGGBB`; the trailing fill is the same hue held back |
+| `BarColour` | `4FB3A5` | `RRGGBB`; the trailing fill is the same hue held back. `E4DCC4` for bone |
 | `BarFlashSeconds` | `4` | How often the bar flashes while a runestone is waiting |
 | `BarX` / `BarBottom` / `BarThickness` / `BarLength` | `168` / `75` / `10` / `60` | Place the **fallback** bar only |
 
