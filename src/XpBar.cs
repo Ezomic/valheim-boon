@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Boon
+namespace Rist
 {
     /// <summary>
     /// The fallback experience bar: two flat rectangles, drawn only when HudBar has not
@@ -28,7 +28,7 @@ namespace Boon
 
         internal static void Draw()
         {
-            if (!BoonConfig.Enabled.Value || !BoonConfig.ShowXpBar.Value) return;
+            if (!RistConfig.Enabled.Value || !RistConfig.ShowXpBar.Value) return;
             if (!ClientState.Known) return;
 
             var player = Player.m_localPlayer;
@@ -46,8 +46,8 @@ namespace Boon
             // HudBar already converted to pixels.
             if (HudBar.Live)
             {
-                var centreX = BoonConfig.BarPosX.Value;
-                var centreY = Screen.height - BoonConfig.BarPosY.Value;
+                var centreX = RistConfig.BarPosX.Value;
+                var centreY = Screen.height - RistConfig.BarPosY.Value;
                 var half = HudBar.HalfLength;
 
                 if (!HudBar.HasText)
@@ -61,20 +61,20 @@ namespace Boon
                 {
                     _waiting.alignment = TextAnchor.MiddleLeft;
                     GUI.Label(new Rect(centreX + 16f, centreY - 24f, 200f, 48f),
-                              "boon\nwaiting", _waiting);
+                              "rist\nwaiting", _waiting);
                 }
 
                 return;
             }
 
-            var x = BoonConfig.BarX.Value;
-            var thickness = Mathf.Max(3f, BoonConfig.BarThickness.Value);
-            var length = Mathf.Max(10f, BoonConfig.BarLength.Value);
+            var x = RistConfig.BarX.Value;
+            var thickness = Mathf.Max(3f, RistConfig.BarThickness.Value);
+            var length = Mathf.Max(10f, RistConfig.BarLength.Value);
 
             // Upright, to stand beside the health bar rather than lie under it. IMGUI measures
             // from the top, so the bottom-anchored offset is subtracted and the bar is drawn
             // upward from there.
-            var bottom = Screen.height - BoonConfig.BarBottom.Value;
+            var bottom = Screen.height - RistConfig.BarBottom.Value;
             var top = bottom - length;
 
             GUI.DrawTexture(new Rect(x, top, thickness, length), _track);
@@ -87,27 +87,27 @@ namespace Boon
                 GUI.DrawTexture(new Rect(x, bottom - filled, thickness, filled), _fill);
             }
 
-            // Just the level. The exact numbers live on the boons panel, which is what it
+            // Just the level. The exact numbers live on the rists panel, which is what it
             // is for - a permanent "24 / 60" is noise you stop reading by the second hour.
             _label.alignment = TextAnchor.UpperCenter;
             GUI.Label(new Rect(x - 14f, bottom + 3f, thickness + 28f, 18f),
                       ClientState.Level.ToString(), _label);
 
-            // Only while something is actually waiting. The centre message announcing a boon
+            // Only while something is actually waiting. The centre message announcing a rist
             // fades after a few seconds, and one missed during a fight would otherwise leave a
             // card unclaimed with nothing on screen to say so.
             if (!ClientState.HasPick) return;
 
             _waiting.alignment = TextAnchor.MiddleLeft;
             GUI.Label(new Rect(x + thickness + 6f, top, 200f, length),
-                      "boon\nwaiting", _waiting);
+                      "rist\nwaiting", _waiting);
         }
 
         private static void Build()
         {
             // Rebuilt when the colour changes, so nudging it in the cfg shows up without a
             // restart - the same reason HudBar re-reads its own size and tint.
-            var tint = BoonConfig.BarTint();
+            var tint = RistConfig.BarTint();
             if (_label != null && FillColour == tint) return;
 
             FillColour = tint;

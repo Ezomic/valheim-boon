@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using BepInEx;
 
-namespace Boon
+namespace Rist
 {
     /// <summary>
     /// The server's record of every player, on the server's own disk.
@@ -16,16 +16,16 @@ namespace Boon
     /// </summary>
     internal static class Ledger
     {
-        private static readonly Dictionary<string, BoonRecord> _records =
-            new Dictionary<string, BoonRecord>();
+        private static readonly Dictionary<string, RistRecord> _records =
+            new Dictionary<string, RistRecord>();
 
         private static bool _loaded;
         private static bool _dirty;
         private static float _nextFlush;
 
-        private static string LedgerPath => Path.Combine(Paths.ConfigPath, "boon-ledger.txt");
+        private static string LedgerPath => Path.Combine(Paths.ConfigPath, "rist-ledger.txt");
 
-        internal static BoonRecord For(string owner)
+        internal static RistRecord For(string owner)
         {
             Load();
 
@@ -33,7 +33,7 @@ namespace Boon
 
             if (!_records.TryGetValue(owner, out var rec))
             {
-                rec = new BoonRecord { Owner = owner };
+                rec = new RistRecord { Owner = owner };
                 _records[owner] = rec;
                 _dirty = true;
             }
@@ -53,7 +53,7 @@ namespace Boon
 
             if (!File.Exists(LedgerPath))
             {
-                BoonPlugin.Log.LogInfo("No ledger yet; starting a fresh one at " + LedgerPath);
+                RistPlugin.Log.LogInfo("No ledger yet; starting a fresh one at " + LedgerPath);
                 return;
             }
 
@@ -62,12 +62,12 @@ namespace Boon
             {
                 if (line.Trim().Length == 0) continue;
 
-                var rec = BoonRecord.Parse(line);
+                var rec = RistRecord.Parse(line);
                 if (rec == null) { bad++; continue; }
                 _records[rec.Owner] = rec;
             }
 
-            BoonPlugin.Log.LogInfo("Ledger loaded: " + _records.Count + " players" +
+            RistPlugin.Log.LogInfo("Ledger loaded: " + _records.Count + " players" +
                                    (bad > 0 ? ", " + bad + " unreadable lines skipped" : "") + ".");
         }
 
@@ -102,7 +102,7 @@ namespace Boon
             }
             catch (Exception e)
             {
-                BoonPlugin.Log.LogError("Could not write the ledger: " + e.Message);
+                RistPlugin.Log.LogError("Could not write the ledger: " + e.Message);
             }
         }
     }

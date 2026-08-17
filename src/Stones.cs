@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Boon
+namespace Rist
 {
     /// <summary>
-    /// One runestone per boon, generated on first sight and kept for the session.
+    /// One runestone per rist, generated on first sight and kept for the session.
     ///
     /// Authoring a texture is normally the wrong answer in this repo - the game has art and
     /// borrowing it matches by construction. It is right here for one reason: a stone is a
@@ -19,7 +19,7 @@ namespace Boon
     /// fell outside the circle and every stone came out pale.
     ///
     /// Everything varies off one seed, the card's own id: the outline, the rock it is cut
-    /// from, and which runes are cut into it. Seeded rather than random so a boon looks the
+    /// from, and which runes are cut into it. Seeded rather than random so a rist looks the
     /// same in every session and on every machine - the stone becomes part of how you
     /// recognise a card, which only works if it never changes.
     /// </summary>
@@ -67,7 +67,7 @@ namespace Boon
             "P", "Z", "S", "T", "B", "E", "M", "L", "NG", "D", "O", "Y",
         };
 
-        /// <summary>The stone this boon is cut into, built the first time it is drawn.</summary>
+        /// <summary>The stone this rist is cut into, built the first time it is drawn.</summary>
         internal static Texture2D For(Card card)
         {
             if (card == null) return null;
@@ -80,8 +80,8 @@ namespace Boon
         }
 
         /// <summary>
-        /// The runes cut into this boon, one per rank, in the order they are cut. Drawn from
-        /// the same seed as the stone, so a boon's marks are as much a part of recognising it
+        /// The runes cut into this rist, one per rank, in the order they are cut. Drawn from
+        /// the same seed as the stone, so a rist's marks are as much a part of recognising it
         /// as its shape - and distinct within a stone, because the same rune twice would read
         /// as a mistake.
         /// </summary>

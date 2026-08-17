@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using Ezomic.Core;
 using UnityEngine;
 
-namespace Boon
+namespace Rist
 {
     /// <summary>
     /// Turns the cards a player holds into actual effect.
@@ -17,7 +17,7 @@ namespace Boon
     /// </summary>
     internal static class Effects
     {
-        private const string EffectName = "Boon";
+        private const string EffectName = "Rist";
 
         // StatusEffect.NameHash() hashes the UnityEngine.Object name, so this can be computed
         // once without instantiating anything to ask.
@@ -62,8 +62,8 @@ namespace Boon
             ApplyStats(player, ranks);
             ApplyInventoryRows(player, ranks);
 
-            if (BoonConfig.Verbose.Value)
-                BoonPlugin.Log.LogInfo("Applied cards: " + (signature.Length == 0 ? "(none)" : signature));
+            if (RistConfig.Verbose.Value)
+                RistPlugin.Log.LogInfo("Applied cards: " + (signature.Length == 0 ? "(none)" : signature));
         }
 
         /// <summary>
@@ -234,14 +234,14 @@ namespace Boon
 
             ExtraRows = Mathf.Max(0, Mathf.RoundToInt(rows));
 
-            // Through Core when it is here, through Boon's own owner when it is not. The two
+            // Through Core when it is here, through Rist's own owner when it is not. The two
             // never both run: OwnInventoryRows is only patched in when Core is absent.
-            if (BoonPlugin.CorePresent) ClaimThroughCore(ExtraRows);
+            if (RistPlugin.CorePresent) ClaimThroughCore(ExtraRows);
             else OwnInventoryRows.Claimed = ExtraRows;
         }
 
         /// <summary>
-        /// Never inlined, for the same reason as BoonPlugin.RegisterWithCore: the JIT resolves
+        /// Never inlined, for the same reason as RistPlugin.RegisterWithCore: the JIT resolves
         /// a method's assemblies when it first compiles that method, so this call sitting
         /// inline above would drag Ezomic.Core in on a machine that has no Core - and it sits
         /// on the path that runs whenever a rank changes.
@@ -249,7 +249,7 @@ namespace Boon
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void ClaimThroughCore(int rows)
         {
-            InventoryRows.Claim(BoonPlugin.PluginGuid, rows);
+            InventoryRows.Claim(RistPlugin.PluginGuid, rows);
         }
 
         private static string Signature(Dictionary<string, int> ranks)

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Boon
+namespace Rist
 {
     /// <summary>
     /// How fast a claim is allowed to pay.
@@ -62,14 +62,14 @@ namespace Boon
         /// report would look like a jump. That also means turning CheckSkillBaseline off turns
         /// this off with it, which is the honest reading: no baseline, no comparison.
         /// </summary>
-        internal static bool Step(BoonRecord rec, string owner, int skillType, float skillLevel, out string why)
+        internal static bool Step(RistRecord rec, string owner, int skillType, float skillLevel, out string why)
         {
             why = null;
 
             if (rec == null || !Gate.HasBaseline(owner)) return true;
 
             var seen = rec.Snapshot.TryGetValue(skillType, out var s) ? s : 0f;
-            var allowed = seen + Mathf.Max(1f, BoonConfig.MaxSkillLevelJump.Value);
+            var allowed = seen + Mathf.Max(1f, RistConfig.MaxSkillLevelJump.Value);
 
             if (skillLevel <= allowed) return true;
 
@@ -91,10 +91,10 @@ namespace Boon
         {
             if (owner == null) return true;
 
-            var perMinute = BoonConfig.MaxXpPerMinute.Value;
+            var perMinute = RistConfig.MaxXpPerMinute.Value;
             if (perMinute <= 0f) return true;   // Zero or below is off, not a hard stop.
 
-            var ceiling = Mathf.Max(perMinute, BoonConfig.XpBurst.Value);
+            var ceiling = Mathf.Max(perMinute, RistConfig.XpBurst.Value);
             var now = Time.time;
 
             if (!Purses.TryGetValue(owner, out var purse))
@@ -108,7 +108,7 @@ namespace Boon
 
             if (purse.Left < xp)
             {
-                BoonPlugin.Log.LogWarning("Earning cap reached for " + owner + " - " +
+                RistPlugin.Log.LogWarning("Earning cap reached for " + owner + " - " +
                                           xp.ToString("0.#") + " xp withheld (allowance " +
                                           purse.Left.ToString("0.#") + "). Either a very long " +
                                           "grinding session or a forged report.");
@@ -120,7 +120,7 @@ namespace Boon
                 if (!purse.Told)
                 {
                     purse.Told = true;
-                    Net.SendNotice(sender, BoonConfig.CappedMessage.Value);
+                    Net.SendNotice(sender, RistConfig.CappedMessage.Value);
                 }
 
                 return false;

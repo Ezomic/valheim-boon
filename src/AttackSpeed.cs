@@ -1,12 +1,12 @@
 using HarmonyLib;
 using UnityEngine;
 
-namespace Boon
+namespace Rist
 {
     /// <summary>
     /// The three attack-speed cards, split by what is in your hands.
     ///
-    /// This is the first thing in Boon that patches a gameplay path rather than riding a stat
+    /// This is the first thing in Rist that patches a gameplay path rather than riding a stat
     /// the game already sums, and it is here because there is no other way: SE_Stats has no
     /// attack-speed field and SEMan has no ModifyAttackSpeed among its twenty-two hooks. Swing
     /// speed is the animator's speed, full stop.
@@ -82,7 +82,7 @@ namespace Boon
         private static void Started(bool __result, Humanoid character, CharacterAnimEvent animEvent,
                                     ItemDrop.ItemData weapon)
         {
-            if (!__result || !BoonConfig.Enabled.Value) return;
+            if (!__result || !RistConfig.Enabled.Value) return;
             if (character == null || animEvent == null) return;
 
             // Local player only. The cards live in ClientState, which is this client's own
@@ -99,7 +99,7 @@ namespace Boon
             // Clamped, because this multiplies an animation rather than a number in a table.
             // A mis-typed catalogue line could otherwise run the whole character at twenty
             // times speed, and animation events are what land the hit.
-            bonus = Mathf.Min(bonus, Mathf.Max(0f, BoonConfig.AttackSpeedMax.Value));
+            bonus = Mathf.Min(bonus, Mathf.Max(0f, RistConfig.AttackSpeedMax.Value));
 
             animEvent.Speed(1f + bonus);
         }

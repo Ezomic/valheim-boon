@@ -1,6 +1,6 @@
 # Changelog
 
-Notable changes to Boon. Format follows [Keep a Changelog](https://keepachangelog.com),
+Notable changes to Rist. Format follows [Keep a Changelog](https://keepachangelog.com),
 and the mod uses [semantic versioning](https://semver.org).
 
 ## [1.0.0] — 2026-08-16
@@ -13,7 +13,7 @@ inventing a release nobody could have installed.
 
 > **It adds a level beside the skills. It never reads, writes, rescales or reskins a vanilla skill.**
 
-Valheim has skills but no character level. Boon adds one that runs alongside them. Vanilla
+Valheim has skills but no character level. Rist adds one that runs alongside them. Vanilla
 skills are read and never written.
 
 ### Levels and picks
@@ -60,8 +60,8 @@ purchase anyone makes on their first pick.
 ### The panel
 
 A fifth tab on the compendium bar, beside the raven and the trophy, opens a full screen of
-runestones — one per boon, each with its own outline, rock and marks, all seeded off the card
-id so a boon looks the same in every session and on every machine. A rank cuts one more mark
+runestones — one per rist, each with its own outline, rock and marks, all seeded off the card
+id so a rist looks the same in every session and on every machine. A rank cuts one more mark
 into the rim, and the mark holds **the level that bought it**.
 
 Three designs came before it: a draft window dealing three at random, a board of tiles, and
@@ -97,7 +97,7 @@ is therefore a claim that cannot be verified, only bounded:
   the client at all. It banks three minutes so an honest burst — clearing a crypt levels four
   skills at once — is paid in full.
 
-Nobody is disconnected and nothing is ever taken away. Boon used to refuse the connection, and
+Nobody is disconnected and nothing is ever taken away. Rist used to refuse the connection, and
 a levelling mod deciding who may play means a bug in an XP system locks people out of a server.
 Refusing at the door moved to [Threshold](../threshold), where it is the whole job and is done
 openly.
@@ -122,14 +122,14 @@ The rule both arrive at: **clone for geometry and sprites, drive the state yours
 
 ### Core is optional
 
-Boon installs and runs on its own. Core is a **soft** dependency; installing Boon no longer
+Rist installs and runs on its own. Core is a **soft** dependency; installing Rist no longer
 installs Core with it, and `manifest.json` no longer lists it.
 
-Solo, nothing is given up — including the extra inventory rows, which now have a Boon-owned
+Solo, nothing is given up — including the extra inventory rows, which now have a Rist-owned
 implementation used only when Core is absent. On a server, three things are lost, and the
 README section "Core is optional, and here is exactly what that costs" sets them out: the
 `cards.txt` hash check, the host-authoritative curve, and the arbitration of
-`Inventory.m_height` between mods. Boon logs a warning at startup naming all three.
+`Inventory.m_height` between mods. Rist logs a warning at startup naming all three.
 
 The row fallback deliberately copies Core's `Player.Load` widening rather than simplifying it.
 That is not a nicety: without it every item in a granted row is destroyed by loading the game,

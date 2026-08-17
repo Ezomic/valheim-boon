@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Boon
+namespace Rist
 {
     /// <summary>
-    /// The boon panel: a full screen of runestones, one per card, each carved one more mark
+    /// The rist panel: a full screen of runestones, one per card, each carved one more mark
     /// per rank taken.
     ///
     /// Three designs came before this. A draft window that dealt three cards at random; a
@@ -22,7 +22,7 @@ namespace Boon
     /// Full screen also deletes the scroll view: twenty-five stones fit a five by five field
     /// exactly, and the panel is sized to the screen rather than to its contents.
     /// </summary>
-    internal static class BoonPanel
+    internal static class RistPanel
     {
         private const float Board = 1120f;
         private const float PadX = 30f;
@@ -73,7 +73,7 @@ namespace Boon
         {
             get
             {
-                if (!BoonConfig.Enabled.Value) return false;
+                if (!RistConfig.Enabled.Value) return false;
                 if (Player.m_localPlayer == null || Player.m_localPlayer.IsDead()) return false;
                 return !InventoryGui.IsVisible() && !Menu.IsVisible();
             }
@@ -110,7 +110,7 @@ namespace Boon
             GUI.Label(new Rect(0f, 0f, Screen.width, Screen.height), GUIContent.none, _void);
 
             var count = Mathf.Max(1, Cards.All.Count);
-            var columns = Mathf.Max(1, BoonConfig.PanelColumns.Value);
+            var columns = Mathf.Max(1, RistConfig.PanelColumns.Value);
             var rows = Mathf.CeilToInt(count / (float)columns);
 
             var cellH = Stone + StoneGap + NameLine + StoneGap + NowLine;
@@ -137,7 +137,7 @@ namespace Boon
 
         private static void DrawHead(float x, ref float y, float width)
         {
-            GUI.Label(new Rect(x, y, width * 0.5f, 32f), "YOUR BOONS", _title);
+            GUI.Label(new Rect(x, y, width * 0.5f, 32f), "YOUR RISTS", _title);
 
             var held = ClientState.Ranks.Count;
             var marks = 0;
@@ -145,14 +145,14 @@ namespace Boon
 
             GUI.Label(new Rect(x + 200f, y + 9f, width - 480f, 20f),
                       "Level " + ClientState.Level + " · " + held + " of " + Cards.All.Count +
-                      " carved · " + marks + " of " + Cards.All.Count * BoonConfig.MaxRank.Value +
+                      " carved · " + marks + " of " + Cards.All.Count * RistConfig.MaxRank.Value +
                       " marks", _sub);
 
             if (ClientState.HasPick)
             {
                 var owed = ClientState.Owed;
                 GUI.Label(new Rect(x, y + 7f, width, 22f),
-                          owed == 1 ? "1 boon to spend" : owed + " boons to spend", _spend);
+                          owed == 1 ? "1 rist to spend" : owed + " rists to spend", _spend);
             }
 
             y += 34f;
@@ -179,7 +179,7 @@ namespace Boon
         private static void DrawStone(Card card, int index, Rect cell)
         {
             var rank = ClientState.RankOf(card.Id);
-            var maxRank = Mathf.Max(1, BoonConfig.MaxRank.Value);
+            var maxRank = Mathf.Max(1, RistConfig.MaxRank.Value);
             var maxed = rank >= maxRank;
             var canTake = ClientState.HasPick && !maxed;
 
@@ -205,7 +205,7 @@ namespace Boon
             }
 
             // Uncarved rock is the same stone held well back, rather than a second texture:
-            // the shape is how a boon is recognised, and it should not change when it is
+            // the shape is how a rist is recognised, and it should not change when it is
             // taken.
             GUI.color = rank > 0 ? Color.white : Unworked;
             GUI.DrawTexture(disc, texture);
@@ -257,7 +257,7 @@ namespace Boon
 
             var card = Cards.All[_selected];
             var rank = ClientState.RankOf(card.Id);
-            var maxRank = Mathf.Max(1, BoonConfig.MaxRank.Value);
+            var maxRank = Mathf.Max(1, RistConfig.MaxRank.Value);
             var maxed = rank >= maxRank;
 
             var previousRule = GUI.color;
@@ -282,7 +282,7 @@ namespace Boon
             if (card.HasBonus)
             {
                 var times = Card.BonusTimes(rank);
-                var at = Mathf.Max(1, BoonConfig.BonusEvery.Value) * (times + 1);
+                var at = Mathf.Max(1, RistConfig.BonusEvery.Value) * (times + 1);
 
                 y = Row(rect.x, y, w, "CAPSTONE",
                         times > 0 ? "★ " + card.DescribeBonus(times)
@@ -325,7 +325,7 @@ namespace Boon
             GUI.Label(new Rect(rect.x, rect.yMax - 34f, w, 30f),
                       maxed ? "Fully carved"
                             : ClientState.HasPick ? "Click the stone to carve it"
-                                                  : "No boon to spend", _take);
+                                                  : "No rist to spend", _take);
         }
 
         /// <summary>
@@ -381,7 +381,7 @@ namespace Boon
         /// </summary>
         internal static string OpenHint()
         {
-            return "A boon to spend — see your boons in the inventory";
+            return "A rist to spend — see your rists in the inventory";
         }
 
         private static void Take(string id)

@@ -2,14 +2,14 @@ using System.Collections.Generic;
 using HarmonyLib;
 using UnityEngine;
 
-namespace Boon
+namespace Rist
 {
     /// <summary>
-    /// Boon's own inventory height, used only when Core is not installed.
+    /// Rist's own inventory height, used only when Core is not installed.
     ///
     /// Core's InventoryRows is the right implementation and this is deliberately not a rival
     /// to it: it is patched in only when the Chainloader reports no Core, so the two never
-    /// both write. When Core is present Boon claims through it exactly as before, and none of
+    /// both write. When Core is present Rist claims through it exactly as before, and none of
     /// this runs.
     ///
     /// **The honest warning, which belongs in the README too.** Core's version exists because
@@ -17,7 +17,7 @@ namespace Boon
     /// rows each write it, the last writer wins, and a mod that writes only when its own state
     /// changes loses silently to one that writes every frame. Core adds every claim up and
     /// writes once, so mods stack instead of fighting. This class cannot do that - it knows
-    /// only about Boon. Standalone Boon plus any other row-granting mod is a fight, and which
+    /// only about Rist. Standalone Rist plus any other row-granting mod is a fight, and which
     /// side wins is a matter of frame ordering. That is the cost of not requiring Core, and it
     /// is why Core remains the recommended way to run this.
     ///
@@ -26,7 +26,7 @@ namespace Boon
     /// </summary>
     internal static class OwnInventoryRows
     {
-        /// <summary>Rows Boon currently wants. Set by Effects, read by the tick.</summary>
+        /// <summary>Rows Rist currently wants. Set by Effects, read by the tick.</summary>
         internal static int Claimed;
 
         private static System.Reflection.FieldInfo _height;
@@ -42,7 +42,7 @@ namespace Boon
         /// </summary>
         private const int LoadSlack = 16;
 
-        /// <summary>Driven from BoonPlugin.Update, since there is no Core to own the timing.</summary>
+        /// <summary>Driven from RistPlugin.Update, since there is no Core to own the timing.</summary>
         internal static void Tick()
         {
             var player = Player.m_localPlayer;
@@ -65,7 +65,7 @@ namespace Boon
                 _base = inventory.GetHeight();
                 _applied = -1;
 
-                BoonPlugin.Log.LogInfo("Inventory rows: vanilla height is " + _base + ".");
+                RistPlugin.Log.LogInfo("Inventory rows: vanilla height is " + _base + ".");
             }
 
             // Unless a load has just widened the grid, in which case this must run even with
@@ -77,7 +77,7 @@ namespace Boon
             if (_height == null) _height = AccessTools.Field(typeof(Inventory), "m_height");
             if (_height == null)
             {
-                BoonPlugin.Log.LogError("Inventory.m_height not found - extra rows cannot work.");
+                RistPlugin.Log.LogError("Inventory.m_height not found - extra rows cannot work.");
                 _applied = Claimed;
                 return;
             }
@@ -91,7 +91,7 @@ namespace Boon
             _widened = false;
             _height.SetValue(inventory, wanted);
 
-            BoonPlugin.Log.LogInfo("Inventory rows: " + _base + " + " + Claimed +
+            RistPlugin.Log.LogInfo("Inventory rows: " + _base + " + " + Claimed +
                                    (wanted > _base + Claimed
                                        ? ", held at " + wanted + " by items in the grid"
                                        : "") + ".");

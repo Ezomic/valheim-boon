@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
-namespace Boon
+namespace Rist
 {
     /// <summary>
-    /// One player's standing with Boon: how much XP they have earned on this server, which
+    /// One player's standing with Rist: how much XP they have earned on this server, which
     /// cards they hold, and at which level each rank of each card was bought.
     ///
     /// Held by the server, never by the character. That is the whole anti-cheat premise - a
@@ -18,7 +18,7 @@ namespace Boon
     /// that arrives from the client and could name someone else's record. The socket identity
     /// is established by the platform before any of our code runs, so it cannot be claimed.
     /// </summary>
-    internal sealed class BoonRecord
+    internal sealed class RistRecord
     {
         internal string Owner = "";
         internal float Xp;
@@ -112,7 +112,7 @@ namespace Boon
                 // The picks go back rather than being written off, so they can be spent again.
                 DraftsTaken = Math.Max(0, DraftsTaken - returned);
 
-                BoonPlugin.Log.LogInfo("Card '" + id + "' is no longer in the catalogue - " +
+                RistPlugin.Log.LogInfo("Card '" + id + "' is no longer in the catalogue - " +
                                        returned + " pick(s) returned to " + Owner + ".");
             }
 
@@ -152,7 +152,7 @@ namespace Boon
             return sb.ToString();
         }
 
-        internal static BoonRecord Parse(string line)
+        internal static RistRecord Parse(string line)
         {
             if (string.IsNullOrEmpty(line)) return null;
 
@@ -168,7 +168,7 @@ namespace Boon
             if (!float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var xp)) return null;
             if (!int.TryParse(parts[3], out var drafts)) return null;
 
-            var rec = new BoonRecord { Owner = parts[1], Xp = xp, DraftsTaken = drafts };
+            var rec = new RistRecord { Owner = parts[1], Xp = xp, DraftsTaken = drafts };
 
             foreach (var entry in parts[4].Split(','))
             {

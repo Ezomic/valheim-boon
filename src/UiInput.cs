@@ -1,10 +1,10 @@
 using HarmonyLib;
 using UnityEngine;
 
-namespace Boon
+namespace Rist
 {
     /// <summary>
-    /// Making the boon panel actually usable takes four patches, not one - the same set
+    /// Making the rist panel actually usable takes four patches, not one - the same set
     /// devkit needed, and for the same reasons.
     ///
     /// Blocking input stops the player swinging an axe while choosing. Tripping
@@ -20,21 +20,21 @@ namespace Boon
         private static void BlockInput(ref bool __result)
         {
             // Composes with other mods doing the same: both return false, and false wins.
-            if (BoonPanel.IsOpen) __result = false;
+            if (RistPanel.IsOpen) __result = false;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(PlayerController), "TakeInput")]
         private static void BlockController(ref bool __result)
         {
-            if (BoonPanel.IsOpen) __result = false;
+            if (RistPanel.IsOpen) __result = false;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(PlayerController), "InInventoryEtc")]
         private static void HoldLookStill(ref bool __result)
         {
-            if (BoonPanel.IsOpen) __result = true;
+            if (RistPanel.IsOpen) __result = true;
         }
 
         /// <summary>
@@ -45,7 +45,7 @@ namespace Boon
         [HarmonyPatch(typeof(GameCamera), nameof(GameCamera.UpdateMouseCapture))]
         private static void FreeCursor()
         {
-            if (!BoonPanel.IsOpen) return;
+            if (!RistPanel.IsOpen) return;
 
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
@@ -59,9 +59,9 @@ namespace Boon
         [HarmonyPatch(typeof(Menu), nameof(Menu.Show))]
         private static bool EscapeCloses()
         {
-            if (!BoonPanel.IsOpen) return true;
+            if (!RistPanel.IsOpen) return true;
 
-            BoonPanel.Close();
+            RistPanel.Close();
             return false;
         }
     }

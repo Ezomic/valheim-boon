@@ -2,13 +2,13 @@
 
   <PropertyGroup>
     <TargetFramework>net462</TargetFramework>
-    <AssemblyName>Boon</AssemblyName>
-    <RootNamespace>Boon</RootNamespace>
+    <AssemblyName>Rist</AssemblyName>
+    <RootNamespace>Rist</RootNamespace>
     <LangVersion>latest</LangVersion>
     <Version>1.0.0</Version>
     <Authors>Robbin Thijssen</Authors>
     <Company>Thijssen Software</Company>
-    <Product>Boon</Product>
+    <Product>Rist</Product>
     <Description>A character level beside the skills, paid out in cards you draft and deepen.</Description>
     <Copyright>Copyright (c) 2026 Robbin Thijssen</Copyright>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
@@ -22,7 +22,7 @@
     <ManagedDir>$(ValheimDir)\valheim_Data\Managed</ManagedDir>
     <ProfileDir Condition="'$(ProfileDir)' == ''">$(MSBuildProjectDirectory)\testprofile</ProfileDir>
     <BepInExCore>$(ProfileDir)\BepInEx\core</BepInExCore>
-    <DeployDir>$(ProfileDir)\BepInEx\plugins\Boon</DeployDir>
+    <DeployDir>$(ProfileDir)\BepInEx\plugins\Rist</DeployDir>
   </PropertyGroup>
 
   <ItemGroup>
@@ -59,11 +59,11 @@
     <MakeDir Directories="$(DeployDir)" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DeployDir)" ContinueOnError="true" />
     <!-- The card catalogue is read at runtime, so it has to sit beside the DLL. -->
-    <Copy SourceFiles="@(BoonAssets)" DestinationFolder="$(DeployDir)" ContinueOnError="true" />
+    <Copy SourceFiles="@(RistAssets)" DestinationFolder="$(DeployDir)" ContinueOnError="true" />
   </Target>
 
   <ItemGroup>
-    <BoonAssets Include="assets\*.txt" />
+    <RistAssets Include="assets\*.txt" />
   </ItemGroup>
 
 </Project>

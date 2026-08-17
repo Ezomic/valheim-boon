@@ -6,10 +6,10 @@ schemaVersion = "0.0.1"
 
 [package]
 namespace = "Ezomic"
-name = "Boon"
+name = "Rist"
 versionNumber = "1.0.0"
 description = "A character level beside the skills, carved into runestones you choose and deepen."
-websiteUrl = "https://github.com/Ezomic/valheim-boon"
+websiteUrl = "https://github.com/Ezomic/valheim-rist"
 containsNsfwContent = false
 
 [package.dependencies]
@@ -21,8 +21,8 @@ readme = "./README.md"
 outdir = "./build"
 
 [[build.copy]]
-source = "./package/BepInEx/plugins/Boon"
-target = "plugins/Boon"
+source = "./package/BepInEx/plugins/Rist"
+target = "plugins/Rist"
 
 [publish]
 repository = "https://thunderstore.io"

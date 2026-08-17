@@ -6,10 +6,10 @@ using Ezomic.Core;
 using HarmonyLib;
 using UnityEngine;
 
-namespace Boon
+namespace Rist
 {
     [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
-    // Soft, not hard. Boon installs and runs on its own; a hard dependency that is absent does
+    // Soft, not hard. Rist installs and runs on its own; a hard dependency that is absent does
     // not degrade, the plugin simply never loads. Soft still buys the load-order guarantee when
     // Core is present, which is what registering needs. What standalone costs is set out in
     // TryRegisterWithCore, and it is more here than for most of the suite.
@@ -19,10 +19,10 @@ namespace Boon
     // loaded there. The ledger, the gate and every authority decision live on the server; on a
     // dedicated host none of them would have existed and clients would have reported skill-ups
     // into nothing. Core and Utangard were both bitten by exactly this.
-    public class BoonPlugin : BaseUnityPlugin
+    public class RistPlugin : BaseUnityPlugin
     {
-        public const string PluginGuid = "ezomic.valheim.boon";
-        public const string PluginName = "Boon";
+        public const string PluginGuid = "ezomic.valheim.rist";
+        public const string PluginName = "Rist";
         public const string PluginVersion = "1.0.0";
         public const string PluginAuthor = "Robbin Thijssen";
 
@@ -31,7 +31,7 @@ namespace Boon
 
         /// <summary>
         /// Whether Core answered at load. Read by Effects, which claims rows through Core when
-        /// it is here and through Boon's own owner when it is not, and by Cards, which can only
+        /// it is here and through Rist's own owner when it is not, and by Cards, which can only
         /// declare the catalogue to a gate that exists.
         /// </summary>
         internal static bool CorePresent;
@@ -45,7 +45,7 @@ namespace Boon
         private void Awake()
         {
             Log = Logger;
-            BoonConfig.Bind(Config);
+            RistConfig.Bind(Config);
             TryRegisterWithCore();
 
             Cards.Load();
@@ -68,7 +68,7 @@ namespace Boon
         /// <summary>
         /// Joins Core's version gate when Core is installed, and does without it when not.
         ///
-        /// Boon gives up more than the rest of the suite does standing alone, so it is worth
+        /// Rist gives up more than the rest of the suite does standing alone, so it is worth
         /// being exact about what.
         ///
         /// **The catalogue is no longer checked.** cards.txt names what every rank is worth,
@@ -84,11 +84,11 @@ namespace Boon
         /// cfg files have to be matched by hand.
         ///
         /// **Extra inventory rows are claimed without an arbiter.** See OwnInventoryRows: it
-        /// does the whole job correctly for Boon alone, and cannot know about a second mod
+        /// does the whole job correctly for Rist alone, and cannot know about a second mod
         /// wanting rows from the same private int.
         ///
         /// None of that is a reason to refuse to run - a solo player needs none of it, and
-        /// someone who wants only Boon should be able to have only Boon. It is a reason to say
+        /// someone who wants only Rist should be able to have only Rist. It is a reason to say
         /// so plainly, here and in the README.
         /// </summary>
         private void TryRegisterWithCore()
@@ -127,8 +127,8 @@ namespace Boon
             // LevelBaseXp reads a different level out of the same xp, and every number on its
             // screen disagrees with the server that decides them - which is how a cheapened
             // test curve on one machine made a dedicated server refuse every pick.
-            Suite.Sync(BoonConfig.XpPerSkillLevel, BoonConfig.LevelBaseXp, BoonConfig.LevelExponent,
-                       BoonConfig.MaxRank, BoonConfig.BonusEvery);
+            Suite.Sync(RistConfig.XpPerSkillLevel, RistConfig.LevelBaseXp, RistConfig.LevelExponent,
+                       RistConfig.MaxRank, RistConfig.BonusEvery);
         }
 
         private void OnDestroy()
@@ -152,7 +152,7 @@ namespace Boon
                 OwnInventoryRows.Backdrop.Tick();
             }
 
-            if (!BoonConfig.Enabled.Value) return;
+            if (!RistConfig.Enabled.Value) return;
 
             if (Net.IsServer) Ledger.Tick(Time.time);
 
@@ -181,7 +181,7 @@ namespace Boon
         private void OnGUI()
         {
             XpBar.Draw();
-            BoonPanel.Draw();
+            RistPanel.Draw();
         }
 
         /// <summary>
@@ -224,7 +224,7 @@ namespace Boon
             if (_playerId == null) _playerId = AccessTools.Field(typeof(PlayerProfile), "m_playerID");
             if (_playerId == null)
             {
-                Log.LogError("PlayerProfile.m_playerID not found - Boon cannot identify characters.");
+                Log.LogError("PlayerProfile.m_playerID not found - Rist cannot identify characters.");
                 return 0L;
             }
 

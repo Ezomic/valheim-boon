@@ -2,7 +2,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Boon
+namespace Rist
 {
     /// <summary>
     /// The experience bar, built by cloning one of the game's own upright bars.
@@ -68,13 +68,13 @@ namespace Boon
             get
             {
                 var scale = _canvas != null ? _canvas.scaleFactor : 1f;
-                return Mathf.Max(16f, BoonConfig.BarSize.Value) * 0.5f * scale;
+                return Mathf.Max(16f, RistConfig.BarSize.Value) * 0.5f * scale;
             }
         }
 
         internal static void Update()
         {
-            if (!BoonConfig.Enabled.Value || !BoonConfig.ShowXpBar.Value || !BoonConfig.VanillaBar.Value)
+            if (!RistConfig.Enabled.Value || !RistConfig.ShowXpBar.Value || !RistConfig.VanillaBar.Value)
             {
                 Drop();
                 return;
@@ -99,9 +99,9 @@ namespace Boon
             // Length and colour are re-read rather than set once at build. Both are numbers
             // that get nudged, and a bar you have to restart the game to re-measure is a bar
             // that stays slightly wrong.
-            if (!Mathf.Approximately(_sizedAt, BoonConfig.BarSize.Value)) Size();
-            if (_uprightAt != BoonConfig.BarUpright.Value) Lay();
-            if (_tintedAt != BoonConfig.BarColour.Value) Colour();
+            if (!Mathf.Approximately(_sizedAt, RistConfig.BarSize.Value)) Size();
+            if (_uprightAt != RistConfig.BarUpright.Value) Lay();
+            if (_tintedAt != RistConfig.BarColour.Value) Colour();
 
             var progress = Mathf.Clamp01(Levels.Progress(ClientState.Xp));
             Fill(progress);
@@ -157,7 +157,7 @@ namespace Boon
             if (!_hasFlash || !ClientState.HasPick) return;
             if (Time.time < _nextFlash) return;
 
-            _nextFlash = Time.time + Mathf.Max(1f, BoonConfig.BarFlashSeconds.Value);
+            _nextFlash = Time.time + Mathf.Max(1f, RistConfig.BarFlashSeconds.Value);
             _animator.SetTrigger("Flash");
         }
 
@@ -178,7 +178,7 @@ namespace Boon
             // Same parent, so canvas scale, sort order and the HUD's own show/hide all come
             // along. Position is overridden below; everything else is inherited on purpose.
             var go = Object.Instantiate(donor.gameObject, donor.parent);
-            go.name = "BoonXpBar";
+            go.name = "RistXpBar";
             go.SetActive(true);
 
             _rect = go.GetComponent<RectTransform>();
@@ -225,7 +225,7 @@ namespace Boon
             _shownLevel = -1;
             _trail = -1f;   // A rebuilt bar starts level, not draining in from empty.
 
-            BoonPlugin.Log.LogInfo("Experience bar cloned from " + donor.name + ".");
+            RistPlugin.Log.LogInfo("Experience bar cloned from " + donor.name + ".");
             return true;
         }
 
@@ -257,7 +257,7 @@ namespace Boon
                 graphic.color = c;
             }
 
-            BoonPlugin.Log.LogInfo("Cloned bar has no Visible animator parameter; unfaded by hand.");
+            RistPlugin.Log.LogInfo("Cloned bar has no Visible animator parameter; unfaded by hand.");
         }
 
         private static void ReadParameters()
@@ -282,13 +282,13 @@ namespace Boon
         /// </summary>
         private static void Size()
         {
-            _sizedAt = BoonConfig.BarSize.Value;
+            _sizedAt = RistConfig.BarSize.Value;
             var length = Mathf.Max(16f, _sizedAt);
 
             _rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, length + BorderBuffer);
 
             // No SetWidth. The length is held here and applied by Fill, for the reasons below.
-            if (BoonConfig.Verbose.Value) BoonPlugin.Log.LogInfo("Bar sized to " + length + ".");
+            if (RistConfig.Verbose.Value) RistPlugin.Log.LogInfo("Bar sized to " + length + ".");
         }
 
         /// <summary>
@@ -318,7 +318,7 @@ namespace Boon
         /// </summary>
         private static void Fill(float progress)
         {
-            var length = Mathf.Max(16f, BoonConfig.BarSize.Value);
+            var length = Mathf.Max(16f, RistConfig.BarSize.Value);
 
             // The trailing fill only lags downward, which is what makes a level-up read as the
             // old bar draining away rather than the whole thing blinking back to empty.
@@ -349,7 +349,7 @@ namespace Boon
         /// </summary>
         private static void Lay()
         {
-            _uprightAt = BoonConfig.BarUpright.Value;
+            _uprightAt = RistConfig.BarUpright.Value;
             if (_rect == null) return;
 
             _rect.rotation = _uprightAt ? Quaternion.Euler(0f, 0f, 90f) : Quaternion.identity;
@@ -357,8 +357,8 @@ namespace Boon
 
         private static void Colour()
         {
-            _tintedAt = BoonConfig.BarColour.Value;
-            var tint = BoonConfig.BarTint();
+            _tintedAt = RistConfig.BarColour.Value;
+            var tint = RistConfig.BarTint();
 
             // Only the fill is tinted, so the borrowed frame and track keep their own colours.
             // The trailing bar is the same hue held back, which is how vanilla distinguishes
@@ -403,8 +403,8 @@ namespace Boon
             // RGBA(1.000, 0.294, 0.939) - the donor's own magenta, showing through because the
             // tint was reaching nothing. A fill wearing a colour nobody chose is what this line
             // is for.
-            if (BoonConfig.Verbose.Value && image.color != colour)
-                BoonPlugin.Log.LogInfo("Bar fill '" + image.name + "' was " + image.color +
+            if (RistConfig.Verbose.Value && image.color != colour)
+                RistPlugin.Log.LogInfo("Bar fill '" + image.name + "' was " + image.color +
                                        " (sprite " + (image.sprite != null ? image.sprite.name : "none") +
                                        "); set to " + colour + ".");
 
@@ -434,21 +434,21 @@ namespace Boon
                 ? _canvas.worldCamera
                 : null;
 
-            var point = new Vector2(BoonConfig.BarPosX.Value,
-                                    BoonConfig.BarPosY.Value + (raised ? BoonConfig.BarBuildRaise.Value : 0f));
+            var point = new Vector2(RistConfig.BarPosX.Value,
+                                    RistConfig.BarPosY.Value + (raised ? RistConfig.BarBuildRaise.Value : 0f));
 
             // Following the stamina bar is worth more than two pixel numbers: "below the
             // stamina bar" is then true at every resolution and HUD scale rather than on the
             // machine the numbers were measured on, and it inherits vanilla's own shove upward
             // when the build panel opens instead of having to repeat it.
-            if (BoonConfig.BarFollowStamina.Value)
+            if (RistConfig.BarFollowStamina.Value)
             {
                 var anchor = Hud.instance.m_staminaBar2Root;
                 if (anchor != null)
                 {
                     var onScreen = RectTransformUtility.WorldToScreenPoint(cam, anchor.position);
-                    point = new Vector2(onScreen.x + BoonConfig.BarOffsetX.Value,
-                                        onScreen.y - BoonConfig.BarOffsetY.Value);
+                    point = new Vector2(onScreen.x + RistConfig.BarOffsetX.Value,
+                                        onScreen.y - RistConfig.BarOffsetY.Value);
                 }
             }
 
@@ -459,7 +459,7 @@ namespace Boon
         private static void Fail(string why)
         {
             _failed = true;
-            BoonPlugin.Log.LogWarning("Boon: " + why);
+            RistPlugin.Log.LogWarning("Rist: " + why);
         }
 
         internal static void Drop()

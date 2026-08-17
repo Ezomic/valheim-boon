@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Boon
+namespace Rist
 {
     /// <summary>
     /// The character level curve.
@@ -21,14 +21,14 @@ namespace Boon
             // each would rain cards in the first hours and dry up exactly when the deep
             // ranks start to matter. It also removes the incentive to grind a fresh cheap
             // skill from zero purely to farm picks.
-            return Mathf.Max(1f, skillLevel) * BoonConfig.XpPerSkillLevel.Value;
+            return Mathf.Max(1f, skillLevel) * RistConfig.XpPerSkillLevel.Value;
         }
 
         /// <summary>Cumulative XP needed to have reached <paramref name="level"/>.</summary>
         internal static float XpForLevel(int level)
         {
             if (level <= 0) return 0f;
-            return BoonConfig.LevelBaseXp.Value * Mathf.Pow(level, BoonConfig.LevelExponent.Value);
+            return RistConfig.LevelBaseXp.Value * Mathf.Pow(level, RistConfig.LevelExponent.Value);
         }
 
         /// <summary>The level a given total XP amounts to.</summary>
@@ -36,8 +36,8 @@ namespace Boon
         {
             if (xp <= 0f) return 0;
 
-            var b = BoonConfig.LevelBaseXp.Value;
-            var e = BoonConfig.LevelExponent.Value;
+            var b = RistConfig.LevelBaseXp.Value;
+            var e = RistConfig.LevelExponent.Value;
             if (b <= 0f || e <= 0f) return 0;
 
             // Inverse of XpForLevel. Floored, so the level ticks over exactly when the

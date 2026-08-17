@@ -1,6 +1,6 @@
 using HarmonyLib;
 
-namespace Boon
+namespace Rist
 {
     /// <summary>
     /// Dying no longer costs skill progress.
@@ -25,7 +25,7 @@ namespace Boon
         private static bool Prefix()
         {
             // False skips the original entirely.
-            return !BoonConfig.RemoveDeathSkillLoss.Value;
+            return !RistConfig.RemoveDeathSkillLoss.Value;
         }
     }
 }

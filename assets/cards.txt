@@ -1,4 +1,4 @@
-# Boon card catalogue.
+# Rist card catalogue.
 #
 # One card per line:
 #
@@ -29,8 +29,8 @@
 # Value is per rank and accumulates: rank 3 of a 15-per-rank card gives 45.
 # Cards stop being offered once they reach MaxRank in the config.
 #
-# The last field is the SIGIL: the rune cut into the middle of this boon's stone in the
-# boons panel. Optional; a card without one falls back to the first letter of its id.
+# The last field is the SIGIL: the rune cut into the middle of this rist's stone in the
+# rists panel. Optional; a card without one falls back to the first letter of its id.
 #
 # Written as a Latin letter, not as a runic Unicode character. The game font called "rune"
 # is a Latin-mapped decorative face - type F, get the rune - and runic code points come out

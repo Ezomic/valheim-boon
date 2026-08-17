@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 using Ezomic.Core;
 using UnityEngine;
 
-namespace Boon
+namespace Rist
 {
     /// <summary>
     /// One card. The effect is the literal name of a public float field on the
@@ -32,7 +32,7 @@ namespace Boon
         internal float BonusPerRank;
 
         /// <summary>
-        /// The rune cut into the middle of this boon's stone. Optional eighth field: a card
+        /// The rune cut into the middle of this rist's stone. Optional eighth field: a card
         /// written before stones existed falls back to the first letter of its id, which is
         /// wrong-looking but never blank.
         /// </summary>
@@ -53,7 +53,7 @@ namespace Boon
         /// <summary>How many times the capstone has been earned at this rank.</summary>
         internal static int BonusTimes(int rank)
         {
-            var every = Mathf.Max(1, BoonConfig.BonusEvery.Value);
+            var every = Mathf.Max(1, RistConfig.BonusEvery.Value);
             return rank / every;
         }
 
@@ -191,7 +191,7 @@ namespace Boon
 
             if (!File.Exists(path))
             {
-                BoonPlugin.Log.LogError("cards.txt not found beside the DLL at " + path +
+                RistPlugin.Log.LogError("cards.txt not found beside the DLL at " + path +
                                         " - no cards can be taken.");
                 return;
             }
@@ -202,9 +202,9 @@ namespace Boon
             // server only ever checks the rank - so an edited line here is simply believed.
             //
             // Without Core there is nothing to declare it to, and that check is simply gone.
-            // Not a fallback worth inventing: a hash Boon computes and compares against itself
+            // Not a fallback worth inventing: a hash Rist computes and compares against itself
             // proves nothing, since the disagreement being looked for is between two machines.
-            if (BoonPlugin.CorePresent) DeclareCatalogue(File.ReadAllText(path));
+            if (RistPlugin.CorePresent) DeclareCatalogue(File.ReadAllText(path));
 
             var lineNo = 0;
             foreach (var raw in File.ReadAllLines(path))
@@ -216,7 +216,7 @@ namespace Boon
                 var parts = line.Split('|');
                 if (parts.Length < 5)
                 {
-                    BoonPlugin.Log.LogWarning("cards.txt line " + lineNo + ": expected 5 fields, got " +
+                    RistPlugin.Log.LogWarning("cards.txt line " + lineNo + ": expected 5 fields, got " +
                                               parts.Length + " - skipped.");
                     continue;
                 }
@@ -232,20 +232,20 @@ namespace Boon
                 if (!float.TryParse(parts[4].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture,
                                     out card.PerRank))
                 {
-                    BoonPlugin.Log.LogWarning("cards.txt line " + lineNo + ": '" + parts[4].Trim() +
+                    RistPlugin.Log.LogWarning("cards.txt line " + lineNo + ": '" + parts[4].Trim() +
                                               "' is not a number - skipped.");
                     continue;
                 }
 
                 if (card.Id.Length == 0)
                 {
-                    BoonPlugin.Log.LogWarning("cards.txt line " + lineNo + ": blank id - skipped.");
+                    RistPlugin.Log.LogWarning("cards.txt line " + lineNo + ": blank id - skipped.");
                     continue;
                 }
 
                 if (_byId.ContainsKey(card.Id))
                 {
-                    BoonPlugin.Log.LogWarning("cards.txt line " + lineNo + ": duplicate id '" + card.Id +
+                    RistPlugin.Log.LogWarning("cards.txt line " + lineNo + ": duplicate id '" + card.Id +
                                               "' - skipped.");
                     continue;
                 }
@@ -266,7 +266,7 @@ namespace Boon
                         if (!float.TryParse(bonusText, NumberStyles.Float, CultureInfo.InvariantCulture,
                                             out card.BonusPerRank))
                         {
-                            BoonPlugin.Log.LogWarning("cards.txt line " + lineNo + ": bonus value '" +
+                            RistPlugin.Log.LogWarning("cards.txt line " + lineNo + ": bonus value '" +
                                                       bonusText + "' is not a number - bonus dropped.");
                             card.BonusEffect = "";
                         }
@@ -283,7 +283,7 @@ namespace Boon
                 _byId[card.Id] = card;
             }
 
-            BoonPlugin.Log.LogInfo("Loaded " + _all.Count + " cards from cards.txt.");
+            RistPlugin.Log.LogInfo("Loaded " + _all.Count + " cards from cards.txt.");
         }
 
         /// <summary>
@@ -301,7 +301,7 @@ namespace Boon
             {
                 if (Card.Specials.Contains(effect)) return true;
 
-                BoonPlugin.Log.LogWarning("cards.txt line " + lineNo + ": unknown special '" + effect +
+                RistPlugin.Log.LogWarning("cards.txt line " + lineNo + ": unknown special '" + effect +
                                           "' - card '" + id + "' skipped.");
                 return false;
             }
@@ -309,14 +309,14 @@ namespace Boon
             field = typeof(SE_Stats).GetField(effect, BindingFlags.Public | BindingFlags.Instance);
             if (field != null && field.FieldType == typeof(float)) return true;
 
-            BoonPlugin.Log.LogWarning("cards.txt line " + lineNo + ": SE_Stats has no public float field '" +
+            RistPlugin.Log.LogWarning("cards.txt line " + lineNo + ": SE_Stats has no public float field '" +
                                       effect + "' - card '" + id + "' skipped.");
             field = null;
             return false;
         }
 
         /// <summary>
-        /// Never inlined, for the same reason as BoonPlugin.RegisterWithCore: the JIT resolves
+        /// Never inlined, for the same reason as RistPlugin.RegisterWithCore: the JIT resolves
         /// a method's assemblies when it first compiles that method, so this call sitting
         /// inline in Load would drag Ezomic.Core in on a machine that has no Core - and the
         /// exception would land while the catalogue was being read, taking every card with it.

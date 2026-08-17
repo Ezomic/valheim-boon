@@ -1,4 +1,4 @@
-# Boon
+# Rist
 
 A character level beside the skills, carved into runestones you choose and deepen.
 
@@ -7,7 +7,7 @@ Single DLL plus a text file, no asset bundle.
 
 ## What it is
 
-Valheim has skills but no character level. Boon adds one that runs **alongside** the skill
+Valheim has skills but no character level. Rist adds one that runs **alongside** the skill
 system — vanilla skills are read, never written, never rescaled, never reskinned.
 
 Every character level earns one **pick**. Spend it on any runestone in the catalogue and that runestone
@@ -31,7 +31,7 @@ The panel earns its keep here. Choosing between nineteen runestones is only a re
 one says what it is worth now **and** what the pick would make it, which is why every tile
 carries both lines.
 
-## Why boons, and why capacity is the bottom of one
+## Why rists, and why capacity is the bottom of one
 
 This started as an inventory problem. Late-biome kit eats the grid - armour, a weapon, a bow,
 ammo, five tools, a torch, food, mead - and there is very little left for what you went out to
@@ -42,16 +42,16 @@ itself when it changes, so more space is a twenty-line mod. That is also exactly
 [Hoard](../hoard) argues against: the mid game is a logistics problem, and the tedium and the
 difficulty are the same mechanic seen from two sides.
 
-So capacity is earned, and it is a **capstone** rather than a boon of its own. It was a boon
+So capacity is earned, and it is a **capstone** rather than a rist of its own. It was a rist
 once, called Deep pack, and it was the strongest thing in the catalogue - taken first every
 time, which is not a choice. A row now sits at the bottom of Ox-backed and of Sure hand: the
-reward for taking a hauling boon the whole way.
+reward for taking a hauling rist the whole way.
 
 ## The panel
 
 A fifth tab on the compendium bar, beside the raven and the trophy, opens a full screen of
-runestones - one per boon. Each carries its own outline, its own rock and its own runes, all
-seeded off the runestone id, so a boon looks the same in every session and on every machine: the
+runestones - one per rist. Each carries its own outline, its own rock and its own runes, all
+seeded off the runestone id, so a rist looks the same in every session and on every machine: the
 stone is part of how you recognise it.
 
 A rank cuts one more mark into the rim, and the mark holds **the level that bought it**. Five
@@ -160,7 +160,7 @@ m_accumulator = 0f;            // NOT scaled — always wiped
 Setting the world's skill reduction to zero therefore still throws away partial progress
 toward the next level in *every* skill, and still announces that skills were lowered. On a
 skill in the seventies, where one level is a long grind, the accumulator is the part that
-actually hurts. Boon skips the method, which removes all three together.
+actually hurts. Rist skips the method, which removes all three together.
 
 ## Where progress lives, and why it is not on your character
 
@@ -208,7 +208,7 @@ be protecting you from.
 
 ## The gate, and how small a claim it makes
 
-Boon used to refuse the connection. A character that had ever spawned in another world was
+Rist used to refuse the connection. A character that had ever spawned in another world was
 sent `ConnectionStatus.ErrorKicked` and dropped, on the reasoning that a character which has
 only been here cannot have been levelled elsewhere.
 
@@ -242,7 +242,7 @@ nothing is paid twice. It only ever raises, so a skill lost to a death penalty c
 levels away.
 
 Turn it **off** and the opposite rule applies — only XP gained on this server counts, and every
-character starts at Boon level 0 no matter what it is carrying. That is the stricter setting
+character starts at Rist level 0 no matter what it is carrying. That is the stricter setting
 and it is a per-server one: config syncs from the host, so whichever a server picks applies to
 everyone on it.
 
@@ -251,7 +251,7 @@ everyone on it.
 | `true` (default) | the levels its skills are already worth |
 | `false` | nothing until it levels a skill here |
 
-What crediting costs is worth stating plainly: a maxed vanilla character walks in at Boon level
+What crediting costs is worth stating plainly: a maxed vanilla character walks in at Rist level
 219 and takes the whole catalogue. If that is not wanted, the answer is not to withhold XP from
 it — it is to not let it in. That is a **door policy**, and the door is
 [Threshold](../threshold)'s: it reads `m_worldData` and `m_usedCheats` off the profile and
@@ -324,11 +324,11 @@ prefab name that does not resolve. A typo costs one runestone, not the catalogue
 
 ## Core is optional, and here is exactly what that costs
 
-Boon installs and runs on its own. Core is a **soft** dependency: install Boon by itself and
+Rist installs and runs on its own. Core is a **soft** dependency: install Rist by itself and
 it works, including the extra inventory rows. **Solo, you need nothing else and give up
 nothing.**
 
-On a server it is a different question, and Boon gives up more without Core than the rest of
+On a server it is a different question, and Rist gives up more without Core than the rest of
 this suite does. Three things, all of which matter only in multiplayer:
 
 **The catalogue is no longer checked.** `cards.txt` names what every rank is worth, effects are
@@ -346,7 +346,7 @@ have to be matched by hand.
 `Inventory.m_height` is a single private int with no owner. Two mods that both want extra rows
 each write it, the last writer wins, and a mod that only writes when its own state changes
 loses silently to one that writes every frame. Core exists to add every claim up and write
-once, so mods stack instead of fighting. Standalone Boon owns that write alone — correct on its
+once, so mods stack instead of fighting. Standalone Rist owns that write alone — correct on its
 own, and **in conflict with any other mod that grants inventory rows**, with the winner decided
 by frame ordering rather than by anything either mod can control. If you run another row-adding
 mod, install Core.
@@ -357,11 +357,11 @@ granted row is destroyed by loading the game, silently, because `AddItem` drops 
 position outside the current grid and the row is not applied until after the load. That bug
 cost a real heartwood to find, and the fallback would not have shipped without the fix.
 
-Boon logs a warning at startup when it starts without Core, naming all three.
+Rist logs a warning at startup when it starts without Core, naming all three.
 
 ## Config
 
-`BepInEx\config\ezomic.valheim.boon.cfg`
+`BepInEx\config\ezomic.valheim.rist.cfg`
 
 | Key | Default | What it does |
 | --- | --- | --- |
@@ -371,7 +371,7 @@ Boon logs a warning at startup when it starts without Core, naming all three.
 | `LevelExponent` | `1.4` | Cumulative XP for level N is base × N^exponent |
 | `MaxRank` | `5` | How deep one runestone goes, and how many slots its track shows |
 | `BonusEvery` | `5` | Ranks between capstones |
-| `ShowInfoTab` | `true` | Add the boons tab to the compendium bar |
+| `ShowInfoTab` | `true` | Add the rists tab to the compendium bar |
 | `RemoveDeathSkillLoss` | `true` | Skip `Skills.OnDeath` |
 | `CheckSkillBaseline` | `true` | Take a joining character's skills as the baseline it is paid from |
 | `CreditExistingSkills` | `true` | Pay a joining character for the skills it already has; off counts only XP gained here |
@@ -427,5 +427,5 @@ version says the code is finished, not that the numbers are right.
 
 ## Author
 
-Boon is an original mod by **Robbin Thijssen** (Thijssen Software).
+Rist is an original mod by **Robbin Thijssen** (Thijssen Software).
 Copyright (c) 2026 Robbin Thijssen. MIT licensed — see `LICENSE`.

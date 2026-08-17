@@ -1,7 +1,7 @@
 using TMPro;
 using UnityEngine;
 
-namespace Boon
+namespace Rist
 {
     /// <summary>
     /// The game's own typefaces, borrowed.
@@ -49,7 +49,7 @@ namespace Boon
             HeadFace = FindFace(HeadFaceNames) ?? Face;
             RuneFace = FindFace(RuneFaceNames) ?? HeadFace;
 
-            BoonPlugin.Log.LogInfo("Fonts: body=" + Name(Face) + ", heading=" + Name(HeadFace) +
+            RistPlugin.Log.LogInfo("Fonts: body=" + Name(Face) + ", heading=" + Name(HeadFace) +
                                    ", rune=" + Name(RuneFace) + ".");
 
             // Every Font the game has loaded, named, once. The marks on the stones are written
@@ -66,7 +66,7 @@ namespace Boon
             // glyphs are requested, and an IMGUI style cached before that rebuild draws the
             // right characters in the wrong shapes. Kept, because that is the sort of thing
             // that recurs and is impossible to reason about without the list.
-            if (!BoonConfig.Verbose.Value) return;
+            if (!RistConfig.Verbose.Value) return;
 
             var seen = new System.Collections.Generic.List<string>();
             foreach (var font in Resources.FindObjectsOfTypeAll<Font>())
@@ -76,7 +76,7 @@ namespace Boon
             }
 
             seen.Sort(System.StringComparer.Ordinal);
-            BoonPlugin.Log.LogInfo("  Font objects available (" + seen.Count + "): " +
+            RistPlugin.Log.LogInfo("  Font objects available (" + seen.Count + "): " +
                                    string.Join(", ", seen.ToArray()));
 
             var tmp = new System.Collections.Generic.List<string>();
@@ -87,7 +87,7 @@ namespace Boon
             }
 
             tmp.Sort(System.StringComparer.Ordinal);
-            BoonPlugin.Log.LogInfo("  TMP font assets (" + tmp.Count + "): " +
+            RistPlugin.Log.LogInfo("  TMP font assets (" + tmp.Count + "): " +
                                    string.Join(", ", tmp.ToArray()));
         }
 

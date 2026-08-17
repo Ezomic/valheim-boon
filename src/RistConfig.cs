@@ -1,7 +1,7 @@
 using BepInEx.Configuration;
 using UnityEngine;
 
-namespace Boon
+namespace Rist
 {
     /// <summary>
     /// Everything tunable, per the repo rule that a rejected number should be a config
@@ -10,9 +10,9 @@ namespace Boon
     /// Note the standing BepInEx trap: every entry is written to disk on first run and the
     /// saved value beats a new default in code. Changing a default here does nothing on a
     /// machine that has already run the plugin - edit
-    /// BepInEx\config\ezomic.valheim.boon.cfg as part of the same change.
+    /// BepInEx\config\ezomic.valheim.rist.cfg as part of the same change.
     /// </summary>
-    internal static class BoonConfig
+    internal static class RistConfig
     {
         internal static ConfigEntry<bool> Enabled;
 
@@ -82,7 +82,7 @@ namespace Boon
                 "Cumulative XP needed for character level 1. Later levels scale by LevelExponent.\n" +
                 "Together with LevelExponent this is the whole pacing of the mod. The pair was " +
                 "60 and 1.5 until it was played, and that asked for sixteen skill level-ups per " +
-                "boon by character level 20 - the reward simply stopped arriving. 40 and 1.4 " +
+                "rist by character level 20 - the reward simply stopped arriving. 40 and 1.4 " +
                 "roughly halves that at every level.");
 
             LevelExponent = cfg.Bind("Levelling", "LevelExponent", 1.4f,
@@ -99,7 +99,7 @@ namespace Boon
             // and now the only way in - the keybind is gone rather than merely unbound.
             ShowInfoTab = cfg.Bind("General", "ShowInfoTab", true,
                 "Add a fifth tab to the compendium bar, beside the raven and the trophy, that " +
-                "opens your boons. Cloned from a tab already there, so it carries the game's " +
+                "opens your rists. Cloned from a tab already there, so it carries the game's " +
                 "own frame, hover and click sound.");
 
 
@@ -219,7 +219,7 @@ namespace Boon
             // these are the kind of number that wants nudging rather than rebuilding.
 
             PanelColumns = cfg.Bind("Cards", "PanelColumns", 4,
-                "Tiles across the boons panel. Fewer means wider tiles and a taller panel; the " +
+                "Tiles across the rists panel. Fewer means wider tiles and a taller panel; the " +
                 "panel scrolls vertically once it would pass 88% of the screen height.");
 
             MaxRank = cfg.Bind("Cards", "MaxRank", 5,
@@ -229,8 +229,8 @@ namespace Boon
 
             // ProtectCharacter used to be bound here. It refused to start a local world with a
             // character belonging to another one, which is protection against being locked out
-            // by a door Boon no longer owns - so it moved to Threshold along with the door,
-            // and the bindings moved from boon-home.txt to threshold-home.txt. The old key may
+            // by a door Rist no longer owns - so it moved to Threshold along with the door,
+            // and the bindings moved from rist-home.txt to threshold-home.txt. The old key may
             // still be sitting in existing config files doing nothing.
 
             RemoveDeathSkillLoss = cfg.Bind("Death", "RemoveDeathSkillLoss", true,
@@ -239,7 +239,7 @@ namespace Boon
                 "the reduction factor, so zeroing it still discards partial progress toward " +
                 "the next level in every skill.");
 
-            // The anti-cheat is a question about XP, not about admission. Boon used to refuse
+            // The anti-cheat is a question about XP, not about admission. Rist used to refuse
             // the connection outright, which meant a levelling mod decided who could play -
             // and when it did, the player got Valheim's generic kick screen with the reason
             // only in the server's log. The "has this character been to other worlds" half of
@@ -263,7 +263,7 @@ namespace Boon
             CreditExistingSkills = cfg.Bind("Gate", "CreditExistingSkills", true,
                 "Pay a joining character for the skills it already has, so a character that " +
                 "turns up worth twenty levels arrives at twenty levels with the picks to " +
-                "spend. Off starts every character at Boon level 0 no matter what it is " +
+                "spend. Off starts every character at Rist level 0 no matter what it is " +
                 "carrying, and only level-ups watched from here earn anything.\n" +
                 "Not an estimate: XP is the skill level reached, so a skill at N has already " +
                 "produced 1+2+...+N. Summing that over every skill is exactly what the " +
@@ -311,7 +311,7 @@ namespace Boon
                 "player would silently stop earning mid-fight.");
 
             CappedMessage = cfg.Bind("Gate", "CappedMessage",
-                "You are earning faster than this world will pay for. Boons will resume shortly.",
+                "You are earning faster than this world will pay for. Rists will resume shortly.",
                 "Shown once per session, centre-screen, when the earning cap withholds XP. " +
                 "A cap that simply stops paying is invisible, so it says so once: " +
                 "invisible, and an honest player who hits one deserves to know why.");

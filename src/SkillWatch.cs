@@ -1,6 +1,6 @@
 using HarmonyLib;
 
-namespace Boon
+namespace Rist
 {
     /// <summary>
     /// The client's only job in earning levels: say that a skill went up.
@@ -18,7 +18,7 @@ namespace Boon
     {
         private static void Postfix(Player __instance, Skills.SkillType skill, float level)
         {
-            if (!BoonConfig.Enabled.Value) return;
+            if (!RistConfig.Enabled.Value) return;
 
             // Other players' characters exist on this client too; only our own skill-ups are
             // ours to report.
@@ -27,8 +27,8 @@ namespace Boon
             // Logged on the sending side as well as the receiving side. The two together are
             // what tell you whether a missing grant means the hook never fired or the report
             // never arrived - with only the server's log, both look identical.
-            if (BoonConfig.Verbose.Value)
-                BoonPlugin.Log.LogInfo("Skill up: " + skill + " reached " + level + ", reporting.");
+            if (RistConfig.Verbose.Value)
+                RistPlugin.Log.LogInfo("Skill up: " + skill + " reached " + level + ", reporting.");
 
             Net.ReportSkillUp(skill, level);
         }

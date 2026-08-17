@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
-namespace Boon
+namespace Rist
 {
     /// <summary>
     /// What this server has watched each of a character's skills reach.
@@ -25,8 +25,8 @@ namespace Boon
     ///
     /// So the judgement is gone and the measurement stays. An imported character is simply
     /// **not paid for what it did elsewhere** - which is the property this was always after,
-    /// and which Boon already had and already documents: nothing is ever backfilled, so a
-    /// character arriving at skill 50 starts at Boon level 0 regardless. Preventing a character
+    /// and which Rist already had and already documents: nothing is ever backfilled, so a
+    /// character arriving at skill 50 starts at Rist level 0 regardless. Preventing a character
     /// from being used across worlds at all is a door policy, and the door is Threshold's.
     ///
     /// The baseline itself is still worth keeping, for a reason that has nothing to do with
@@ -100,7 +100,7 @@ namespace Boon
         /// </summary>
         internal static void Judge(long sender, string owner, string facts, string skills)
         {
-            if (!BoonConfig.CheckSkillBaseline.Value) return;
+            if (!RistConfig.CheckSkillBaseline.Value) return;
             if (string.IsNullOrEmpty(owner)) return;
 
             var reported = ParseSkills(skills);
@@ -123,9 +123,9 @@ namespace Boon
             if (raised > 0) Ledger.Touch();
 
             if (first)
-                BoonPlugin.Log.LogInfo("Baseline adopted for " + owner + " (" + reported.Count + " skills).");
-            else if (raised > 0 && BoonConfig.Verbose.Value)
-                BoonPlugin.Log.LogInfo("Baseline for " + owner + " raised on " + raised + " skill(s).");
+                RistPlugin.Log.LogInfo("Baseline adopted for " + owner + " (" + reported.Count + " skills).");
+            else if (raised > 0 && RistConfig.Verbose.Value)
+                RistPlugin.Log.LogInfo("Baseline for " + owner + " raised on " + raised + " skill(s).");
 
             if (Credit(sender, owner, rec, reported)) Net.PushState(sender, rec);
         }
@@ -148,9 +148,9 @@ namespace Boon
         /// nothing is double-paid; and it only ever raises, so a skill lost to a death penalty
         /// cannot take levels away.
         /// </summary>
-        private static bool Credit(long sender, string owner, BoonRecord rec, Dictionary<int, float> reported)
+        private static bool Credit(long sender, string owner, RistRecord rec, Dictionary<int, float> reported)
         {
-            if (!BoonConfig.CreditExistingSkills.Value) return false;
+            if (!RistConfig.CreditExistingSkills.Value) return false;
 
             var worth = 0f;
             foreach (var kv in reported)
@@ -159,7 +159,7 @@ namespace Boon
                 if (n > 0f) worth += n * (n + 1f) * 0.5f;
             }
 
-            worth *= BoonConfig.XpPerSkillLevel.Value;
+            worth *= RistConfig.XpPerSkillLevel.Value;
 
             // Never downward. Only the shortfall is paid, so this is idempotent.
             if (worth <= rec.Xp + 0.001f) return false;
@@ -168,8 +168,8 @@ namespace Boon
             rec.Xp = worth;
             Ledger.Touch();
 
-            BoonPlugin.Log.LogInfo("Credited " + owner + " for skills already held: " +
-                                   worth.ToString("0") + " xp, Boon level " + before + " -> " + rec.Level + ".");
+            RistPlugin.Log.LogInfo("Credited " + owner + " for skills already held: " +
+                                   worth.ToString("0") + " xp, Rist level " + before + " -> " + rec.Level + ".");
 
             return true;
         }

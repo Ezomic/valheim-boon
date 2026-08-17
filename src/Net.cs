@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
 
-namespace Boon
+namespace Rist
 {
     /// <summary>
     /// What the local client currently believes about itself. Display and effects only -
@@ -15,7 +15,7 @@ namespace Boon
         internal static int DraftsTaken;
 
         /// <summary>Card id to the levels that bought its ranks. A 0 is a rank whose level
-        /// was never recorded - see BoonRecord.Taken.</summary>
+        /// was never recorded - see RistRecord.Taken.</summary>
         internal static readonly Dictionary<string, List<int>> Taken = new Dictionary<string, List<int>>();
 
         /// <summary>Ranks alone, rebuilt from Taken, because that is all Effects needs.</summary>
@@ -64,7 +64,7 @@ namespace Boon
         internal static void PredictTake(string id)
         {
             if (!Known || string.IsNullOrEmpty(id) || Owed <= 0) return;
-            if (RankOf(id) >= BoonConfig.MaxRank.Value) return;
+            if (RankOf(id) >= RistConfig.MaxRank.Value) return;
 
             if (!Taken.TryGetValue(id, out var levels))
             {
@@ -143,13 +143,13 @@ namespace Boon
     /// </summary>
     internal static class Net
     {
-        private const string RpcHello = "Boon_Hello";
-        private const string RpcSkillUp = "Boon_SkillUp";
-        private const string RpcPick = "Boon_Pick";
-        private const string RpcState = "Boon_State";
-        private const string RpcAskProfile = "Boon_AskProfile";
-        private const string RpcProfile = "Boon_Profile";
-        private const string RpcNotice = "Boon_Notice";
+        private const string RpcHello = "Rist_Hello";
+        private const string RpcSkillUp = "Rist_SkillUp";
+        private const string RpcPick = "Rist_Pick";
+        private const string RpcState = "Rist_State";
+        private const string RpcAskProfile = "Rist_AskProfile";
+        private const string RpcProfile = "Rist_Profile";
+        private const string RpcNotice = "Rist_Notice";
 
         private static ZRoutedRpc _registeredOn;
 
@@ -200,7 +200,7 @@ namespace Boon
             ClientState.Clear();
             Effects.Reset();
 
-            BoonPlugin.Log.LogInfo("RPCs registered (" + (IsServer ? "server" : "client") + ").");
+            RistPlugin.Log.LogInfo("RPCs registered (" + (IsServer ? "server" : "client") + ").");
         }
 
         // ---- client to server ----------------------------------------------------------
@@ -237,7 +237,7 @@ namespace Boon
         /// </summary>
         private static void OnHello(long sender, long characterId)
         {
-            if (!IsServer || !BoonConfig.Enabled.Value) return;
+            if (!IsServer || !RistConfig.Enabled.Value) return;
 
             var platform = PlatformOf(sender);
             if (platform == null || characterId == 0L) return;
@@ -251,18 +251,18 @@ namespace Boon
             // record since it was last loaded.
             if (rec.Reconcile()) Ledger.Touch();
 
-            BoonPlugin.Log.LogInfo("Hello from " + platform + " playing character " + characterId +
+            RistPlugin.Log.LogInfo("Hello from " + platform + " playing character " + characterId +
                                    " - level " + rec.Level + ", " + rec.Taken.Count + " cards, " +
                                    rec.Owed + " to spend.");
 
             PushState(sender, rec);
 
-            if (BoonConfig.CheckSkillBaseline.Value) AskProfile(sender);
+            if (RistConfig.CheckSkillBaseline.Value) AskProfile(sender);
         }
 
         private static void OnSkillUp(long sender, int skillType, float skillLevel)
         {
-            if (!IsServer || !BoonConfig.Enabled.Value) return;
+            if (!IsServer || !RistConfig.Enabled.Value) return;
 
             var owner = OwnerOf(sender);
             if (owner == null) return;
@@ -271,14 +271,14 @@ namespace Boon
             // a different mod or a forged packet. Either way it is not worth paying for.
             if (skillLevel <= 0f || skillLevel > 100f)
             {
-                if (BoonConfig.Verbose.Value)
-                    BoonPlugin.Log.LogWarning("Rejected skill-up from " + owner + ": level " + skillLevel);
+                if (RistConfig.Verbose.Value)
+                    RistPlugin.Log.LogWarning("Rejected skill-up from " + owner + ": level " + skillLevel);
                 return;
             }
 
             if (!WithinRate(owner))
             {
-                BoonPlugin.Log.LogWarning("Rate limit hit for " + owner +
+                RistPlugin.Log.LogWarning("Rate limit hit for " + owner +
                                           " - skill-up ignored. Either a very fast player or a forged report.");
                 return;
             }
@@ -291,7 +291,7 @@ namespace Boon
             // permanent alibi for every claim after it.
             if (!Throttle.Step(rec, owner, skillType, skillLevel, out var why))
             {
-                BoonPlugin.Log.LogWarning("Rejected skill-up from " + owner + " - " + why + ".");
+                RistPlugin.Log.LogWarning("Rejected skill-up from " + owner + " - " + why + ".");
                 return;
             }
 
@@ -323,20 +323,20 @@ namespace Boon
 
             Ledger.Touch();
 
-            if (BoonConfig.Verbose.Value)
-                BoonPlugin.Log.LogInfo(owner + " +" + amount.ToString("0.#") +
+            if (RistConfig.Verbose.Value)
+                RistPlugin.Log.LogInfo(owner + " +" + amount.ToString("0.#") +
                                        " xp (skill " + (Skills.SkillType)skillType + " " + skillLevel +
                                        ") -> " + rec.Xp.ToString("0.#"));
 
             if (rec.Level > before)
-                BoonPlugin.Log.LogInfo(owner + " reached Boon level " + rec.Level + ".");
+                RistPlugin.Log.LogInfo(owner + " reached Rist level " + rec.Level + ".");
 
             PushState(sender, rec);
         }
 
         private static void OnPick(long sender, string cardId)
         {
-            if (!IsServer || !BoonConfig.Enabled.Value) return;
+            if (!IsServer || !RistConfig.Enabled.Value) return;
 
             var owner = OwnerOf(sender);
             if (owner == null) return;
@@ -350,7 +350,7 @@ namespace Boon
             // pick, or asking past MaxRank, still gets nothing.
             if (rec.Owed <= 0)
             {
-                BoonPlugin.Log.LogWarning("Rejected pick '" + cardId + "' from " + owner + " - nothing owed.");
+                RistPlugin.Log.LogWarning("Rejected pick '" + cardId + "' from " + owner + " - nothing owed.");
                 PushState(sender, rec);
                 return;
             }
@@ -358,14 +358,14 @@ namespace Boon
             var card = Cards.Get(cardId);
             if (card == null)
             {
-                BoonPlugin.Log.LogWarning("Rejected pick '" + cardId + "' from " + owner + " - no such card.");
+                RistPlugin.Log.LogWarning("Rejected pick '" + cardId + "' from " + owner + " - no such card.");
                 PushState(sender, rec);
                 return;
             }
 
-            if (rec.RankOf(cardId) >= BoonConfig.MaxRank.Value)
+            if (rec.RankOf(cardId) >= RistConfig.MaxRank.Value)
             {
-                BoonPlugin.Log.LogWarning("Rejected pick '" + cardId + "' from " + owner + " - already at max rank.");
+                RistPlugin.Log.LogWarning("Rejected pick '" + cardId + "' from " + owner + " - already at max rank.");
                 PushState(sender, rec);
                 return;
             }
@@ -373,7 +373,7 @@ namespace Boon
             rec.Take(cardId);
             Ledger.Touch();
 
-            BoonPlugin.Log.LogInfo(owner + " took '" + card.Name + "' to rank " + rec.RankOf(cardId) +
+            RistPlugin.Log.LogInfo(owner + " took '" + card.Name + "' to rank " + rec.RankOf(cardId) +
                                    " with the level " + rec.DraftsTaken + " pick.");
 
             PushState(sender, rec);
@@ -385,7 +385,7 @@ namespace Boon
             Gate.Judge(sender, OwnerOf(sender), facts, skills);
         }
 
-        internal static void PushState(long peerUid, BoonRecord rec)
+        internal static void PushState(long peerUid, RistRecord rec)
         {
             if (ZRoutedRpc.instance == null || rec == null) return;
             ZRoutedRpc.instance.InvokeRoutedRPC(peerUid, RpcState, rec.ToWire());
@@ -406,8 +406,8 @@ namespace Boon
         {
             if (!_characters.TryGetValue(sender, out var characterId))
             {
-                if (BoonConfig.Verbose.Value)
-                    BoonPlugin.Log.LogWarning("Message from an unidentified connection; ignored until it says hello.");
+                if (RistConfig.Verbose.Value)
+                    RistPlugin.Log.LogWarning("Message from an unidentified connection; ignored until it says hello.");
                 return null;
             }
 
@@ -451,7 +451,7 @@ namespace Boon
             // A dedicated server never takes this branch.
             if (!ZNet.instance.IsDedicated()) return "localhost";
 
-            BoonPlugin.Log.LogWarning("Could not identify the sender of a Boon RPC; ignored.");
+            RistPlugin.Log.LogWarning("Could not identify the sender of a Rist RPC; ignored.");
             return null;
         }
 
@@ -466,7 +466,7 @@ namespace Boon
             var now = Time.time;
             while (q.Count > 0 && now - q.Peek() > 60f) q.Dequeue();
 
-            if (q.Count >= Mathf.Max(1f, BoonConfig.MaxSkillUpsPerMinute.Value)) return false;
+            if (q.Count >= Mathf.Max(1f, RistConfig.MaxSkillUpsPerMinute.Value)) return false;
 
             q.Enqueue(now);
             return true;
@@ -486,11 +486,11 @@ namespace Boon
             {
                 var player = Player.m_localPlayer;
                 if (player != null)
-                    player.Message(MessageHud.MessageType.Center, BoonPanel.OpenHint());
+                    player.Message(MessageHud.MessageType.Center, RistPanel.OpenHint());
             }
 
-            if (BoonConfig.Verbose.Value)
-                BoonPlugin.Log.LogInfo("State: level " + ClientState.Level + ", " +
+            if (RistConfig.Verbose.Value)
+                RistPlugin.Log.LogInfo("State: level " + ClientState.Level + ", " +
                                        ClientState.Ranks.Count + " cards, " +
                                        ClientState.Owed + " to spend.");
         }
@@ -523,7 +523,7 @@ namespace Boon
         {
             if (string.IsNullOrEmpty(message)) return;
 
-            BoonPlugin.Log.LogWarning("Boon: " + message);
+            RistPlugin.Log.LogWarning("Rist: " + message);
 
             var player = Player.m_localPlayer;
             if (player != null) player.Message(MessageHud.MessageType.Center, message);

@@ -1,11 +1,11 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Boon
+namespace Rist
 {
     /// <summary>
     /// A fifth tab on the compendium bar, beside the raven, the valknut, the trophy and the
-    /// swords, that opens the boons.
+    /// swords, that opens the rists.
     ///
     /// A thing on screen rather than a key, which is the standing preference here - Stow was
     /// given a buildable post for the same reason. There was a keybind once and it is gone
@@ -27,7 +27,7 @@ namespace Boon
 
         internal static void Update()
         {
-            if (_failed || !BoonConfig.Enabled.Value || !BoonConfig.ShowInfoTab.Value) return;
+            if (_failed || !RistConfig.Enabled.Value || !RistConfig.ShowInfoTab.Value) return;
 
             var gui = InventoryGui.instance;
             if (gui == null || gui.m_infoPanel == null)
@@ -49,14 +49,14 @@ namespace Boon
             if (donor == null)
             {
                 _failed = true;
-                BoonPlugin.Log.LogWarning("No compendium tab to clone, and there is no keybind " +
-                                          "any more - the boons panel has no way in. That is a " +
+                RistPlugin.Log.LogWarning("No compendium tab to clone, and there is no keybind " +
+                                          "any more - the rists panel has no way in. That is a " +
                                           "bug rather than a setting; please report it.");
                 return;
             }
 
             var go = Object.Instantiate(donor.gameObject, donor.transform.parent);
-            go.name = "BoonTab";
+            go.name = "RistTab";
 
             var button = go.GetComponent<Button>();
             if (button != null)
@@ -74,7 +74,7 @@ namespace Boon
             Place(gui, go, donor);
 
             _tab = go;
-            BoonPlugin.Log.LogInfo("Boons tab added to the compendium bar.");
+            RistPlugin.Log.LogInfo("Rists tab added to the compendium bar.");
         }
 
         /// <summary>
@@ -88,7 +88,7 @@ namespace Boon
 
             foreach (var button in gui.m_infoPanel.GetComponentsInChildren<Button>(true))
             {
-                if (button == null || button.name == "BoonTab") continue;
+                if (button == null || button.name == "RistTab") continue;
 
                 var rect = button.GetComponent<RectTransform>();
                 if (rect == null) continue;
@@ -148,7 +148,7 @@ namespace Boon
             for (var i = 0; i < icons.Count; i++)
                 icons[i].anchoredPosition = new Vector2(first + i * pitch, y);
 
-            BoonPlugin.Log.LogInfo("Compendium bar re-spaced: " + icons.Count +
+            RistPlugin.Log.LogInfo("Compendium bar re-spaced: " + icons.Count +
                                    " icons at " + (int)pitch + "px.");
         }
 
@@ -178,7 +178,7 @@ namespace Boon
             {
                 var tex = Algiz();
                 _icon = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f));
-                _icon.name = "BoonAlgiz";
+                _icon.name = "RistAlgiz";
             }
 
             // Swap one sprite. Nothing else.
@@ -218,14 +218,14 @@ namespace Boon
                         glyph = image;
                 }
 
-                BoonPlugin.Log.LogWarning("The tab's target graphic was not an Image; fell back to '" +
+                RistPlugin.Log.LogWarning("The tab's target graphic was not an Image; fell back to '" +
                                           (glyph != null ? glyph.name : "nothing") + "'.");
             }
 
             if (glyph == null)
             {
-                BoonPlugin.Log.LogWarning("No glyph layer on the cloned tab - it will still open " +
-                                          "the boons, wearing the donor's picture.");
+                RistPlugin.Log.LogWarning("No glyph layer on the cloned tab - it will still open " +
+                                          "the rists, wearing the donor's picture.");
                 return;
             }
 
@@ -239,23 +239,23 @@ namespace Boon
             // ten attempts had gone by with nobody knowing what the layers were - and it is
             // what finally ended that, so it stays rather than being deleted. Turn Verbose on
             // and the next question about this bar is answered in numbers.
-            if (!BoonConfig.Verbose.Value) return;
+            if (!RistConfig.Verbose.Value) return;
 
             foreach (var image in donor.GetComponentsInChildren<Image>(true))
             {
                 if (image == null) continue;
-                BoonPlugin.Log.LogInfo("  donor layer '" + image.name + "' " +
+                RistPlugin.Log.LogInfo("  donor layer '" + image.name + "' " +
                                        (image.enabled ? "on" : "off") + " " +
                                        image.rectTransform.rect.size + " colour " + image.color +
                                        " sprite " + (image.sprite != null ? image.sprite.name : "none"));
             }
 
-            BoonPlugin.Log.LogInfo("  donor '" + donor.name + "' normal " + donor.colors.normalColor +
+            RistPlugin.Log.LogInfo("  donor '" + donor.name + "' normal " + donor.colors.normalColor +
                                    ", highlighted " + donor.colors.highlightedColor +
                                    ", target graphic " +
                                    (donor.targetGraphic != null ? donor.targetGraphic.name : "none"));
 
-            BoonPlugin.Log.LogInfo("Boons tab: rune on '" + glyph.name + "' at " +
+            RistPlugin.Log.LogInfo("Rists tab: rune on '" + glyph.name + "' at " +
                                    glyph.rectTransform.rect.size + ", gold from the button.");
         }
 
@@ -337,7 +337,7 @@ namespace Boon
             // The panel is full screen and hides itself while the inventory is up, so the
             // inventory has to go first or the click would appear to do nothing.
             if (InventoryGui.instance != null) InventoryGui.instance.Hide();
-            BoonPanel.Open();
+            RistPanel.Open();
         }
     }
 }
