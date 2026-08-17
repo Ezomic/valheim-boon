@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 
 namespace Boon
@@ -50,6 +51,44 @@ namespace Boon
 
             BoonPlugin.Log.LogInfo("Fonts: body=" + Name(Face) + ", heading=" + Name(HeadFace) +
                                    ", rune=" + Name(RuneFace) + ".");
+
+            // Every Font the game has loaded, named, once. The marks on the stones are written
+            // as Latin letters on the understanding that the rune face maps them to runes -
+            // type F, get the rune - and when they come out as plain letters instead there is
+            // no way to tell from here whether the face was not applied, or was applied and
+            // simply is not the runic one. IMGUI needs a real Font rather than a
+            // TMP_FontAsset, and the game ships both, so the two can easily disagree.
+            //
+            // Behind Verbose. It ran ungated once, to settle whether the marks coming out as
+            // plain Latin meant the wrong face or no face, and it answered: `rune` is there,
+            // it is the one chosen, and it maps Latin to runic as intended. The marks were
+            // being drawn through a stale dynamic-font atlas - Unity rebuilds one when new
+            // glyphs are requested, and an IMGUI style cached before that rebuild draws the
+            // right characters in the wrong shapes. Kept, because that is the sort of thing
+            // that recurs and is impossible to reason about without the list.
+            if (!BoonConfig.Verbose.Value) return;
+
+            var seen = new System.Collections.Generic.List<string>();
+            foreach (var font in Resources.FindObjectsOfTypeAll<Font>())
+            {
+                if (font == null || string.IsNullOrEmpty(font.name)) continue;
+                if (!seen.Contains(font.name)) seen.Add(font.name);
+            }
+
+            seen.Sort(System.StringComparer.Ordinal);
+            BoonPlugin.Log.LogInfo("  Font objects available (" + seen.Count + "): " +
+                                   string.Join(", ", seen.ToArray()));
+
+            var tmp = new System.Collections.Generic.List<string>();
+            foreach (var asset in Resources.FindObjectsOfTypeAll<TMP_FontAsset>())
+            {
+                if (asset == null || string.IsNullOrEmpty(asset.name)) continue;
+                if (!tmp.Contains(asset.name)) tmp.Add(asset.name);
+            }
+
+            tmp.Sort(System.StringComparer.Ordinal);
+            BoonPlugin.Log.LogInfo("  TMP font assets (" + tmp.Count + "): " +
+                                   string.Join(", ", tmp.ToArray()));
         }
 
         private static string Name(Font font)
