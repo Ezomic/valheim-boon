@@ -80,13 +80,22 @@ namespace Boon
                 "progression exactly when the deep card ranks matter, and would make " +
                 "grinding a fresh cheap skill from zero the fastest way to farm cards.");
 
-            LevelBaseXp = cfg.Bind("Levelling", "LevelBaseXp", 60f,
-                "Cumulative XP needed for character level 1. Later levels scale by LevelExponent.");
+            LevelBaseXp = cfg.Bind("Levelling", "LevelBaseXp", 40f,
+                "Cumulative XP needed for character level 1. Later levels scale by LevelExponent.\n" +
+                "Together with LevelExponent this is the whole pacing of the mod. The pair was " +
+                "60 and 1.5 until it was played, and that asked for sixteen skill level-ups per " +
+                "boon by character level 20 - the reward simply stopped arriving. 40 and 1.4 " +
+                "roughly halves that at every level.");
 
-            LevelExponent = cfg.Bind("Levelling", "LevelExponent", 1.5f,
+            LevelExponent = cfg.Bind("Levelling", "LevelExponent", 1.4f,
                 "Cumulative XP for level N is LevelBaseXp * N^LevelExponent. Above 1 means " +
                 "each level costs more than the last. Vanilla's own skill curve is already " +
-                "front-loaded, so this counteracts a flood of early cards.");
+                "front-loaded, so this counteracts a flood of early cards.\n" +
+                "This is the shape rather than the scale: lowering it helps the late game far " +
+                "more than the early one, which is where the old 1.5 hurt. It is also what " +
+                "keeps the catalogue scarce - there are 95 picks in it at MaxRank 5, and a " +
+                "curve flat enough to hand out all of them turns a free choice into an order " +
+                "of purchase. At 1.4 a long playthrough lands near 67 of the 95.");
 
             // A thing on screen rather than a key, which is the standing preference here,
             // and now the only way in - the keybind is gone rather than merely unbound.

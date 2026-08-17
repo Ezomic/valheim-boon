@@ -341,8 +341,8 @@ Boon logs a warning at startup when it starts without Core, naming all three.
 | --- | --- | --- |
 | `Enabled` | `true` | Off keeps records but stops granting and applying |
 | `XpPerSkillLevel` | `1` | XP per skill-up, multiplied by the level reached |
-| `LevelBaseXp` | `60` | Cumulative XP for level 1 |
-| `LevelExponent` | `1.5` | Cumulative XP for level N is base × N^exponent |
+| `LevelBaseXp` | `40` | Cumulative XP for level 1 |
+| `LevelExponent` | `1.4` | Cumulative XP for level N is base × N^exponent |
 | `MaxRank` | `5` | How deep one runestone goes, and how many slots its track shows |
 | `BonusEvery` | `5` | Ranks between capstones |
 | `ShowInfoTab` | `true` | Add the boons tab to the compendium bar |
@@ -374,15 +374,16 @@ Runs on a listen host and on a dedicated server, and both halves have been exerc
 ledger, the gate, the pick path, the level curve, the panel, the bar and the compendium tab.
 Nineteen runestones, all of them verified to name a field the game actually reads.
 
-What is not done is the part that only play settles. The shipping curve of 60 * N^1.5 has
-never been played - testing ran on a cheapened one - so the pacing of the whole mod is
+What is not done is the part that only play settles. The curve was 60 * N^1.5 and has now
+been played once and retuned to 40 * N^1.4; beyond that it has not been played - testing ran on a cheapened one - so the pacing of the whole mod is
 unknown, and no value in the catalogue has been tuned against anything but reasoning. The
 version says the code is finished, not that the numbers are right.
 
 ## Known gaps
 
 - **The shipping curve has never been played.** Everything below it works; how often a stone
-  lights up at 60 * N^1.5 is a guess, and it is the single number the whole feel rests on.
+  lights up at 40 * N^1.4 is now measured against one session rather than reasoned about,
+  but one session is not a playthrough.
   The panel, the bar and the tab have all been seen in game and are correct; this is about
   pacing, not about whether anything draws.
 - **Balance rests entirely on the runestones.** With a free choice the strongest runestone is
