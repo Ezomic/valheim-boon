@@ -3,9 +3,9 @@
 Notable changes to Rist. Format follows [Keep a Changelog](https://keepachangelog.com),
 and the mod uses [semantic versioning](https://semver.org).
 
-## [1.0.0] — 2026-08-16
+## [1.0.0] - 2026-08-16
 
-First release. There is no 0.1.0 entry below it because 0.1.0 was never published — it was
+First release. There is no 0.1.0 entry below it because 0.1.0 was never published. It was
 this same work under a version that had not yet been judged ready, and folding it in beats
 inventing a release nobody could have installed.
 
@@ -28,7 +28,7 @@ skills are read and never written.
 ### Free choice, not a dealt hand
 
 An earlier version dealt three runestones per level, seeded so that quitting on a bad offer and
-returning re-offered the same three — otherwise the pick is theatre, since anyone can reroll
+returning re-offered the same three, since otherwise the pick is theatre, since anyone can reroll
 until they get what they want.
 
 Choosing freely deletes that problem rather than defending against it: no roll to reroll, no
@@ -43,12 +43,12 @@ if each stone says both what it is worth now and what the pick would make it.
 
 Taking a runestone the whole way grants something the earlier ranks did not hint at, rather
 than one more slice of the same number. It is what makes depth a decision against breadth
-instead of a rounding error — five ranks of the same small bonus is the same reward as five
+instead of a rounding error: five ranks of the same small bonus is the same reward as five
 different small bonuses, so without this there was no reason to ever finish anything.
 
 ### Capacity is a capstone, not a runestone of its own
 
-This began as an inventory problem — late-biome kit eats the grid and leaves nothing for what
+This began as an inventory problem: late-biome kit eats the grid and leaves nothing for what
 you went out to fetch. The cheap fix is more rows, and that is exactly what
 [Hoard](../hoard) argues against.
 
@@ -60,7 +60,7 @@ purchase anyone makes on their first pick.
 ### The panel
 
 A fifth tab on the compendium bar, beside the raven and the trophy, opens a full screen of
-runestones — one per rist, each with its own outline, rock and marks, all seeded off the card
+runestones, one per rist, each with its own outline, rock and marks, all seeded off the card
 id so a rist looks the same in every session and on every machine. A rank cuts one more mark
 into the rim, and the mark holds **the level that bought it**.
 
@@ -81,7 +81,7 @@ and a fifth in any of those reads as one of them.
 ### What the server decides
 
 The ledger is held by the server and keyed to the platform identity plus the character, never
-to the character file — a character file sits on the player's own disk, so nothing that decides
+to the character file. A character file sits on the player's own disk, so nothing that decides
 rewards may live there. The client reports only that a skill went up; every number is derived
 server-side.
 
@@ -94,8 +94,8 @@ is therefore a claim that cannot be verified, only bounded:
   watched that skill reach did not come from playing. This also protects the baseline, which
   would otherwise adopt the forged level and give every later claim an alibi.
 - **XP per minute of connected time**, which is the only cap that does not depend on believing
-  the client at all. It banks three minutes so an honest burst — clearing a crypt levels four
-  skills at once — is paid in full.
+  the client at all. It banks three minutes so an honest burst, clearing a crypt levels four
+  skills at once, is paid in full.
 
 Nobody is disconnected and nothing is ever taken away. Rist used to refuse the connection, and
 a levelling mod deciding who may play means a bug in an XP system locks people out of a server.
@@ -125,7 +125,7 @@ The rule both arrive at: **clone for geometry and sprites, drive the state yours
 Rist installs and runs on its own. Core is a **soft** dependency; installing Rist no longer
 installs Core with it, and `manifest.json` no longer lists it.
 
-Solo, nothing is given up — including the extra inventory rows, which now have a Rist-owned
+Solo, nothing is given up, including the extra inventory rows, which now have a Rist-owned
 implementation used only when Core is absent. On a server, three things are lost, and the
 README section "Core is optional, and here is exactly what that costs" sets them out: the
 `cards.txt` hash check, the host-authoritative curve, and the arbitration of
@@ -139,14 +139,14 @@ can never both write the field or both widen the grid.
 
 Mechanically, as elsewhere in the suite: every `Ezomic.Core` call now sits in its own
 `[MethodImpl(MethodImplOptions.NoInlining)]` method behind a `Chainloader.PluginInfos` check,
-because the JIT resolves a method's assemblies when it first compiles that method — an inline
+because the JIT resolves a method's assemblies when it first compiles that method, and an inline
 call would drag Core in before the check could prevent it. Verified by decompiling the built
 DLL: `Suite.*` and `InventoryRows.*` appear only inside those isolated methods.
 
 ### A character arrives worth what its skills are worth
 
 `CreditExistingSkills`, on by default, pays a joining character for the skills it already
-holds — turn up carrying skills worth twenty levels and you arrive at twenty levels with the
+holds: turn up carrying skills worth twenty levels and you arrive at twenty levels with the
 picks to spend. XP is the skill level reached, so a skill at N has already produced N(N+1)/2;
 summing that over every skill is exactly what the character would hold had all of it happened
 here, which also makes it safe to re-run on every login and impossible to double-pay.
@@ -155,7 +155,7 @@ Off, only XP gained on this server counts and every character starts at level 0.
 from the host, so a server picks one rule for everyone on it.
 
 There is no untrusted state. A character above the baseline was briefly marked untrusted and
-paid nothing "until they line up again", which it could never do — the withholding returned
+paid nothing "until they line up again", which it could never do, because the withholding returned
 before the baseline was updated, and the login check only adopted a new baseline when it had
 found nothing wrong, so the baseline froze while the player's real skills climbed away from it.
 

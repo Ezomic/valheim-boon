@@ -6,7 +6,7 @@ see the [README](README.md).
 ## It used to deal three at random
 
 The first version dealt three runestones per level, seeded so that quitting on a bad offer and
-coming back re-offered the same three — otherwise the pick is theatre, since anyone can reroll
+coming back re-offered the same three, since otherwise the pick is theatre, since anyone can reroll
 until they get what they wanted.
 
 Choosing freely deletes that whole problem rather than defending against it. There is no roll
@@ -37,14 +37,14 @@ reward for taking a hauling rist the whole way.
 
 ## The bar
 
-The experience bar is a **clone of one of the game's own upright bars** — the eitr bar, with
+The experience bar is a **clone of one of the game's own upright bars**, the eitr bar, with
 the stamina bar behind it as a fallback donor.
 
 The first version drew two flat rectangles in IMGUI. It sat in the right place and still read
 as a mod, because a vanilla bar is not a rectangle: it carries a frame sprite, a bevelled
 inner track, softened ends, and a second fill behind the first that lags a change. None of
 that survives being approximated with a 1×1 texture. Cloning the real thing inherits all of
-it at once — the same argument as borrowing a material rather than authoring one.
+it at once, the same argument as borrowing a material rather than authoring one.
 
 `GuiBar` only ever resizes its fill on `RectTransform.Axis.Horizontal`, so an upright vanilla
 bar is a **rotated horizontal one**. That is why the bar is cloned rather than built: the
@@ -62,7 +62,7 @@ Two things are read off components rather than off child names, because names ar
 and would be a guess: the trailing bar is the one with `m_smoothDrain` set, and the animator
 is driven only through parameters it is confirmed to have.
 
-Position is **screen pixels**, not the donor's `anchoredPosition` — `Hud.UpdateEitr` rewrites
+Position is **screen pixels**, not the donor's `anchoredPosition`, because `Hud.UpdateEitr` rewrites
 that every frame `(0,130)`, or `(0,285)` with the build HUD up, so it is never a stable thing
 to copy. Being pinned in screen space means the bar also has to make vanilla's own
 build-panel dodge by hand, which is what `BarBuildRaise` is.
@@ -106,7 +106,7 @@ you looking in entirely the wrong place.
 
 **On the server, keyed by the platform identity of the connection and the character being played.**
 
-This is the load-bearing decision. Valheim keeps characters entirely client-side — even
+This is the load-bearing decision. Valheim keeps characters entirely client-side. Even
 `ZNet.SaveOtherPlayerProfiles` only sends each client an RPC telling it to save its own
 profile locally, so the server never holds a character file. Anything stored on the character
 is therefore editable by its owner, which rules it out for anything that decides rewards.
@@ -124,7 +124,7 @@ their own account's records and the character half separates their characters wi
 
 The client's half of the protocol is deliberately thin. It reports **that a skill went up**
 and **which runestone it wants**. It never sends a level, an XP total or a rank, because the server
-does not store anything the client says — only re-derives from the events it claims.
+does not store anything the client says, only re-derives from the events it claims.
 
 ### Singleplayer
 
@@ -139,7 +139,7 @@ Since `GetServerPeerID()` returns your own id when you are the server, skill rep
 state pushes all loop straight back and resolve against the local ledger. Progress is stored
 under the owner `localhost@<character id>`.
 
-The only gap is that the host has no peer entry for itself, so nothing greets it on spawn —
+The only gap is that the host has no peer entry for itself, so nothing greets it on spawn,
 hence a one-shot seed of the opening state. Everything after arrives by the same path a
 client's would.
 
@@ -155,7 +155,7 @@ only been here cannot have been levelled elsewhere.
 That was the wrong power for this mod to hold. A levelling mod deciding who may play means a
 bug in an XP system locks people out of the server, and it did: the player got Valheim's
 generic kick screen with the reason only in the server's log, so a refusal and a crash looked
-identical from their side. The check itself was also stricter than it sounded — "has this
+identical from their side. The check itself was also stricter than it sounded: "has this
 character been anywhere else" refuses a character on every world but its first, permanently,
 because `m_worldData` entries are never removed. Visiting a friend's world once cost you this
 server for good.
@@ -181,7 +181,7 @@ that earned everything here computes the total it already has, so the credit is 
 nothing is paid twice. It only ever raises, so a skill lost to a death penalty cannot take
 levels away.
 
-Turn it **off** and the opposite rule applies — only XP gained on this server counts, and every
+Turn it **off** and the opposite rule applies: only XP gained on this server counts, and every
 character starts at Rist level 0 no matter what it is carrying. That is the stricter setting
 and it is a per-server one: config syncs from the host, so whichever a server picks applies to
 everyone on it.
@@ -193,14 +193,14 @@ everyone on it.
 
 What crediting costs is worth stating plainly: a maxed vanilla character walks in at Rist level
 219 and takes the whole catalogue. If that is not wanted, the answer is not to withhold XP from
-it — it is to not let it in. That is a **door policy**, and the door is
+it, it is to not let it in. That is a **door policy**, and the door is
 [Threshold](../threshold)'s: it reads `m_worldData` and `m_usedCheats` off the profile and
 turns the connection away openly, which is the whole of its job.
 
 **There is no untrusted state**, and the removal is worth recording. A character above the
 baseline used to be marked untrusted and paid nothing "until they line up again". It never
 could: the withholding returned before the baseline was updated, and the login comparison only
-adopted a new baseline when it had found nothing wrong — so the baseline froze at the moment of
+adopted a new baseline when it had found nothing wrong, so the baseline froze at the moment of
 judgement while the player's real skills climbed away from it. A penalty with no exit is worse
 than no penalty, and it was aimed at something a door handles better.
 
@@ -220,25 +220,25 @@ possible is bounding what a claim can be worth, and there are exactly three leve
 | `MaxXpPerMinute` + `XpBurst` | how much anything can be worth over time |
 
 The first alone was not enough, and the gap is arithmetic: XP is the skill level reached, so
-thirty reports a minute each naming a level-100 skill was worth 3,000 XP — a character level
-every ten seconds — and each of those forged levels was adopted into the baseline, giving the
+thirty reports a minute each naming a level-100 skill was worth 3,000 XP, a character level
+every ten seconds, and each of those forged levels was adopted into the baseline, giving the
 next claim an alibi.
 
 `MaxSkillLevelJump` closes that by refusing anything more than one level above the baseline,
 which is what the game itself does: `Skills.Skill.Raise` levels one at a time and fires one
 callback each. It needs a complete login baseline to mean anything, so it is enforced only for
-characters this world has fully seen — an absent baseline entry is otherwise indistinguishable
+characters this world has fully seen, since an absent baseline entry is otherwise indistinguishable
 from a skill that has genuinely never been used.
 
 `MaxXpPerMinute` is the only cap that does not depend on believing the client at all. However
 convincing a report is, time connected is a quantity the server measures for itself. It is a
-token bucket rather than a tripwire, banking three minutes by default, so an honest burst —
-clearing a crypt levels four skills at once — is still paid in full.
+token bucket rather than a tripwire, banking three minutes by default, so an honest burst,
+clearing a crypt levels four skills at once, is still paid in full.
 
 ### What this does not do
 
 None of it detects a cheat; it bounds one. A purpose-built client can still claim a plausible
 level-up it did not earn, at the honest rate, forever. What the ceilings guarantee is that
-doing so is no faster than playing, which is the only property worth having here — and it is
+doing so is no faster than playing, which is the only property worth having here, and it is
 the reason the whole thing withholds rather than punishes. A false positive costs a player
 some XP and says so on screen, not their seat on the server.

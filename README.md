@@ -8,7 +8,7 @@ Single DLL plus a text file, no asset bundle.
 ## What it is
 
 Valheim has skills but no character level. Rist adds one that runs **alongside** the skill
-system — vanilla skills are read, never written, never rescaled, never reskinned.
+system: vanilla skills are read, never written, never rescaled, never reskinned.
 
 Every character level earns one **pick**. Spend it on any runestone in the catalogue and that runestone
 gains a rank, up to **five**. Picks bank: nothing expires, and the panel waits.
@@ -43,7 +43,7 @@ table of what counts.
 
 XP is **weighted by the skill level reached**, not flat per level-up. Vanilla's own skill cost
 curve is `pow(level+1, 1.5)`, so early levels are nearly free. A flat rate would rain runestones in
-the first hours and dry up exactly when the deep ranks start to matter — and would make
+the first hours and dry up exactly when the deep ranks start to matter, and would make
 grinding a fresh cheap skill from zero the fastest way to farm picks.
 
 ## Dying no longer costs skill progress
@@ -53,8 +53,8 @@ Valheim already has a world modifier for this and it is **not enough**. `Skills.
 the level loss is scaled by the factor:
 
 ```csharp
-m_level -= m_level * factor;   // scaled — zero factor means no loss
-m_accumulator = 0f;            // NOT scaled — always wiped
+m_level -= m_level * factor;   // scaled: zero factor means no loss
+m_accumulator = 0f;            // NOT scaled: always wiped
 // ...and "$msg_skills_lowered" is shown regardless
 ```
 
@@ -101,8 +101,8 @@ id | Name | flavour text | effect | value-per-rank
 
 `effect` is the literal name of a public float field on the game's own `SE_Stats`. That is
 what makes the catalogue a text file rather than a switch statement: Valheim already sums
-about forty-five of these across active status effects — carry weight, armour, the six stamina
-costs, stealth, fall damage, regen rates, skill gain — so naming one turns it into a runestone with
+about forty-five of these across active status effects (carry weight, armour, the six stamina
+costs, stealth, fall damage, regen rates, skill gain) so naming one turns it into a runestone with
 no code change and no rebuild.
 
 `*inventoryrow` is the single special, because grid height is not a stat.
@@ -120,7 +120,7 @@ On a server it is a different question, and Rist gives up more without Core than
 this suite does. Three things, all of which matter only in multiplayer:
 
 **The catalogue is no longer checked.** `cards.txt` names what every rank is worth, effects are
-applied client-side from it, and the server only ever verifies the *rank* — so an edited line
+applied client-side from it, and the server only ever verifies the *rank*, so an edited line
 is simply believed. With Core, a hash of the file travels in the version handshake and two ends
 running the same build over different catalogues get reported. Without it, a client that edits
 `cards.txt` gets whatever it wrote.
@@ -134,7 +134,7 @@ have to be matched by hand.
 `Inventory.m_height` is a single private int with no owner. Two mods that both want extra rows
 each write it, the last writer wins, and a mod that only writes when its own state changes
 loses silently to one that writes every frame. Core exists to add every claim up and write
-once, so mods stack instead of fighting. Standalone Rist owns that write alone — correct on its
+once, so mods stack instead of fighting. Standalone Rist owns that write alone, correct on its
 own, and **in conflict with any other mod that grants inventory rows**, with the winner decided
 by frame ordering rather than by anything either mod can control. If you run another row-adding
 mod, install Core.
@@ -173,13 +173,13 @@ Rist logs a warning at startup when it starts without Core, naming all three.
 | `BarFollowStamina` | `true` | Anchor to the stamina bar; off falls back to `BarPosX`/`BarPosY` |
 | `BarOffsetX` / `BarOffsetY` | `0` / `70` | Pixels right of and below the stamina bar's centre |
 | `BarPosX` / `BarPosY` | `172` / `105` | Screen pixels to the **centre**, when not following |
-| `BarSize` | `240` | Length in canvas units — 64 is a starting stamina bar |
+| `BarSize` | `240` | Length in canvas units; 64 is a starting stamina bar |
 | `BarBuildRaise` | `155` | Pixels to lift the bar while the build or ship panel is open |
 | `BarColour` | `4FB3A5` | `RRGGBB`; the trailing fill is the same hue held back. `E4DCC4` for bone |
 | `BarFlashSeconds` | `4` | How often the bar flashes while a runestone is waiting |
 | `BarX` / `BarBottom` / `BarThickness` / `BarLength` | `168` / `75` / `10` / `60` | Place the **fallback** bar only |
 
-A value already written to the `.cfg` beats a new default in code — change the `.cfg`.
+A value already written to the `.cfg` beats a new default in code. Change the `.cfg`.
 
 ## Status: v1.0
 
@@ -221,4 +221,4 @@ a vanilla one, and why the ledger lives where it does: [DESIGN.md](DESIGN.md).
 ## Author
 
 Rist is an original mod by **Robbin Thijssen** (Thijssen Software).
-Copyright (c) 2026 Robbin Thijssen. MIT licensed — see `LICENSE`.
+Copyright (c) 2026 Robbin Thijssen. MIT licensed. See `LICENSE`.
