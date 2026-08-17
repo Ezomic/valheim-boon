@@ -2,55 +2,48 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
-using UnityEngine;
 
 namespace Boon
 {
     /// <summary>
-    /// Whether this server is willing to pay for the skill levels a character turned up with.
+    /// What this server has watched each of a character's skills reach.
     ///
-    /// It used to refuse the connection, and that was the wrong power for this mod to hold. A
-    /// levelling mod deciding who may play means a bug in an XP system locks people out of the
-    /// server, and it did: a character that had been used on another world was kicked with
-    /// Valheim's generic screen and the reason only in the server's log, so the player could
-    /// not tell a refusal from a crash. The travel check that produced that verdict has moved
-    /// out to Threshold, where refusing a connection is the whole job and is done openly.
+    /// This used to be a judgement and is now only a measurement, and the difference is the
+    /// whole history of the file. It began by refusing the connection outright, which is the
+    /// wrong power for a levelling mod to hold: a bug in an XP system then locks people out of
+    /// a server, and it did - the player got Valheim's generic kick screen with the reason only
+    /// in the server's log. That check moved to Threshold, where turning people away is the
+    /// entire job and is done openly with its own message.
     ///
-    /// What is left here is the part that was always Boon's own business: this server keeps a
-    /// record of how high it watched each skill go, and if a character comes back higher than
-    /// that, the gain did not happen here and is not paid for. The character plays normally.
-    /// It simply earns nothing until its levels line up with what this server saw.
+    /// What replaced it here was softer but not actually better: a character whose skills sat
+    /// above the baseline was marked untrusted and paid no XP "until they line up again". They
+    /// never could. The withholding returned before the snapshot was updated, and the login
+    /// comparison only adopted a new baseline when it had found nothing wrong - so the baseline
+    /// froze at the moment of judgement while the player's real skills only ever climbed. The
+    /// gap widened forever, on that character, on that server, while the message on screen
+    /// promised a recovery that no amount of play could reach.
     ///
-    /// That is a strictly smaller claim, and it needs no profile facts to make - the baseline
-    /// is the server's own memory, which no client can reach or edit.
+    /// So the judgement is gone and the measurement stays. An imported character is simply
+    /// **not paid for what it did elsewhere** - which is the property this was always after,
+    /// and which Boon already had and already documents: nothing is ever backfilled, so a
+    /// character arriving at skill 50 starts at Boon level 0 regardless. Preventing a character
+    /// from being used across worlds at all is a door policy, and the door is Threshold's.
+    ///
+    /// The baseline itself is still worth keeping, for a reason that has nothing to do with
+    /// trust: <see cref="Throttle.Step"/> needs it to tell a plausible next level from a forged
+    /// one, and an absent entry has to be distinguishable from a skill never used.
     /// </summary>
     internal static class Gate
     {
-        /// <summary>
-        /// Owners whose reported skills this server does not vouch for, for this session.
-        ///
-        /// Deliberately not persisted. It is a judgement about a login, re-made on the next
-        /// one, and writing it to the ledger would turn a recoverable state into a permanent
-        /// mark on a character that may simply have been fixed.
-        /// </summary>
-        private static readonly HashSet<string> Untrusted = new HashSet<string>(StringComparer.Ordinal);
-
         /// <summary>
         /// Owners this server holds a complete skill list for, learned from the login exchange.
         ///
         /// Kept because an absent snapshot entry is ambiguous on its own: it means either "this
         /// skill has never been used" or "we have never looked". Anything comparing a report
         /// against the baseline has to know which, and only the login exchange can say - it is
-        /// the one moment every skill is reported at once. <see cref="Throttle.Step"/> is the
-        /// caller.
+        /// the one moment every skill is reported at once.
         /// </summary>
         private static readonly HashSet<string> Baselined = new HashSet<string>(StringComparer.Ordinal);
-
-        /// <summary>Whether XP should be withheld from this owner right now.</summary>
-        internal static bool IsUntrusted(string owner)
-        {
-            return owner != null && BoonConfig.WithholdUntrustedXp.Value && Untrusted.Contains(owner);
-        }
 
         /// <summary>Whether this server has seen this owner's whole skill list this session.</summary>
         internal static bool HasBaseline(string owner)
@@ -59,15 +52,11 @@ namespace Boon
         }
 
         /// <summary>
-        /// Drop every judgement, for a new connection.
-        ///
-        /// Both sets are per-session by design - they describe a login, not a character - so
-        /// carrying them across a disconnect would let a verdict about one world follow a
-        /// player into the next.
+        /// Drop what was learned, for a new connection. Per-session by design: it describes a
+        /// login rather than a character.
         /// </summary>
         internal static void Forget()
         {
-            Untrusted.Clear();
             Baselined.Clear();
         }
 
@@ -97,63 +86,21 @@ namespace Boon
         // ---- server side ---------------------------------------------------------------
 
         /// <summary>
-        /// Judge a joining character on both counts: where it has been, and whether it came
-        /// back stronger than this server watched it become.
+        /// Take a joining character's skill list as the baseline, whatever it says.
         ///
-        /// The two catch different things and neither subsumes the other. The travel check
-        /// reads the character's own file, so it sees a trip even if nothing was gained - and
-        /// can be defeated by editing that file. The snapshot compares against this server's
-        /// own record, which no client can reach, so it survives an edited file - but it only
-        /// notices a trip that actually produced levels. Together they cover both.
+        /// No comparison and no verdict. A character that turns up higher than this server last
+        /// saw it gained that somewhere else and is paid nothing for it - not because it is
+        /// refused, but because XP only ever comes from a level-up watched from here. Adopting
+        /// the higher number is what stops the next honest level-up looking like a forgery to
+        /// <see cref="Throttle.Step"/>.
         ///
-        /// With WithholdUntrustedXp off this only writes to the log.
+        /// The list is self-reported, and always was. It is not load-bearing on its own: what
+        /// bounds a forged one is Step's single-level ceiling and the earning cap over connected
+        /// time, neither of which asks the client anything.
         /// </summary>
         internal static void Judge(long sender, string owner, string facts, string skills)
         {
             if (!BoonConfig.CheckSkillBaseline.Value) return;
-
-            var who = owner ?? ("peer " + sender);
-            var reasons = new List<string>();
-
-            SnapshotReasons(skills, owner, who, reasons);
-
-            if (owner != null) Untrusted.Remove(owner);
-
-            if (reasons.Count == 0)
-            {
-                if (BoonConfig.Verbose.Value) BoonPlugin.Log.LogInfo("Gate: " + who + " passed.");
-                return;
-            }
-
-            var why = string.Join(", ", reasons.ToArray());
-
-            if (!BoonConfig.WithholdUntrustedXp.Value)
-            {
-                BoonPlugin.Log.LogWarning("Gate (not enforcing): would withhold XP from " + who + " - " + why + ".");
-                return;
-            }
-
-            if (owner != null) Untrusted.Add(owner);
-            BoonPlugin.Log.LogWarning("Gate: withholding XP from " + who + " - " + why + ".");
-
-            // Say it to the player, not only to the log. The whole failure of the old
-            // behaviour was that the person affected had no way to find out what happened, and
-            // moving from a kick to a quiet withholding makes that worse rather than better -
-            // nothing visible happens at all, you simply stop earning.
-            Net.SendNotice(sender, BoonConfig.UntrustedMessage.Value);
-        }
-
-        /// <summary>
-        /// Compare the reported skills against the highest levels this server itself watched
-        /// them reach.
-        ///
-        /// A character with no snapshot yet has its current skills **adopted** as the baseline
-        /// rather than being refused. Refusing would turn away everyone the first time this
-        /// shipped, and a genuinely imported character is what the travel check is for - the
-        /// two are deliberately layered.
-        /// </summary>
-        private static void SnapshotReasons(string skills, string owner, string who, List<string> reasons)
-        {
             if (string.IsNullOrEmpty(owner)) return;
 
             var reported = ParseSkills(skills);
@@ -162,45 +109,25 @@ namespace Boon
             var rec = Ledger.For(owner);
             if (rec == null) return;
 
-            // From here we hold this owner's whole skill list, whichever branch runs below.
-            // That is what makes a per-report comparison meaningful, so it is recorded before
-            // the verdict rather than after: even a character judged untrusted has been fully
-            // seen, and if the withholding is later turned off its reports still need bounding.
+            var first = !rec.HasSnapshot;
             Baselined.Add(owner);
 
-            if (!rec.HasSnapshot)
-            {
-                foreach (var kv in reported) rec.Snapshot[kv.Key] = kv.Value;
-                Ledger.Touch();
-
-                BoonPlugin.Log.LogInfo("Gate: adopted a first skill baseline for " + who +
-                                       " (" + reported.Count + " skills). Future joins are compared against it.");
-                return;
-            }
-
-            var slack = Mathf.Max(0f, BoonConfig.SkillDriftAllowance.Value);
-
+            var raised = 0;
             foreach (var kv in reported)
             {
-                var seen = rec.Snapshot.TryGetValue(kv.Key, out var s) ? s : 0f;
-                if (kv.Value <= seen + slack) continue;
-
-                reasons.Add((Skills.SkillType)kv.Key + " is " + kv.Value.ToString("0.#") +
-                            " but this server only saw it reach " + seen.ToString("0.#"));
+                if (rec.Snapshot.TryGetValue(kv.Key, out var seen) && kv.Value <= seen) continue;
+                rec.Snapshot[kv.Key] = kv.Value;
+                raised++;
             }
 
-            // Passing means the report matched, so take it as the new baseline - it is the
-            // freshest confirmation of a state this server agrees with.
-            if (reasons.Count != 0) return;
+            if (raised > 0) Ledger.Touch();
 
-            foreach (var kv in reported)
-            {
-                if (!rec.Snapshot.TryGetValue(kv.Key, out var s) || kv.Value > s)
-                {
-                    rec.Snapshot[kv.Key] = kv.Value;
-                    Ledger.Touch();
-                }
-            }
+            if (first)
+                BoonPlugin.Log.LogInfo("Baseline adopted for " + owner + " (" + reported.Count +
+                                       " skills). Only level-ups from here earn anything.");
+            else if (raised > 0 && BoonConfig.Verbose.Value)
+                BoonPlugin.Log.LogInfo("Baseline for " + owner + " raised on " + raised +
+                                       " skill(s) - gained elsewhere, so not paid for.");
         }
 
         private static Dictionary<int, float> ParseSkills(string wire)
@@ -220,6 +147,5 @@ namespace Boon
 
             return map;
         }
-
     }
 }

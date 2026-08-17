@@ -28,10 +28,7 @@ namespace Boon
         internal static ConfigEntry<bool> RemoveDeathSkillLoss;
 
         internal static ConfigEntry<bool> CheckSkillBaseline;
-        internal static ConfigEntry<bool> WithholdUntrustedXp;
-        internal static ConfigEntry<string> UntrustedMessage;
         internal static ConfigEntry<float> MaxSkillUpsPerMinute;
-        internal static ConfigEntry<float> SkillDriftAllowance;
         internal static ConfigEntry<float> MaxSkillLevelJump;
         internal static ConfigEntry<float> MaxXpPerMinute;
         internal static ConfigEntry<float> XpBurst;
@@ -248,35 +245,19 @@ namespace Boon
             // that judgement now lives in Threshold, where turning people away is the whole
             // job and is done openly. What is left here is strictly about payment.
             CheckSkillBaseline = cfg.Bind("Gate", "CheckSkillBaseline", true,
-                "On every login, compare the character's skills against the highest levels " +
-                "this server itself watched them reach. The baseline is the server's own " +
-                "memory, so unlike anything read off the character file it cannot be edited " +
-                "by the client.");
-
-            WithholdUntrustedXp = cfg.Bind("Gate", "WithholdUntrustedXp", true,
-                "When a character's skills sit above what this server saw, pay no XP for its " +
-                "skill-ups until they line up again, and tell the player once.\n" +
-                "Nobody is disconnected and nothing already earned is taken away - the " +
-                "character plays normally and simply stops earning. Off logs what would have " +
-                "been withheld and pays anyway.\n" +
-                "Note this replaces the old RequireFreshCharacter and GateEnforce pair, which " +
-                "kicked instead. Those keys may still be sitting in your config file doing " +
-                "nothing; they can be deleted.");
-
-            UntrustedMessage = cfg.Bind("Gate", "UntrustedMessage",
-                "Your skills are ahead of what this world has seen. No boons will be earned until they match.",
-                "Shown once, centre-screen, to a character whose XP is being withheld. " +
-                "Withholding is invisible by nature - nothing happens, you simply stop " +
-                "earning - so without this the player has no way to know, which is the same " +
-                "complaint that killed the old kick.");
-
-            SkillDriftAllowance = cfg.Bind("Gate", "SkillDriftAllowance", 1f,
-                "How far a returning character's skill may sit above the highest level this " +
-                "server watched it reach before it counts as gained elsewhere.\n" +
-                "Not zero, because the ledger is flushed on a timer: a server that stops " +
-                "unexpectedly can lose the last few seconds of snapshot updates, and a level " +
-                "genuinely earned here would then look imported. One level of slack absorbs " +
-                "that and is worth nothing to a cheat.");
+                "On login, take the character's skill list as the baseline this server pays " +
+                "from. Nothing is compared and nobody is judged: a character that turns up " +
+                "higher than this world last saw it gained that elsewhere and is simply not " +
+                "paid for it, because XP only ever comes from a level-up watched from here.\n" +
+                "Off leaves the baseline to fill in from observed play alone, which also turns " +
+                "off MaxSkillLevelJump - without a complete list, a skill never used cannot be " +
+                "told from one never seen.\n" +
+                "This replaces WithholdUntrustedXp, UntrustedMessage and SkillDriftAllowance, " +
+                "which marked such a character untrusted and paid it nothing 'until they line " +
+                "up again'. They never could: the withholding stopped the baseline advancing, " +
+                "and the baseline was the only thing that could have cleared it. Those keys may " +
+                "still be sitting in your config file doing nothing and can be deleted. Keeping " +
+                "a character out of a world altogether is a door policy - that is Threshold.");
 
             MaxSkillUpsPerMinute = cfg.Bind("Gate", "MaxSkillUpsPerMinute", 30f,
                 "Server-side ceiling on accepted skill-up reports per player. A backstop " +
@@ -316,7 +297,7 @@ namespace Boon
             CappedMessage = cfg.Bind("Gate", "CappedMessage",
                 "You are earning faster than this world will pay for. Boons will resume shortly.",
                 "Shown once per session, centre-screen, when the earning cap withholds XP. " +
-                "Same reasoning as UntrustedMessage: a cap that simply stops paying is " +
+                "A cap that simply stops paying is invisible, so it says so once: " +
                 "invisible, and an honest player who hits one deserves to know why.");
         }
 

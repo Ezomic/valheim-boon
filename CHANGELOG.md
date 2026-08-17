@@ -97,11 +97,10 @@ is therefore a claim that cannot be verified, only bounded:
   the client at all. It banks three minutes so an honest burst — clearing a crypt levels four
   skills at once — is paid in full.
 
-A character whose skills sit above what this world watched them reach earns nothing until they
-line up, and is told so on screen. Nobody is disconnected and nothing already earned is taken
-away: Boon used to refuse the connection, and a levelling mod deciding who may play means a bug
-in an XP system locks people out. Refusing at the door moved to [Threshold](../threshold),
-where it is the whole job and is done openly.
+Nobody is disconnected and nothing is ever taken away. Boon used to refuse the connection, and
+a levelling mod deciding who may play means a bug in an XP system locks people out of a server.
+Refusing at the door moved to [Threshold](../threshold), where it is the whole job and is done
+openly.
 
 ### Cloning vanilla UI, and what it does not hand over
 
@@ -143,6 +142,20 @@ Mechanically, as elsewhere in the suite: every `Ezomic.Core` call now sits in it
 because the JIT resolves a method's assemblies when it first compiles that method — an inline
 call would drag Core in before the check could prevent it. Verified by decompiling the built
 DLL: `Suite.*` and `InventoryRows.*` appear only inside those isolated methods.
+
+### No untrusted state
+
+A character whose skills sit above what this world has watched is not judged, not marked and
+not withheld from. Its skill list becomes the baseline it is paid from, so the levels it gained
+elsewhere are worth nothing here — which is the property that was wanted, and one Boon already
+had, since nothing is ever backfilled for anyone.
+
+There was a withholding, briefly, and it could not be escaped: it returned before the baseline
+was updated and the login check only adopted a new baseline when it had found nothing wrong, so
+the baseline froze while the player's real skills climbed away from it. The on-screen message
+promised recovery "until they line up again" and no amount of play could deliver it.
+
+Keeping a character out of a world is a door policy, and the door is Threshold's.
 
 ### Known limits
 

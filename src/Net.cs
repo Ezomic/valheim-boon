@@ -283,17 +283,6 @@ namespace Boon
                 return;
             }
 
-            // Untrusted characters play normally and simply earn nothing. This is the whole
-            // of the consequence now - it used to be a kick - and it is checked here rather
-            // than at the door because "should this gain be paid for" is the only question
-            // Boon has any business answering.
-            if (Gate.IsUntrusted(owner))
-            {
-                if (BoonConfig.Verbose.Value)
-                    BoonPlugin.Log.LogInfo("Withheld XP from " + owner + " - skills not vouched for.");
-                return;
-            }
-
             var rec = Ledger.For(owner);
             if (rec == null) return;
 

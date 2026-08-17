@@ -225,21 +225,30 @@ entire job and is done openly with its own message. What is left here is strictl
 payment, and it is a much smaller claim: **this server decides what it is willing to pay for,
 not who may play.**
 
-### What the server remembers
+### What the server remembers, and what it does about it
 
 Every accepted skill-up raises a per-character baseline — the highest level this world has
-itself watched each skill reach. That baseline is the one fact in the whole system a client
-cannot touch. Character files sit on the player's own disk and are unencrypted ZPackages, so
-anything read out of one is self-reported; the baseline is the server's own memory.
+watched each skill reach. A joining character's whole skill list is taken as that baseline, so
+one that turns up higher than this world last saw it is **not paid for the difference**. Not
+because it is refused, but because XP only ever comes from a level-up watched from here.
 
-A character that comes back with skills above it gained them somewhere else, whatever its file
-says about where it has been. It plays completely normally and simply earns nothing until the
-numbers line up, and it is told so on screen — withholding is invisible by nature, and a
-player who cannot tell they have stopped earning is the same complaint that killed the kick.
+That is the entire claim, and it is smaller than it sounds. Nothing is backfilled for anyone:
+a brand new character arriving at skill 50 also starts at Boon level 0. Taking a character to
+another world and back therefore earns nothing extra, without needing a rule that says so.
 
-Nothing already earned is ever taken away. `SkillDriftAllowance` gives a level of slack,
-because the ledger is flushed on a timer and a server that stops unexpectedly can lose the last
-few seconds of baseline updates; one level absorbs that and is worth nothing to a cheat.
+**There is no untrusted state, and the removal is worth recording.** Such a character used to
+be marked untrusted and paid nothing "until they line up again". It never could. The
+withholding returned before the baseline was updated, and the login comparison only adopted a
+new baseline when it had found nothing wrong — so the baseline froze at the moment of judgement
+while the player's real skills climbed away from it. The gap only widened, on that character,
+on that server, permanently, while the message on screen promised a recovery no amount of play
+could reach. A penalty with no exit is worse than no penalty, and it was aimed at something
+Boon does not need to prevent anyway.
+
+Keeping a character out of a world altogether is a **door policy**, and the door is
+[Threshold](../threshold)'s: it reads `m_worldData` and `m_usedCheats` off the profile and
+turns the connection away openly, which is the whole of its job. Boon's business is only which
+gains it pays for.
 
 ### Three ceilings, because a report cannot be verified
 
@@ -347,9 +356,7 @@ Boon logs a warning at startup when it starts without Core, naming all three.
 | `BonusEvery` | `5` | Ranks between capstones |
 | `ShowInfoTab` | `true` | Add the boons tab to the compendium bar |
 | `RemoveDeathSkillLoss` | `true` | Skip `Skills.OnDeath` |
-| `CheckSkillBaseline` | `true` | Compare a joining character against what this world watched it reach |
-| `WithholdUntrustedXp` | `true` | Pay nothing while it sits above that; off logs only |
-| `SkillDriftAllowance` | `1` | Levels of slack before a returning character counts as imported |
+| `CheckSkillBaseline` | `true` | Take a joining character's skills as the baseline it is paid from |
 | `MaxSkillUpsPerMinute` | `30` | Server-side ceiling on accepted reports per player |
 | `MaxSkillLevelJump` | `1` | Levels above the baseline one report may claim |
 | `MaxXpPerMinute` | `600` | XP paid per minute of connected time; `0` is off |
@@ -394,10 +401,6 @@ version says the code is finished, not that the numbers are right.
   and the catalogue hash all work host-side and against a dev server, but no remote client has
   connected, so the join path is exercised only in the shape where the server is also the
   client.
-- **A character judged untrusted may not recover on its own.** XP is withheld and the baseline
-  stops advancing with it, so "until they line up again" has no path back within a session
-  short of the skills being re-seen at login. Not yet hit in practice; if a player reports
-  earning nothing forever, that is where to look.
 - **Ranks taken before ledger v3 have no level.** The old format recorded a rank and nothing
   else, and picks were not stored in order, so there is no way to tell which level bought
   which rank. Those slots read a dash permanently. Everything taken since is exact.
