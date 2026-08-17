@@ -143,19 +143,24 @@ because the JIT resolves a method's assemblies when it first compiles that metho
 call would drag Core in before the check could prevent it. Verified by decompiling the built
 DLL: `Suite.*` and `InventoryRows.*` appear only inside those isolated methods.
 
-### No untrusted state
+### A character arrives worth what its skills are worth
 
-A character whose skills sit above what this world has watched is not judged, not marked and
-not withheld from. Its skill list becomes the baseline it is paid from, so the levels it gained
-elsewhere are worth nothing here — which is the property that was wanted, and one Boon already
-had, since nothing is ever backfilled for anyone.
+`CreditExistingSkills`, on by default, pays a joining character for the skills it already
+holds — turn up carrying skills worth twenty levels and you arrive at twenty levels with the
+picks to spend. XP is the skill level reached, so a skill at N has already produced N(N+1)/2;
+summing that over every skill is exactly what the character would hold had all of it happened
+here, which also makes it safe to re-run on every login and impossible to double-pay.
 
-There was a withholding, briefly, and it could not be escaped: it returned before the baseline
-was updated and the login check only adopted a new baseline when it had found nothing wrong, so
-the baseline froze while the player's real skills climbed away from it. The on-screen message
-promised recovery "until they line up again" and no amount of play could deliver it.
+Off, only XP gained on this server counts and every character starts at level 0. Config syncs
+from the host, so a server picks one rule for everyone on it.
 
-Keeping a character out of a world is a door policy, and the door is Threshold's.
+There is no untrusted state. A character above the baseline was briefly marked untrusted and
+paid nothing "until they line up again", which it could never do — the withholding returned
+before the baseline was updated, and the login check only adopted a new baseline when it had
+found nothing wrong, so the baseline froze while the player's real skills climbed away from it.
+
+Keeping a well-travelled character out of a world altogether is a door policy, and the door is
+Threshold's.
 
 ### Known limits
 

@@ -28,6 +28,7 @@ namespace Boon
         internal static ConfigEntry<bool> RemoveDeathSkillLoss;
 
         internal static ConfigEntry<bool> CheckSkillBaseline;
+        internal static ConfigEntry<bool> CreditExistingSkills;
         internal static ConfigEntry<float> MaxSkillUpsPerMinute;
         internal static ConfigEntry<float> MaxSkillLevelJump;
         internal static ConfigEntry<float> MaxXpPerMinute;
@@ -258,6 +259,21 @@ namespace Boon
                 "and the baseline was the only thing that could have cleared it. Those keys may " +
                 "still be sitting in your config file doing nothing and can be deleted. Keeping " +
                 "a character out of a world altogether is a door policy - that is Threshold.");
+
+            CreditExistingSkills = cfg.Bind("Gate", "CreditExistingSkills", true,
+                "Pay a joining character for the skills it already has, so a character that " +
+                "turns up worth twenty levels arrives at twenty levels with the picks to " +
+                "spend. Off starts every character at Boon level 0 no matter what it is " +
+                "carrying, and only level-ups watched from here earn anything.\n" +
+                "Not an estimate: XP is the skill level reached, so a skill at N has already " +
+                "produced 1+2+...+N. Summing that over every skill is exactly what the " +
+                "character would hold if all of it had happened here - which also makes it " +
+                "safe to re-run on every login, since a character that earned everything here " +
+                "is owed nothing and a skill lost to death cannot take levels away.\n" +
+                "On by default because the level is meant to sit beside the skills; without " +
+                "this it records which server you were standing on instead. If you would " +
+                "rather a well-travelled character could not join at all, that is a door " +
+                "policy rather than a payment one - see Threshold.");
 
             MaxSkillUpsPerMinute = cfg.Bind("Gate", "MaxSkillUpsPerMinute", 30f,
                 "Server-side ceiling on accepted skill-up reports per player. A backstop " +

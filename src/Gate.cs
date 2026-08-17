@@ -123,11 +123,55 @@ namespace Boon
             if (raised > 0) Ledger.Touch();
 
             if (first)
-                BoonPlugin.Log.LogInfo("Baseline adopted for " + owner + " (" + reported.Count +
-                                       " skills). Only level-ups from here earn anything.");
+                BoonPlugin.Log.LogInfo("Baseline adopted for " + owner + " (" + reported.Count + " skills).");
             else if (raised > 0 && BoonConfig.Verbose.Value)
-                BoonPlugin.Log.LogInfo("Baseline for " + owner + " raised on " + raised +
-                                       " skill(s) - gained elsewhere, so not paid for.");
+                BoonPlugin.Log.LogInfo("Baseline for " + owner + " raised on " + raised + " skill(s).");
+
+            if (Credit(sender, owner, rec, reported)) Net.PushState(sender, rec);
+        }
+
+        /// <summary>
+        /// Pay a joining character for the skills it already has.
+        ///
+        /// The level is meant to sit beside the skills, so a character that turns up with
+        /// skills worth twenty levels should have twenty levels - whether it earned them here,
+        /// on another world, or before this mod was installed. Anything else makes the number
+        /// a record of which server you were standing on rather than of the character.
+        ///
+        /// The arithmetic is not an estimate. XP is granted per skill level-up weighted by the
+        /// level reached, so a skill sitting at N has already produced 1 + 2 + ... + N, which
+        /// is N(N+1)/2. Summing that over every skill gives exactly the XP the character would
+        /// hold if every one of those level-ups had been watched from here.
+        ///
+        /// That exactness is also what makes it safe to run on every login. A character that
+        /// earned everything here computes the total it already has, so the credit is zero and
+        /// nothing is double-paid; and it only ever raises, so a skill lost to a death penalty
+        /// cannot take levels away.
+        /// </summary>
+        private static bool Credit(long sender, string owner, BoonRecord rec, Dictionary<int, float> reported)
+        {
+            if (!BoonConfig.CreditExistingSkills.Value) return false;
+
+            var worth = 0f;
+            foreach (var kv in reported)
+            {
+                var n = kv.Value;
+                if (n > 0f) worth += n * (n + 1f) * 0.5f;
+            }
+
+            worth *= BoonConfig.XpPerSkillLevel.Value;
+
+            // Never downward. Only the shortfall is paid, so this is idempotent.
+            if (worth <= rec.Xp + 0.001f) return false;
+
+            var before = rec.Level;
+            rec.Xp = worth;
+            Ledger.Touch();
+
+            BoonPlugin.Log.LogInfo("Credited " + owner + " for skills already held: " +
+                                   worth.ToString("0") + " xp, Boon level " + before + " -> " + rec.Level + ".");
+
+            return true;
         }
 
         private static Dictionary<int, float> ParseSkills(string wire)

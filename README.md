@@ -225,30 +225,47 @@ entire job and is done openly with its own message. What is left here is strictl
 payment, and it is a much smaller claim: **this server decides what it is willing to pay for,
 not who may play.**
 
-### What the server remembers, and what it does about it
+### What a character arrives worth
 
-Every accepted skill-up raises a per-character baseline — the highest level this world has
-watched each skill reach. A joining character's whole skill list is taken as that baseline, so
-one that turns up higher than this world last saw it is **not paid for the difference**. Not
-because it is refused, but because XP only ever comes from a level-up watched from here.
+The level is meant to sit **beside** the skills, so a character that turns up carrying skills
+worth twenty levels arrives at twenty levels, with the picks to spend. `CreditExistingSkills`
+is on by default and does exactly that.
 
-That is the entire claim, and it is smaller than it sounds. Nothing is backfilled for anyone:
-a brand new character arriving at skill 50 also starts at Boon level 0. Taking a character to
-another world and back therefore earns nothing extra, without needing a rule that says so.
+The arithmetic is not an estimate. XP is granted per skill level-up weighted by the level
+reached, so a skill sitting at N has already produced `1 + 2 + … + N`, which is `N(N+1)/2`.
+Summing that over every skill gives precisely the XP the character would hold if every one of
+those level-ups had been watched from here.
 
-**There is no untrusted state, and the removal is worth recording.** Such a character used to
-be marked untrusted and paid nothing "until they line up again". It never could. The
-withholding returned before the baseline was updated, and the login comparison only adopted a
-new baseline when it had found nothing wrong — so the baseline froze at the moment of judgement
-while the player's real skills climbed away from it. The gap only widened, on that character,
-on that server, permanently, while the message on screen promised a recovery no amount of play
-could reach. A penalty with no exit is worse than no penalty, and it was aimed at something
-Boon does not need to prevent anyway.
+That exactness is what makes it safe to run on **every** login rather than once: a character
+that earned everything here computes the total it already has, so the credit is zero and
+nothing is paid twice. It only ever raises, so a skill lost to a death penalty cannot take
+levels away.
 
-Keeping a character out of a world altogether is a **door policy**, and the door is
+Turn it **off** and the opposite rule applies — only XP gained on this server counts, and every
+character starts at Boon level 0 no matter what it is carrying. That is the stricter setting
+and it is a per-server one: config syncs from the host, so whichever a server picks applies to
+everyone on it.
+
+| `CreditExistingSkills` | what a joining character gets |
+| --- | --- |
+| `true` (default) | the levels its skills are already worth |
+| `false` | nothing until it levels a skill here |
+
+What crediting costs is worth stating plainly: a maxed vanilla character walks in at Boon level
+219 and takes the whole catalogue. If that is not wanted, the answer is not to withhold XP from
+it — it is to not let it in. That is a **door policy**, and the door is
 [Threshold](../threshold)'s: it reads `m_worldData` and `m_usedCheats` off the profile and
-turns the connection away openly, which is the whole of its job. Boon's business is only which
-gains it pays for.
+turns the connection away openly, which is the whole of its job.
+
+**There is no untrusted state**, and the removal is worth recording. A character above the
+baseline used to be marked untrusted and paid nothing "until they line up again". It never
+could: the withholding returned before the baseline was updated, and the login comparison only
+adopted a new baseline when it had found nothing wrong — so the baseline froze at the moment of
+judgement while the player's real skills climbed away from it. A penalty with no exit is worse
+than no penalty, and it was aimed at something a door handles better.
+
+The baseline itself is still kept, for a reason unrelated to trust: `Throttle.Step` needs it to
+tell a plausible next level from a forged one.
 
 ### Three ceilings, because a report cannot be verified
 
@@ -357,6 +374,7 @@ Boon logs a warning at startup when it starts without Core, naming all three.
 | `ShowInfoTab` | `true` | Add the boons tab to the compendium bar |
 | `RemoveDeathSkillLoss` | `true` | Skip `Skills.OnDeath` |
 | `CheckSkillBaseline` | `true` | Take a joining character's skills as the baseline it is paid from |
+| `CreditExistingSkills` | `true` | Pay a joining character for the skills it already has; off counts only XP gained here |
 | `MaxSkillUpsPerMinute` | `30` | Server-side ceiling on accepted reports per player |
 | `MaxSkillLevelJump` | `1` | Levels above the baseline one report may claim |
 | `MaxXpPerMinute` | `600` | XP paid per minute of connected time; `0` is off |
@@ -406,9 +424,6 @@ version says the code is finished, not that the numbers are right.
   which rank. Those slots read a dash permanently. Everything taken since is exact.
 - **`SE_Stats` has no max health, stamina or eitr field** - those come from food in Valheim -
   so no max-pool runestone is possible without a different vehicle.
-- **Nobody is backfilled.** With only server-observed gains counting, a character arriving at
-  skill 50 still starts at Boon level 0. That follows from the anti-cheat choice rather than
-  being an oversight.
 
 ## Author
 
