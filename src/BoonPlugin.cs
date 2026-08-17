@@ -18,7 +18,7 @@ namespace Boon
     // server runs valheim_server.exe, so the entire server half of this mod would never have
     // loaded there. The ledger, the gate and every authority decision live on the server; on a
     // dedicated host none of them would have existed and clients would have reported skill-ups
-    // into nothing. Core and Wither were both bitten by exactly this.
+    // into nothing. Core and Utangard were both bitten by exactly this.
     public class BoonPlugin : BaseUnityPlugin
     {
         public const string PluginGuid = "ezomic.valheim.boon";
