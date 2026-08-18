@@ -160,7 +160,7 @@ character been anywhere else" refuses a character on every world but its first, 
 because `m_worldData` entries are never removed. Visiting a friend's world once cost you this
 server for good.
 
-That whole judgement now lives in [Threshold](../threshold), where turning people away is the
+That whole judgement now lives in [Dyrr](../dyrr), where turning people away is the
 entire job and is done openly with its own message. What is left here is strictly about
 payment, and it is a much smaller claim: **this server decides what it is willing to pay for,
 not who may play.**
@@ -194,7 +194,7 @@ everyone on it.
 What crediting costs is worth stating plainly: a maxed vanilla character walks in at Rist level
 219 and takes the whole catalogue. If that is not wanted, the answer is not to withhold XP from
 it, it is to not let it in. That is a **door policy**, and the door is
-[Threshold](../threshold)'s: it reads `m_worldData` and `m_usedCheats` off the profile and
+[Dyrr](../dyrr)'s: it reads `m_worldData` and `m_usedCheats` off the profile and
 turns the connection away openly, which is the whole of its job.
 
 **There is no untrusted state**, and the removal is worth recording. A character above the

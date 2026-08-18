@@ -83,7 +83,7 @@ the host.
 
 Crediting has a plain cost: a maxed vanilla character walks in at Rist level 219 and takes the
 whole catalogue. The answer to that is not to withhold XP from it, it is to not let it in,
-which is [Threshold](../threshold)'s job rather than this mod's.
+which is [Dyrr](../dyrr)'s job rather than this mod's.
 
 Skill reports come from the client and cannot be verified, so three ceilings bound what a claim
 can be worth: how many are accepted, how much one may say, and how much anything can be worth

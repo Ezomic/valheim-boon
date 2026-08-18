@@ -99,7 +99,7 @@ is therefore a claim that cannot be verified, only bounded:
 
 Nobody is disconnected and nothing is ever taken away. Rist used to refuse the connection, and
 a levelling mod deciding who may play means a bug in an XP system locks people out of a server.
-Refusing at the door moved to [Threshold](../threshold), where it is the whole job and is done
+Refusing at the door moved to [Dyrr](../dyrr), where it is the whole job and is done
 openly.
 
 ### Cloning vanilla UI, and what it does not hand over
@@ -160,7 +160,7 @@ before the baseline was updated, and the login check only adopted a new baseline
 found nothing wrong, so the baseline froze while the player's real skills climbed away from it.
 
 Keeping a well-travelled character out of a world altogether is a door policy, and the door is
-Threshold's.
+Dyrr's.
 
 ### Known limits
 
