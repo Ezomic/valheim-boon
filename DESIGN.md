@@ -35,6 +35,83 @@ once, called Deep pack, and it was the strongest thing in the catalogue - taken 
 time, which is not a choice. A row now sits at the bottom of Ox-backed and of Sure hand: the
 reward for taking a hauling rist the whole way.
 
+## What a level is made of
+
+XP is skill level-ups and nothing else, which keeps the mod out of the business of maintaining
+a table of what activities count. But "a skill level-up" is not one thing, and treating it as
+one is what the first year of this mod got wrong.
+
+XP is weighted by the **level reached**. Vanilla's skill cost curve is `pow(level+1, 1.5)`, so
+early levels are nearly free; a flat rate per level-up would rain runestones in the first hours
+and dry up exactly when the deep ranks start to matter, and it would make grinding a fresh
+cheap skill from zero the fastest way to farm picks.
+
+That much was right and is unchanged. What it missed is that the two are not independent. The
+live server's ledger is what said so - a character sitting at Rist level 12 held 1346 XP:
+
+| Skill | Level | XP | Share |
+| --- | --- | --- | --- |
+| WoodCutting | 36 | 666 | 49% |
+| Run | 19 | 190 | 14% |
+| Spears | 19 | 190 | 14% |
+| Crafting | 14 | 105 | 8% |
+| Jump | 11 | 66 | 5% |
+| Axes | 11 | 66 | 5% |
+| Clubs | 8 | 36 | 3% |
+| the rest | ≤5 | 27 | 2% |
+
+Half the character came from felling trees and under a quarter of it from being in a fight.
+The level-reached weighting had compounded the wrong way: the safest repeatable activity in
+the game is also the one that climbs highest, so it was collecting the most level-ups **and**
+the most XP per level-up. Chopping is not nothing, but it should not be the majority of who a
+character is.
+
+### Why the curve could not fix it
+
+`LevelBaseXp` and `LevelExponent` are the obvious reach and they cannot reach this. Both scale
+the whole curve, so the *ratio* survives them untouched - a character made of trees stays a
+character made of trees, just a slower one - and every hour of the late game pays for a
+problem that lives in the first. That is not a prediction. The pair was `60` and `1.5`, it
+asked for sixteen skill level-ups per runestone by level 20, the reward simply stopped
+arriving, and it had to be walked back to `40` and `1.4`.
+
+So the price goes on the income rather than the curve. `SkillWeights` is a multiplier per
+skill, defaulting to full price for a skill raised by something that can kill you, half for
+situational, a quarter for repetition that cannot hurt you. The same character re-prices to
+level 6, 53% of it earned fighting, WoodCutting down to 30% - still the largest single line,
+because level 36 genuinely is a lot of work, but no longer the story.
+
+### Re-pricing, and why it is a stamp rather than a switch
+
+Weights only affect new XP, so changing them would leave everyone already playing holding a
+level bought at the old prices. `WeightGeneration` recomputes: bump it to any different text
+and each character is re-priced once, on its next login.
+
+The recompute is **exact** rather than an estimate, and that falls out of the design rather
+than being arranged. XP is granted per level-up weighted by the level reached and by the
+skill, so a skill at N has produced precisely `weight × N(N+1)/2` - and the server already
+keeps the highest level it has watched every skill reach, for anti-forgery reasons that have
+nothing to do with this. Summing over that snapshot reproduces the ledger to the XP. It is
+literally the same function that credits a joining character, shared deliberately: if
+crediting priced a character higher than re-pricing does, the next login would silently undo
+every re-price and the mod would look like it forgot.
+
+It reads that server-side snapshot rather than the character's current skills for two reasons.
+The snapshot cannot be talked down by a client reporting itself lower, and it is monotonic, so
+a death penalty landing between the old pricing and the new one does not read as levels that
+were never earned.
+
+A stamp rather than a switch because this is the **only** operation allowed to move XP
+downward. The routine per-login credit is one-way on purpose - it must never take levels away,
+or a skill lost to a death penalty would cost a runestone - so re-pricing cannot be folded
+into it, and needs a record of having run rather than re-flooring a character every login.
+That record is a field on the ledger line, which is what took the ledger to `v4`.
+
+**Runestones already taken are kept.** `Owed` already floors at zero, so a character re-priced
+from 12 to 6 holds all twelve and earns no new pick until it passes twelve again. Handing them
+back instead would turn a re-pricing into a free rebuild of the whole character, which is a
+different and much larger thing to do to someone.
+
 ## The bar
 
 The experience bar is a **clone of one of the game's own upright bars**, the eitr bar, with
@@ -172,9 +249,10 @@ worth twenty levels arrives at twenty levels, with the picks to spend. `CreditEx
 is on by default and does exactly that.
 
 The arithmetic is not an estimate. XP is granted per skill level-up weighted by the level
-reached, so a skill sitting at N has already produced `1 + 2 + … + N`, which is `N(N+1)/2`.
-Summing that over every skill gives precisely the XP the character would hold if every one of
-those level-ups had been watched from here.
+reached and by the skill, so a skill sitting at N has already produced
+`weight × (1 + 2 + … + N)`, which is `weight × N(N+1)/2`. Summing that over every skill gives
+precisely the XP the character would hold if every one of those level-ups had been watched
+from here, at the weights standing now.
 
 That exactness is what makes it safe to run on **every** login rather than once: a character
 that earned everything here computes the total it already has, so the credit is zero and

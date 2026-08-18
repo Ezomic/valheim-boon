@@ -48,35 +48,9 @@ grinding a fresh cheap skill from zero the fastest way to farm picks.
 
 ### And weighted by which skill
 
-That was not enough on its own, and the server's own ledger is what said so. A character
-sitting at level 12 held 1346 XP:
-
-| Skill | Level | XP | Share |
-| --- | --- | --- | --- |
-| WoodCutting | 36 | 666 | 49% |
-| Run | 19 | 190 | 14% |
-| Spears | 19 | 190 | 14% |
-| Crafting | 14 | 105 | 8% |
-| Jump | 11 | 66 | 5% |
-| Axes | 11 | 66 | 5% |
-| Clubs | 8 | 36 | 3% |
-| the rest | ≤5 | 27 | 2% |
-
-Half the character came from felling trees, and under a quarter of it from being in a fight.
-The two weightings had compounded the wrong way: the safest repeatable activity in the game is
-also the one that reaches the highest level, so it was paying the most per level-up *and* the
-most level-ups. Chopping is not nothing, but it should not be the majority of who a character
-is.
-
-Raising `LevelBaseXp` or `LevelExponent` cannot fix that, and it is worth being clear about
-why, because it is the obvious reach. Both scale the whole curve, so the ratio survives them
-untouched and every hour of the late game pays for a problem that lives in the first one -
-which is precisely what happened when the pair was `60` and `1.5` and had to be walked back.
-
-So the price sits on the income instead. `SkillWeights` is a multiplier per skill, and the
-principle behind the default table is **risk**: full price for a skill raised by something
-that can kill you, half for one that is situational, a quarter for repetition that cannot hurt
-you.
+Not every skill equally, though. Chopping trees is safe, unlimited and available from the
+first minute, and on the live server it was buying half a character's level on its own - 666
+XP of 1346, against 293 for everything earned in a fight. `SkillWeights` prices that:
 
 | Weight | Skills |
 | --- | --- |
@@ -84,33 +58,23 @@ you.
 | `0.5` | Dodge, Sneak, Swim |
 | `0.25` | WoodCutting, Pickaxes, Crafting, Farming, Cooking, Fishing, Run, Jump, Ride |
 
-The same character comes out at level 6, with 53% of it earned fighting and WoodCutting down
-to 30% - still the biggest single line, because level 36 genuinely is a lot of work, but no
-longer the whole story.
+The principle is **risk**: full price for a skill raised by something that can kill you, half
+for one that is situational, a quarter for repetition that cannot hurt you. That same
+character comes out at level 6 rather than 12, with over half of it earned fighting.
+
+The weights are a table you are meant to edit, and they sync from the host, so a server sets
+them for everyone on it. Why the level curve itself could not have done this job is in
+[DESIGN.md](https://github.com/Ezomic/valheim-rist/blob/main/DESIGN.md).
 
 ### Re-pricing a character that already exists
 
-Changing the weights only affects new XP, which would leave everyone already playing carrying
+Changing the weights affects new XP only, which would leave everyone already playing carrying
 a level bought at the old prices. `WeightGeneration` is the way out: bump it to any different
 text and every character is recomputed once, on its next login, from the skill levels this
 server watched it reach.
 
-That the recompute is *exact* rather than an estimate is a property of the design rather than
-a convenience. XP is granted per level-up weighted by the level reached and the skill, so a
-skill at N has produced exactly `weight × N(N+1)/2` - and the server already keeps the highest
-level it has watched every skill reach, for unrelated anti-forgery reasons. Summing over that
-snapshot reproduces the ledger to the XP. It is the same function that credits a joining
-character, deliberately shared so the two can never disagree.
-
-It is a stamp rather than a switch because it is the **only** operation allowed to move XP
-downward. The routine per-login credit is one-way on purpose - it must never take levels away,
-or a skill lost to a death penalty would cost a runestone - so re-pricing cannot be folded into
-it, and must be able to say it has already run rather than re-flooring a character every login.
-
-**Runestones already taken are kept.** A character re-priced from level 12 to level 6 holds all
-twelve, and earns no new pick until it passes twelve again. Handing them back instead would
-turn a re-pricing into a free rebuild of the whole character, which is a different and much
-larger thing to do to someone.
+**Runestones already taken are kept.** A character re-priced from level 12 to level 6 holds
+all twelve, and earns no new pick until it passes twelve again.
 
 ## Dying no longer costs skill progress
 
@@ -256,10 +220,13 @@ Runs on a listen host and on a dedicated server, and both halves have been exerc
 ledger, the gate, the pick path, the level curve, the panel, the bar and the compendium tab.
 Nineteen runestones, all of them verified to name a field the game actually reads.
 
-What is not done is the part that only play settles. The curve was 60 * N^1.5 and has now
-been played once and retuned to 40 * N^1.4; beyond that it has not been played - testing ran on a cheapened one - so the pacing of the whole mod is
-unknown, and no value in the catalogue has been tuned against anything but reasoning. The
-version says the code is finished, not that the numbers are right.
+What is not done is the part that only play settles. The curve has now been retuned twice off
+real play: from `60 * N^1.5` to `40 * N^1.4` when runestones stopped arriving, and then in
+1.1.0 by weighting XP per skill, when the server's ledger showed half a character's level had
+come from chopping trees. Both were found by reading the ledger rather than by guessing, and
+there is no reason to think it has run out of things to say. No value in the runestone
+catalogue has been tuned against anything but reasoning. The version says the code is
+finished, not that the numbers are right.
 
 ## Known gaps
 

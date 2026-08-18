@@ -3,6 +3,58 @@
 Notable changes to Rist. Format follows [Keep a Changelog](https://keepachangelog.com),
 and the mod uses [semantic versioning](https://semver.org).
 
+## [1.1.0] - 2026-08-18
+
+XP is now weighted by **which** skill it came from, not only by how far that skill got.
+
+### Why
+
+The live server's ledger asked for this rather than a hunch. A character sitting at Rist level
+12 held 1346 XP, of which WoodCutting alone was 666 - half the character was felled trees, and
+everything earned in a fight came to 293, under a quarter of the whole. The level had stopped
+describing the character and started describing how long they had stood in the Meadows with an
+axe.
+
+The existing weighting compounded the wrong way. XP being the level reached is right on its
+own, but the safest repeatable activity in the game is also the one that climbs highest, so it
+was collecting the most level-ups *and* the most XP per level-up.
+
+Raising `LevelBaseXp` or `LevelExponent` cannot fix that, and it is the obvious reach, so it is
+worth saying why not: both scale the whole curve, so the ratio survives untouched and the late
+game pays for a problem that lives in the first hour. That is exactly what happened when the
+pair was `60` and `1.5`, and it had to be walked back.
+
+### Added
+
+- **`SkillWeights`** - a multiplier per skill, as `Skill=multiplier` pairs. The default table
+  is built on risk: full price for a skill raised by something that can kill you, half for one
+  that is situational, a quarter for repetition that cannot hurt you. Synced from the host, so
+  a server sets it for everyone on it.
+- **`DefaultSkillWeight`** - what a skill not named in the table is worth. `1`, so a skill
+  added by a game update or another mod is paid normally rather than silently going unpaid.
+- **`WeightGeneration`** - bump it to any different text and every character is re-priced once,
+  on its next login, from the skill levels this server watched it reach.
+
+### Changed
+
+- **Existing characters are re-priced on their next login.** The bundled generation is `1` and
+  no existing ledger line carries a stamp, so this happens once, automatically. The character
+  above goes from level 12 to level 6, with 53% of it now earned fighting.
+- **Runestones already taken are kept.** A character re-priced from 12 to 6 holds all twelve
+  and earns no new pick until it passes twelve again. Refunding them would turn a re-pricing
+  into a free rebuild of the whole character.
+- The join-time credit is weighted by the same function as the re-pricing, deliberately shared
+  so the two can never drift apart.
+
+### Ledger format
+
+The ledger is now `v4`, carrying the generation each record was last re-priced at. `v1`-`v3`
+are still read and come back as never re-priced, which is what they are.
+
+**This is a one-way door.** A `v4` line does not parse on 1.0.1 or earlier, which drops the
+record rather than erroring, so copy `rist-ledger.txt` aside before updating a server you care
+about.
+
 ## [1.0.1] - 2026-08-18
 
 Documentation and the text players read, with no change to what the mod does.
