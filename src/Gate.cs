@@ -127,7 +127,60 @@ namespace Rist
             else if (raised > 0 && RistConfig.Verbose.Value)
                 RistPlugin.Log.LogInfo("Baseline for " + owner + " raised on " + raised + " skill(s).");
 
-            if (Credit(sender, owner, rec, reported)) Net.PushState(sender, rec);
+            // After the baseline has been raised, so a character whose first ever login this
+            // is gets recomputed against a full skill list rather than an empty one.
+            var changed = Recompute(owner, rec);
+
+            if (Credit(sender, owner, rec, reported) || changed) Net.PushState(sender, rec);
+        }
+
+        /// <summary>
+        /// Re-price a character's whole history under the weights standing now.
+        ///
+        /// The one operation allowed to move xp downward, and the reason it is stamped rather
+        /// than run every login. Routine crediting is deliberately one-way - it must never
+        /// take levels away, or a skill lost to a death penalty would cost a card - so
+        /// re-pricing cannot be folded into it and has to announce itself as a separate,
+        /// once-per-generation act.
+        ///
+        /// Computed from <see cref="RistRecord.Snapshot"/> rather than from the character's
+        /// current skills, for two reasons. The snapshot is this server's own high-water mark,
+        /// so it cannot be talked down by a client reporting itself lower; and it is monotonic,
+        /// so a death penalty between the old pricing and the new one does not read as levels
+        /// that were never earned.
+        ///
+        /// Cards already taken are untouched. DraftsTaken outliving the level is a state Owed
+        /// already handles - it floors at zero - so a character re-priced from 12 to 6 keeps
+        /// its twelve cards and earns no new pick until it passes twelve again.
+        /// </summary>
+        internal static bool Recompute(string owner, RistRecord rec)
+        {
+            if (rec == null) return false;
+
+            // The stamp is written into a pipe-separated ledger line, so a pipe in it would
+            // split the record into a field that no longer parses back as the same text - and
+            // a stamp that never matches means this logs a re-price on every single login.
+            var generation = (RistConfig.WeightGeneration.Value ?? "").Replace("|", "/").Trim();
+            if ((rec.WeightGen ?? "") == generation) return false;
+
+            // Nothing to price from yet. Deliberately not stamped either: stamping here would
+            // spend the generation on a record that was never recomputed, and the login that
+            // finally learns its skills would find the job already marked done.
+            if (!rec.HasSnapshot) return false;
+
+            var before = rec.Xp;
+            var beforeLevel = rec.Level;
+
+            rec.Xp = Weights.WorthOf(rec.Snapshot);
+            rec.WeightGen = generation;
+            Ledger.Touch();
+
+            RistPlugin.Log.LogInfo("Re-priced " + owner + " at weight generation '" + generation +
+                                   "': " + before.ToString("0") + " -> " + rec.Xp.ToString("0") +
+                                   " xp, Rist level " + beforeLevel + " -> " + rec.Level +
+                                   " (" + rec.DraftsTaken + " cards kept, " + rec.Owed + " to spend).");
+
+            return true;
         }
 
         /// <summary>
@@ -139,9 +192,10 @@ namespace Rist
         /// a record of which server you were standing on rather than of the character.
         ///
         /// The arithmetic is not an estimate. XP is granted per skill level-up weighted by the
-        /// level reached, so a skill sitting at N has already produced 1 + 2 + ... + N, which
-        /// is N(N+1)/2. Summing that over every skill gives exactly the XP the character would
-        /// hold if every one of those level-ups had been watched from here.
+        /// level reached and by the skill, so a skill sitting at N has already produced
+        /// weight * (1 + 2 + ... + N), which is weight * N(N+1)/2. Summing that over every
+        /// skill gives exactly the XP the character would hold if every one of those level-ups
+        /// had been watched from here under the weights standing now.
         ///
         /// That exactness is also what makes it safe to run on every login. A character that
         /// earned everything here computes the total it already has, so the credit is zero and
@@ -152,14 +206,11 @@ namespace Rist
         {
             if (!RistConfig.CreditExistingSkills.Value) return false;
 
-            var worth = 0f;
-            foreach (var kv in reported)
-            {
-                var n = kv.Value;
-                if (n > 0f) worth += n * (n + 1f) * 0.5f;
-            }
-
-            worth *= RistConfig.XpPerSkillLevel.Value;
+            // The same arithmetic, now weighted per skill - see Weights.WorthOf, which is
+            // shared with the re-pricing above so the two can never drift apart. They must
+            // agree exactly: if crediting priced a character higher than re-pricing does, the
+            // next login would undo every re-price, and the mod would look like it forgot.
+            var worth = Weights.WorthOf(reported);
 
             // Never downward. Only the shortfall is paid, so this is idempotent.
             if (worth <= rec.Xp + 0.001f) return false;

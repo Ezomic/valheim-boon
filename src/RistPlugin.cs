@@ -128,7 +128,13 @@ namespace Rist
             // screen disagrees with the server that decides them - which is how a cheapened
             // test curve on one machine made a dedicated server refuse every pick.
             Suite.Sync(RistConfig.XpPerSkillLevel, RistConfig.LevelBaseXp, RistConfig.LevelExponent,
-                       RistConfig.MaxRank, RistConfig.BonusEvery);
+                       RistConfig.MaxRank, RistConfig.BonusEvery,
+                       RistConfig.SkillWeights, RistConfig.DefaultSkillWeight);
+
+            // WeightGeneration is deliberately not in that list. It is not a shared rule about
+            // what things are worth, it is a server-side instruction to re-price the ledger
+            // once - and the ledger only exists on the server. Syncing it would push a stamp
+            // to clients that have nothing to stamp.
         }
 
         private void OnDestroy()

@@ -251,6 +251,13 @@ namespace Rist
             // record since it was last loaded.
             if (rec.Reconcile()) Ledger.Touch();
 
+            // Before the standing is logged or pushed, so both report the re-priced number.
+            // Also tried here rather than only after the skill list arrives, because the skill
+            // list only arrives when CheckSkillBaseline is on - and re-pricing reads the
+            // server's own snapshot, which is already on disk. Stamped, so whichever of the
+            // two moments gets there first is the only one that does the work.
+            Gate.Recompute(Key(platform, characterId), rec);
+
             RistPlugin.Log.LogInfo("Hello from " + platform + " playing character " + characterId +
                                    " - level " + rec.Level + ", " + rec.Taken.Count + " cards, " +
                                    rec.Owed + " to spend.");
@@ -308,7 +315,7 @@ namespace Rist
                 Ledger.Touch();
             }
 
-            var amount = Levels.XpForSkillUp(skillLevel);
+            var amount = Levels.XpForSkillUp(skillType, skillLevel);
 
             // The cap that does not care how convincing the claim is. Time connected is the
             // one quantity this server measures for itself, so it is the one honest ceiling.

@@ -19,6 +19,9 @@ namespace Rist
         internal static ConfigEntry<float> XpPerSkillLevel;
         internal static ConfigEntry<float> LevelBaseXp;
         internal static ConfigEntry<float> LevelExponent;
+        internal static ConfigEntry<string> SkillWeights;
+        internal static ConfigEntry<float> DefaultSkillWeight;
+        internal static ConfigEntry<string> WeightGeneration;
 
         internal static ConfigEntry<int> MaxRank;
         internal static ConfigEntry<int> BonusEvery;
@@ -94,6 +97,53 @@ namespace Rist
                 "keeps the catalogue scarce - there are 95 picks in it at MaxRank 5, and a " +
                 "curve flat enough to hand out all of them turns a free choice into an order " +
                 "of purchase. At 1.4 a long playthrough lands near 67 of the 95.");
+
+            // The whole table, not only the reductions. This is the tuning surface for the
+            // mod's pacing and it should be possible to see every skill and its price in one
+            // place without knowing which ones were left out.
+            SkillWeights = cfg.Bind("Levelling", "SkillWeights",
+                "Swords=1, Knives=1, Clubs=1, Polearms=1, Spears=1, Axes=1, Bows=1, " +
+                "Crossbows=1, Unarmed=1, Blocking=1, ElementalMagic=1, BloodMagic=1, " +
+                "Dodge=0.5, Sneak=0.5, Swim=0.5, " +
+                "WoodCutting=0.25, Pickaxes=0.25, Crafting=0.25, Farming=0.25, " +
+                "Cooking=0.25, Fishing=0.25, Run=0.25, Jump=0.25, Ride=0.25",
+                "What each skill is worth toward the character level, as Skill=multiplier " +
+                "pairs. A skill not named here is worth DefaultSkillWeight.\n" +
+                "The principle is risk: full price for a skill raised by something that can " +
+                "kill you, a fraction for one raised by repetition that cannot. This is not a " +
+                "guess at what felt wrong - the live ledger said it. A character at level 12 " +
+                "held 1346 xp of which WoodCutting alone was 666, Run, Jump and Crafting " +
+                "another 361, and everything earned in a fight came to 293. The level was " +
+                "mostly a record of trees felled in the Meadows. Under this table that same " +
+                "character is level 6 and over half of it came from fighting.\n" +
+                "Raising LevelBaseXp or LevelExponent cannot do this. Both scale the curve " +
+                "uniformly, so the ratio survives and the late game pays for it - which is " +
+                "what happened at 60 and 1.5 and had to be walked back.\n" +
+                "Names are the Skills.SkillType names and are case-insensitive; a raw type " +
+                "number also works, for a skill this game version has no name for. Negative " +
+                "weights are clamped to zero. Changing this affects new xp only until you " +
+                "also bump WeightGeneration.");
+
+            DefaultSkillWeight = cfg.Bind("Levelling", "DefaultSkillWeight", 1f,
+                "What a skill not named in SkillWeights is worth. One, so that a skill added " +
+                "by a game update or another mod is paid normally rather than silently going " +
+                "unpaid - an unnamed skill is far more likely to be an oversight than a " +
+                "deliberate zero.");
+
+            WeightGeneration = cfg.Bind("Levelling", "WeightGeneration", "1",
+                "Bump this - to any different text - to recompute every player's xp from the " +
+                "skill levels this server has watched them reach, under the weights standing " +
+                "now. Each character is recomputed once per value, on its next login, and the " +
+                "value it was last done at is written into the ledger line.\n" +
+                "This is the only thing that may move xp *downward*, and it is why it is a " +
+                "stamp rather than a switch. The routine per-login credit is deliberately " +
+                "one-way: it must never take levels away, or a skill lost to a death penalty " +
+                "would cost a card. A recompute has to be able to, so it is made a one-shot " +
+                "with a record of having run rather than something that fires every login.\n" +
+                "Cards already taken are kept. Someone recomputed from level 12 to level 6 " +
+                "keeps all twelve picks and earns no new ones until they pass twelve again, " +
+                "which is the honest reading - the picks were spent, and handing them back " +
+                "would be a free rebuild of the whole character rather than a re-pricing.");
 
             // A thing on screen rather than a key, which is the standing preference here,
             // and now the only way in - the keybind is gone rather than merely unbound.

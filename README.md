@@ -46,6 +46,72 @@ curve is `pow(level+1, 1.5)`, so early levels are nearly free. A flat rate would
 the first hours and dry up exactly when the deep ranks start to matter, and would make
 grinding a fresh cheap skill from zero the fastest way to farm picks.
 
+### And weighted by which skill
+
+That was not enough on its own, and the server's own ledger is what said so. A character
+sitting at level 12 held 1346 XP:
+
+| Skill | Level | XP | Share |
+| --- | --- | --- | --- |
+| WoodCutting | 36 | 666 | 49% |
+| Run | 19 | 190 | 14% |
+| Spears | 19 | 190 | 14% |
+| Crafting | 14 | 105 | 8% |
+| Jump | 11 | 66 | 5% |
+| Axes | 11 | 66 | 5% |
+| Clubs | 8 | 36 | 3% |
+| the rest | ≤5 | 27 | 2% |
+
+Half the character came from felling trees, and under a quarter of it from being in a fight.
+The two weightings had compounded the wrong way: the safest repeatable activity in the game is
+also the one that reaches the highest level, so it was paying the most per level-up *and* the
+most level-ups. Chopping is not nothing, but it should not be the majority of who a character
+is.
+
+Raising `LevelBaseXp` or `LevelExponent` cannot fix that, and it is worth being clear about
+why, because it is the obvious reach. Both scale the whole curve, so the ratio survives them
+untouched and every hour of the late game pays for a problem that lives in the first one -
+which is precisely what happened when the pair was `60` and `1.5` and had to be walked back.
+
+So the price sits on the income instead. `SkillWeights` is a multiplier per skill, and the
+principle behind the default table is **risk**: full price for a skill raised by something
+that can kill you, half for one that is situational, a quarter for repetition that cannot hurt
+you.
+
+| Weight | Skills |
+| --- | --- |
+| `1` | Swords, Knives, Clubs, Polearms, Spears, Axes, Bows, Crossbows, Unarmed, Blocking, ElementalMagic, BloodMagic |
+| `0.5` | Dodge, Sneak, Swim |
+| `0.25` | WoodCutting, Pickaxes, Crafting, Farming, Cooking, Fishing, Run, Jump, Ride |
+
+The same character comes out at level 6, with 53% of it earned fighting and WoodCutting down
+to 30% - still the biggest single line, because level 36 genuinely is a lot of work, but no
+longer the whole story.
+
+### Re-pricing a character that already exists
+
+Changing the weights only affects new XP, which would leave everyone already playing carrying
+a level bought at the old prices. `WeightGeneration` is the way out: bump it to any different
+text and every character is recomputed once, on its next login, from the skill levels this
+server watched it reach.
+
+That the recompute is *exact* rather than an estimate is a property of the design rather than
+a convenience. XP is granted per level-up weighted by the level reached and the skill, so a
+skill at N has produced exactly `weight × N(N+1)/2` - and the server already keeps the highest
+level it has watched every skill reach, for unrelated anti-forgery reasons. Summing over that
+snapshot reproduces the ledger to the XP. It is the same function that credits a joining
+character, deliberately shared so the two can never disagree.
+
+It is a stamp rather than a switch because it is the **only** operation allowed to move XP
+downward. The routine per-login credit is one-way on purpose - it must never take levels away,
+or a skill lost to a death penalty would cost a runestone - so re-pricing cannot be folded into
+it, and must be able to say it has already run rather than re-flooring a character every login.
+
+**Runestones already taken are kept.** A character re-priced from level 12 to level 6 holds all
+twelve, and earns no new pick until it passes twelve again. Handing them back instead would
+turn a re-pricing into a free rebuild of the whole character, which is a different and much
+larger thing to do to someone.
+
 ## Dying no longer costs skill progress
 
 Valheim already has a world modifier for this and it is **not enough**. `Skills.OnDeath` calls
@@ -157,6 +223,9 @@ Rist logs a warning at startup when it starts without Core, naming all three.
 | `XpPerSkillLevel` | `1` | XP per skill-up, multiplied by the level reached |
 | `LevelBaseXp` | `40` | Cumulative XP for level 1 |
 | `LevelExponent` | `1.4` | Cumulative XP for level N is base × N^exponent |
+| `SkillWeights` | see above | What each skill is worth toward the level, as `Skill=multiplier` pairs |
+| `DefaultSkillWeight` | `1` | What a skill not named in `SkillWeights` is worth |
+| `WeightGeneration` | `1` | Bump to re-price every character once under the current weights |
 | `MaxRank` | `5` | How deep one runestone goes, and how many slots its track shows |
 | `BonusEvery` | `5` | Ranks between capstones |
 | `ShowInfoTab` | `true` | Add the rists tab to the compendium bar |

@@ -49,6 +49,16 @@ namespace Rist
         /// </summary>
         internal readonly Dictionary<int, float> Snapshot = new Dictionary<int, float>();
 
+        /// <summary>
+        /// The RistConfig.WeightGeneration this record's xp was last recomputed at.
+        ///
+        /// Empty means never, which is every line written before skill weights existed. The
+        /// stamp is what makes the recompute a one-shot: it is the only operation allowed to
+        /// move xp downward, so it must be able to say it has already run rather than firing
+        /// on every login and re-flooring a character each time.
+        /// </summary>
+        internal string WeightGen = "";
+
         internal bool HasSnapshot => Snapshot.Count > 0;
 
         internal int Level => Levels.LevelForXp(Xp);
@@ -125,16 +135,19 @@ namespace Rist
         // has to survive being opened in a text editor on a server, and a dependency for
         // four fields is not worth it.
         //
-        //   v3|owner|xp|draftsTaken|id:level;level,id:level|skillType:level,...
+        //   v4|owner|xp|draftsTaken|id:level;level,id:level|skillType:level,...|weightGen
         //
         // v1 and v2 are still read. Both carried "id:rank" and a field of standing offers,
         // from when a level dealt three cards at random rather than letting you choose. Their
         // ranks are adopted with unknown levels and the offer field is dropped on the floor.
+        //
+        // v3 is v4 without the trailing weight generation, and reads back as one that has
+        // never been recomputed - which is exactly what it is.
 
         internal string Serialise()
         {
             var sb = new StringBuilder();
-            sb.Append("v3|").Append(Owner).Append('|')
+            sb.Append("v4|").Append(Owner).Append('|')
               .Append(Xp.ToString("R", CultureInfo.InvariantCulture)).Append('|')
               .Append(DraftsTaken).Append('|');
 
@@ -149,6 +162,8 @@ namespace Rist
                 first = false;
             }
 
+            sb.Append('|').Append(WeightGen ?? "");
+
             return sb.ToString();
         }
 
@@ -158,10 +173,10 @@ namespace Rist
 
             var parts = line.Split('|');
             var version = parts[0];
-            if (version != "v1" && version != "v2" && version != "v3") return null;
+            if (version != "v1" && version != "v2" && version != "v3" && version != "v4") return null;
 
             // v3 dropped the offer field, so everything after the cards sits one place earlier.
-            var legacy = version != "v3";
+            var legacy = version == "v1" || version == "v2";
             if (parts.Length < (legacy ? 6 : 5)) return null;
 
             if (parts[1].Length == 0) return null;
@@ -211,6 +226,11 @@ namespace Rist
                     rec.Snapshot[type] = level;
                 }
             }
+
+            // Absent on v1..v3, and absent is correct for them: those lines predate weights
+            // and have never been recomputed under any generation.
+            var genAt = snapshotAt + 1;
+            if (parts.Length > genAt) rec.WeightGen = parts[genAt];
 
             return rec;
         }

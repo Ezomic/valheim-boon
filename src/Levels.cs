@@ -13,15 +13,24 @@ namespace Rist
     /// </summary>
     internal static class Levels
     {
-        /// <summary>XP granted for a single skill reaching <paramref name="skillLevel"/>.</summary>
-        internal static float XpForSkillUp(float skillLevel)
+        /// <summary>
+        /// XP granted for <paramref name="skillType"/> reaching <paramref name="skillLevel"/>.
+        /// </summary>
+        internal static float XpForSkillUp(int skillType, float skillLevel)
         {
             // Level reached, not a flat rate. Vanilla's own skill cost curve is
             // pow(level+1, 1.5), so early levels are nearly free; paying a flat amount for
             // each would rain cards in the first hours and dry up exactly when the deep
             // ranks start to matter. It also removes the incentive to grind a fresh cheap
             // skill from zero purely to farm picks.
-            return Mathf.Max(1f, skillLevel) * RistConfig.XpPerSkillLevel.Value;
+            //
+            // Weighted by which skill it was as well as how far it got. The level-reached
+            // weighting above says how *hard* something was; the skill weight says whether
+            // it was the kind of thing a character level ought to be made of. Without the
+            // second, the two compound the wrong way - the safest repeatable activity in the
+            // game is also the one that reaches the highest level, so it pays the most per
+            // level-up as well as the most level-ups. See Weights for the measurement.
+            return Weights.For(skillType) * Mathf.Max(1f, skillLevel) * RistConfig.XpPerSkillLevel.Value;
         }
 
         /// <summary>Cumulative XP needed to have reached <paramref name="level"/>.</summary>
