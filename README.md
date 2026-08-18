@@ -218,6 +218,16 @@ version says the code is finished, not that the numbers are right.
 Why picks are chosen rather than dealt, why capacity is a capstone, how the bar is built out of
 a vanilla one, and why the ledger lives where it does: [DESIGN.md](https://github.com/Ezomic/valheim-rist/blob/main/DESIGN.md).
 
+## Reporting bugs
+
+[The Discord](https://discord.gg/hJzAVaZ5wb) is the fastest route, and the right one if
+you are not sure whether what you are seeing is a bug at all. Issues on
+[the repo](https://github.com/Ezomic/valheim-rist) work too and suit anything long.
+
+Bring `BepInEx\LogOutput.log` if you can, and say whether you were on a server or your
+own world. The log is most of the difference between a fix and a guess, and it is written
+every session whether or not anything went wrong.
+
 ## Author
 
 Rist is an original mod by **Robbin Thijssen** (Thijssen Software).
