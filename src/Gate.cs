@@ -12,7 +12,7 @@ namespace Rist
     /// whole history of the file. It began by refusing the connection outright, which is the
     /// wrong power for a levelling mod to hold: a bug in an XP system then locks people out of
     /// a server, and it did - the player got Valheim's generic kick screen with the reason only
-    /// in the server's log. That check moved to Threshold, where turning people away is the
+    /// in the server's log. That check moved to Dyrr, where turning people away is the
     /// entire job and is done openly with its own message.
     ///
     /// What replaced it here was softer but not actually better: a character whose skills sat
@@ -27,7 +27,7 @@ namespace Rist
     /// **not paid for what it did elsewhere** - which is the property this was always after,
     /// and which Rist already had and already documents: nothing is ever backfilled, so a
     /// character arriving at skill 50 starts at Rist level 0 regardless. Preventing a character
-    /// from being used across worlds at all is a door policy, and the door is Threshold's.
+    /// from being used across worlds at all is a door policy, and the door is Dyrr's.
     ///
     /// The baseline itself is still worth keeping, for a reason that has nothing to do with
     /// trust: <see cref="Throttle.Step"/> needs it to tell a plausible next level from a forged

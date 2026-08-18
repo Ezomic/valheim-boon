@@ -501,7 +501,7 @@ namespace Rist
 
             // The facts slot is sent empty and kept only so the wire shape does not change.
             // It used to carry which other worlds this character had visited, which is now
-            // Threshold's question - and it was always a strange thing for a levelling mod to
+            // Dyrr's question - and it was always a strange thing for a levelling mod to
             // be asking, since it decided whether you could play rather than whether you earned.
             ZRoutedRpc.instance.InvokeRoutedRPC(sender, RpcProfile, "", Gate.LocalSkills());
         }

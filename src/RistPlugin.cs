@@ -210,7 +210,7 @@ namespace Rist
         /// The character's unique id, which is half of the ledger key.
         ///
         /// Kept here rather than shared, now that the character-protection code this used to
-        /// sit beside has moved to Threshold. It is four lines of reflection; a dependency
+        /// sit beside has moved to Dyrr. It is four lines of reflection; a dependency
         /// between two unrelated mods would cost more than the duplication does.
         ///
         /// m_playerID rather than the profile's filename: the filename is the character's

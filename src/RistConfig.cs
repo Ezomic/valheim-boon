@@ -229,8 +229,8 @@ namespace Rist
 
             // ProtectCharacter used to be bound here. It refused to start a local world with a
             // character belonging to another one, which is protection against being locked out
-            // by a door Rist no longer owns - so it moved to Threshold along with the door,
-            // and the bindings moved from rist-home.txt to threshold-home.txt. The old key may
+            // by a door Rist no longer owns - so it moved to Dyrr along with the door,
+            // and the bindings moved from rist-home.txt to dyrr-home.txt. The old key may
             // still be sitting in existing config files doing nothing.
 
             RemoveDeathSkillLoss = cfg.Bind("Death", "RemoveDeathSkillLoss", true,
@@ -243,7 +243,7 @@ namespace Rist
             // the connection outright, which meant a levelling mod decided who could play -
             // and when it did, the player got Valheim's generic kick screen with the reason
             // only in the server's log. The "has this character been to other worlds" half of
-            // that judgement now lives in Threshold, where turning people away is the whole
+            // that judgement now lives in Dyrr, where turning people away is the whole
             // job and is done openly. What is left here is strictly about payment.
             CheckSkillBaseline = cfg.Bind("Gate", "CheckSkillBaseline", true,
                 "On login, take the character's skill list as the baseline this server pays " +
@@ -258,7 +258,7 @@ namespace Rist
                 "up again'. They never could: the withholding stopped the baseline advancing, " +
                 "and the baseline was the only thing that could have cleared it. Those keys may " +
                 "still be sitting in your config file doing nothing and can be deleted. Keeping " +
-                "a character out of a world altogether is a door policy - that is Threshold.");
+                "a character out of a world altogether is a door policy - that is Dyrr.");
 
             CreditExistingSkills = cfg.Bind("Gate", "CreditExistingSkills", true,
                 "Pay a joining character for the skills it already has, so a character that " +
@@ -273,7 +273,7 @@ namespace Rist
                 "On by default because the level is meant to sit beside the skills; without " +
                 "this it records which server you were standing on instead. If you would " +
                 "rather a well-travelled character could not join at all, that is a door " +
-                "policy rather than a payment one - see Threshold.");
+                "policy rather than a payment one - see Dyrr.");
 
             MaxSkillUpsPerMinute = cfg.Bind("Gate", "MaxSkillUpsPerMinute", 30f,
                 "Server-side ceiling on accepted skill-up reports per player. A backstop " +
