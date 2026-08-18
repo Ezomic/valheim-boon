@@ -83,7 +83,7 @@ the host.
 
 Crediting has a plain cost: a maxed vanilla character walks in at Rist level 219 and takes the
 whole catalogue. The answer to that is not to withhold XP from it, it is to not let it in,
-which is [Dyrr](../dyrr)'s job rather than this mod's.
+which is [Dyrr](https://github.com/Ezomic/valheim-dyrr)'s job rather than this mod's.
 
 Skill reports come from the client and cannot be verified, so three ceilings bound what a claim
 can be worth: how many are accepted, how much one may say, and how much anything can be worth
@@ -216,7 +216,7 @@ version says the code is finished, not that the numbers are right.
 ## Design notes
 
 Why picks are chosen rather than dealt, why capacity is a capstone, how the bar is built out of
-a vanilla one, and why the ledger lives where it does: [DESIGN.md](DESIGN.md).
+a vanilla one, and why the ledger lives where it does: [DESIGN.md](https://github.com/Ezomic/valheim-rist/blob/main/DESIGN.md).
 
 ## Author
 

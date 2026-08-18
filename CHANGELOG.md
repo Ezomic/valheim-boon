@@ -3,6 +3,29 @@
 Notable changes to Rist. Format follows [Keep a Changelog](https://keepachangelog.com),
 and the mod uses [semantic versioning](https://semver.org).
 
+## [1.0.1] - 2026-08-18
+
+Documentation and the text players read, with no change to what the mod does.
+
+### Threshold is Dyrr
+
+The companion mod that decides who may join a world was renamed, and Rist pointed at the old
+name in two places that matter: the config descriptions, which are read by anyone who opens
+`rist.cfg`, and the notes on what Rist deliberately does not do. Both now say Dyrr.
+
+### The README is shorter
+
+The design argument and the technical notes moved to `DESIGN.md`, leaving the README as what
+someone reads before installing. The reasoning is all still there, one link away, rather than
+in front of a reader who only wanted to know what the mod is.
+
+Its two links are absolute now. Thunderstore builds the package page from the README alone, so
+a sibling-folder path pointed at nothing there and `DESIGN.md` is not in the zip at all - both
+would have rendered as dead links on the store page and nowhere else, which is the kind of
+fault you only see after publishing.
+
+Em-dashes are gone from the docs throughout.
+
 ## [1.0.0] - 2026-08-16
 
 First release. There is no 0.1.0 entry below it because 0.1.0 was never published. It was
